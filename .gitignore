@@ -9,6 +9,8 @@ lerna-debug.log*
 
 # Documentation & Markdown files
 *.md
+!README.md
+!apps/**/README.md
 생성명령어
 
 # Dependency directories
