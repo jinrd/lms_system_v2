@@ -1256,13 +1256,8 @@ button {
   white-space: nowrap;
 }
 
-.record-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .data-list {
-  border-top: 1px solid var(--border);
+  overflow: hidden;
 }
 
 .data-row {
@@ -1358,6 +1353,16 @@ button {
   padding-top: 8px;
 }
 
+.dialog__actions--split {
+  justify-content: space-between;
+}
+
+.dialog__action-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1438,6 +1443,18 @@ button {
     bottom: 0;
     padding: 14px 0 0;
     background: #fff;
+  }
+
+  .dialog__actions--split {
+    align-items: stretch;
+  }
+
+  .dialog__action-group {
+    display: flex;
+  }
+
+  .dialog__action-group:last-child {
+    margin-left: auto;
   }
 
   .dialog__actions .button {

@@ -106,7 +106,10 @@ export function EducationPage() {
   const toggleFieldMutation = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) =>
       changeEducationFieldActive(id, active),
-    onSuccess: refreshFields,
+    onSuccess: async () => {
+      setEditor(null);
+      await refreshFields();
+    },
   });
 
   const saveSubjectMutation = useMutation({
@@ -308,37 +311,6 @@ export function EducationPage() {
             )}
           </header>
 
-          {selectedField && (
-            <div className="card-body">
-              <div className="record-actions">
-                <button
-                  type="button"
-                  className="button button--ghost"
-                  disabled={toggleFieldMutation.isPending}
-                  onClick={() => {
-                    const nextActive = !selectedField.active;
-
-                    if (
-                      window.confirm(
-                        `${selectedField.name}을(를) ${
-                          nextActive ? "사용" : "미사용"
-                        } 상태로 변경하시겠습니까?`,
-                      )
-                    ) {
-                      toggleFieldMutation.mutate({
-                        id: selectedField.id,
-                        active: nextActive,
-                      });
-                    }
-                  }}
-                >
-                  <Power size={16} />
-                  {selectedField.active ? "분야 미사용 처리" : "분야 사용"}
-                </button>
-              </div>
-            </div>
-          )}
-
           {subjectsQuery.isLoading && (
             <LoadingState message="세부 과목을 불러오고 있습니다." />
           )}
@@ -484,22 +456,57 @@ export function EducationPage() {
               </div>
             )}
 
-            <div className="dialog__actions">
-              <button
-                type="button"
-                className="button button--secondary"
-                onClick={() => setEditor(null)}
-              >
-                취소
-              </button>
+            <div className="dialog__actions dialog__actions--split">
+              <div className="dialog__action-group">
+                {editor.item && (
+                  <button
+                    type="button"
+                    className={`button ${
+                      editor.item.active
+                        ? "button--danger"
+                        : "button--secondary"
+                    }`}
+                    disabled={toggleFieldMutation.isPending}
+                    onClick={() => {
+                      const nextActive = !editor.item!.active;
 
-              <button
-                type="submit"
-                className="button button--primary"
-                disabled={saveFieldMutation.isPending}
-              >
-                {saveFieldMutation.isPending ? "저장 중..." : "저장"}
-              </button>
+                      if (
+                        window.confirm(
+                          `${editor.item!.name}을(를) ${
+                            nextActive ? "사용" : "미사용"
+                          } 상태로 변경하시겠습니까?`,
+                        )
+                      ) {
+                        toggleFieldMutation.mutate({
+                          id: editor.item!.id,
+                          active: nextActive,
+                        });
+                      }
+                    }}
+                  >
+                    <Power size={16} />
+                    {editor.item.active ? "분야 미사용 처리" : "분야 사용"}
+                  </button>
+                )}
+              </div>
+
+              <div className="dialog__action-group">
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={() => setEditor(null)}
+                >
+                  취소
+                </button>
+
+                <button
+                  type="submit"
+                  className="button button--primary"
+                  disabled={saveFieldMutation.isPending}
+                >
+                  {saveFieldMutation.isPending ? "저장 중..." : "저장"}
+                </button>
+              </div>
             </div>
           </form>
         </Modal>
