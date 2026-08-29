@@ -9,6 +9,19 @@ async function bootstrap(): Promise<void> {
 
   app.enableShutdownHooks();
 
+  const corsOrigins = configService
+    .getOrThrow<string>('CORS_ORIGIN')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  app.enableCors({
+    origin: corsOrigins,
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id'],
+    exposedHeaders: ['x-request-id'],
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,

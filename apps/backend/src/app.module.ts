@@ -37,6 +37,7 @@ import { ClassesModule } from './classes/classes.module';
         JWT_ACCESS_SECRET: Joi.string().min(32).required(),
         JWT_ISSUER: Joi.string().required(),
         JWT_AUDIENCE: Joi.string().required(),
+        CORS_ORIGIN: Joi.string().required(),
       }),
       validationOptions: {
         abortEarly: false,

@@ -8,8 +8,16 @@ import { AppShell } from "./components/layout/AppShell";
 import { ErrorState } from "./components/ui/PageStates";
 import { ChangePasswordPage, LoginPage } from "./pages/AuthPages";
 import { DashboardPage, PlaceholderPage } from "./pages";
+import { RequireRole } from "./auth/RequireRole";
+import { EducationPage } from "./features/education/EducationPage";
 
-const placeholderRoutes = [
+type PlaceholderRoute = {
+  path: string;
+  title: string;
+  description: string;
+};
+
+const placeholderRoutes: PlaceholderRoute[] = [
   {
     path: "notices",
     title: "공지사항",
@@ -19,11 +27,6 @@ const placeholderRoutes = [
     path: "inquiries",
     title: "문의사항",
     description: "학생 문의와 담당자 답변을 관리합니다.",
-  },
-  {
-    path: "education",
-    title: "교육 분야·과목",
-    description: "교육 분야와 세부 과목을 관리합니다.",
   },
   {
     path: "courses",
@@ -104,6 +107,14 @@ const router = createBrowserRouter([
       {
         path: "dashboard",
         element: <DashboardPage />,
+      },
+      {
+        path: "education",
+        element: (
+          <RequireRole roles={["MANAGER", "PRINCIPAL", "ADMIN"]}>
+            <EducationPage />
+          </RequireRole>
+        ),
       },
       ...placeholderRoutes.map((route) => ({
         path: route.path,

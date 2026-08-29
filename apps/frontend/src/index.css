@@ -1173,3 +1173,274 @@ button {
     font-size: 27px;
   }
 }
+
+.status-badge--success {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.status-badge--neutral {
+  color: #475569;
+  background: #f1f5f9;
+}
+
+.management-split {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.6fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.card-header p {
+  margin: 5px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.record-list {
+  padding: 8px;
+}
+
+.record-item {
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 13px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+}
+
+.record-item:hover {
+  background: var(--surface-muted);
+}
+
+.record-item--selected {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+}
+
+.record-item__icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  color: var(--primary);
+  background: #fff;
+  place-items: center;
+}
+
+.record-item__body {
+  min-width: 0;
+}
+
+.record-item__body strong,
+.record-item__body small {
+  display: block;
+}
+
+.record-item__body small {
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.data-list {
+  border-top: 1px solid var(--border);
+}
+
+.data-row {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-row:last-child {
+  border-bottom: 0;
+}
+
+.data-row__main {
+  min-width: 0;
+}
+
+.data-row__main p {
+  margin: 8px 0 5px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.data-row__main small {
+  color: #8490a2;
+}
+
+.data-row__actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.bordered-icon-button {
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
+.bordered-icon-button:hover {
+  color: var(--primary);
+  background: #eef2ff;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  padding: 24px;
+  background: rgb(15 23 42 / 55%);
+  place-items: center;
+}
+
+.dialog {
+  width: min(100%, 620px);
+  max-height: min(90vh, 850px);
+  overflow-y: auto;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: 0 24px 80px rgb(15 23 42 / 22%);
+}
+
+.dialog__header {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dialog__header h2 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.dialog__header p {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.dialog__body {
+  padding: 24px;
+}
+
+.dialog__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.form-field--flush {
+  margin-top: 0;
+}
+
+.form-field textarea,
+.form-field select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  background: #fff;
+  resize: vertical;
+}
+
+.form-field select {
+  height: var(--control-height-lg);
+  padding-block: 0;
+}
+
+.form-field textarea:focus,
+.form-field select:focus {
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+
+@media (max-width: 900px) {
+  .management-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .card-header {
+    align-items: flex-start;
+  }
+
+  .card-header > .cluster {
+    width: 100%;
+  }
+
+  .card-header > .cluster .button {
+    flex: 1;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .data-row {
+    align-items: flex-start;
+    padding: 17px;
+  }
+
+  .data-row__actions {
+    flex-direction: column;
+  }
+
+  .dialog-backdrop {
+    padding: 0;
+  }
+
+  .dialog {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  .dialog__actions {
+    position: sticky;
+    bottom: 0;
+    padding: 14px 0 0;
+    background: #fff;
+  }
+
+  .dialog__actions .button {
+    flex: 1;
+  }
+}
