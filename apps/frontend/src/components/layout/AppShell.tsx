@@ -87,13 +87,13 @@ const navigationGroups: NavigationGroup[] = [
         label: "개설 강의",
         path: "/courses",
         icon: GraduationCap,
-        roles: STAFF_ROLES,
+        roles: MANAGEMENT_ROLES,
       },
       {
         label: "반 관리",
         path: "/classes",
         icon: Users,
-        roles: STAFF_ROLES,
+        roles: MANAGEMENT_ROLES,
       },
       {
         label: "수업 일정",
