@@ -1,0 +1,232 @@
+/// Class 테이블입니다.
+model Class {
+  /// id 컬럼입니다.
+  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// courseOfferingId 컬럼입니다.
+  courseOfferingId String      @map("course_offering_id") @db.Uuid
+  /// name 컬럼입니다.
+  name             String      @db.VarChar(200)
+  /// description 컬럼입니다.
+  description      String?     @db.Text
+  /// room 컬럼입니다.
+  room             String?     @db.VarChar(100)
+  /// startDate 컬럼입니다.
+  startDate        DateTime    @map("start_date") @db.Date
+  /// endDate 컬럼입니다.
+  endDate          DateTime    @map("end_date") @db.Date
+  /// capacity 컬럼입니다.
+  capacity         Int
+  /// status 컬럼입니다.
+  status           ClassStatus
+  /// createdById 컬럼입니다.
+  createdById      String?     @map("created_by") @db.Uuid
+  /// createdAt 컬럼입니다.
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// updatedAt 컬럼입니다.
+  updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  courseOffering        CourseOffering              @relation(fields: [courseOfferingId], references: [id], onDelete: Restrict)
+  createdBy             User?                       @relation("ClassCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  classSubjects         ClassSubject[]
+  instructorAssignments ClassInstructorAssignment[]
+  schedulePatterns      ClassSchedulePattern[]
+  sessions              ClassSession[]
+  enrollments           Enrollment[]
+  noticeClassTargets    NoticeClassTarget[]
+  inquiries             Inquiry[]
+  handovers             Handover[]
+  examClassTargets      ExamClassTarget[]
+  examAttempts          ExamAttempt[]
+  assignments           Assignment[]
+  assignmentSubmissions AssignmentSubmission[]
+  learningMaterials     LearningMaterial[]
+
+  @@unique([courseOfferingId, name], map: "uq_classes_offering_name")
+  @@unique([id, courseOfferingId], map: "uq_classes_id_offering")
+  @@index([courseOfferingId, status], map: "idx_classes_offering_status")
+  @@map("classes")
+}
+
+/// ClassSubject 테이블입니다.
+model ClassSubject {
+  /// id 컬럼입니다.
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// classId 컬럼입니다.
+  classId                 String   @map("class_id") @db.Uuid
+  /// courseOfferingId 컬럼입니다.
+  courseOfferingId        String   @map("course_offering_id") @db.Uuid
+  /// courseOfferingSubjectId 컬럼입니다.
+  courseOfferingSubjectId String   @map("course_offering_subject_id") @db.Uuid
+  /// createdAt 컬럼입니다.
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  class                 Class                  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  courseOfferingSubject CourseOfferingSubject  @relation(fields: [courseOfferingSubjectId], references: [id], onDelete: Restrict)
+  schedulePatterns      ClassSchedulePattern[]
+  sessions              ClassSession[]
+  progress              ClassSubjectProgress?
+  assignments           Assignment[]
+  learningMaterials     LearningMaterial[]
+
+  @@unique([classId, courseOfferingSubjectId], map: "uq_class_subjects_class_offering_subject")
+  @@unique([id, classId], map: "uq_class_subjects_id_class")
+  @@unique([id, courseOfferingSubjectId], map: "uq_class_subjects_id_offering_subject")
+  @@index([courseOfferingId], map: "idx_class_subjects_course_offering")
+  @@map("class_subjects")
+}
+
+/// ClassInstructorAssignment 테이블입니다.
+model ClassInstructorAssignment {
+  /// id 컬럼입니다.
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// classId 컬럼입니다.
+  classId      String    @map("class_id") @db.Uuid
+  /// instructorId 컬럼입니다.
+  instructorId String    @map("instructor_id") @db.Uuid
+  /// assignedFrom 컬럼입니다.
+  assignedFrom DateTime  @map("assigned_from") @db.Date
+  /// assignedTo 컬럼입니다.
+  assignedTo   DateTime? @map("assigned_to") @db.Date
+  /// assignedById 컬럼입니다.
+  assignedById String?   @map("assigned_by") @db.Uuid
+  /// reason 컬럼입니다.
+  reason       String?   @db.Text
+  /// createdAt 컬럼입니다.
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  class      Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  instructor User  @relation("AssignedInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
+  assignedBy User? @relation("InstructorAssignmentCreator", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@index([classId, assignedFrom], map: "idx_class_instructor_assignments_class_from")
+  @@index([instructorId, assignedTo], map: "idx_class_instructor_assignments_instructor_to")
+  @@map("class_instructor_assignments")
+}
+
+/// ClassSchedulePattern 테이블입니다.
+model ClassSchedulePattern {
+  /// id 컬럼입니다.
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// classId 컬럼입니다.
+  classId        String   @map("class_id") @db.Uuid
+  /// classSubjectId 컬럼입니다.
+  classSubjectId String   @map("class_subject_id") @db.Uuid
+  /// dayOfWeek 컬럼입니다.
+  dayOfWeek      Int      @map("day_of_week") @db.SmallInt
+  /// startTime 컬럼입니다.
+  startTime      DateTime @map("start_time") @db.Time(6)
+  /// endTime 컬럼입니다.
+  endTime        DateTime @map("end_time") @db.Time(6)
+  /// room 컬럼입니다.
+  room           String?  @db.VarChar(100)
+  /// active 컬럼입니다.
+  active         Boolean
+  /// createdAt 컬럼입니다.
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// updatedAt 컬럼입니다.
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  class        Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+  classSubject ClassSubject   @relation(fields: [classSubjectId], references: [id], onDelete: Restrict)
+  sessions     ClassSession[]
+
+  @@unique([id, classId, classSubjectId], map: "uq_class_schedule_patterns_identity")
+  @@index([classId, active, dayOfWeek], map: "idx_class_schedule_patterns_class_day")
+  @@map("class_schedule_patterns")
+}
+
+/// ClassSession 테이블입니다.
+model ClassSession {
+  /// id 컬럼입니다.
+  id                      String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// classId 컬럼입니다.
+  classId                 String        @map("class_id") @db.Uuid
+  /// classSubjectId 컬럼입니다.
+  classSubjectId          String        @map("class_subject_id") @db.Uuid
+  /// courseOfferingSubjectId 컬럼입니다.
+  courseOfferingSubjectId String        @map("course_offering_subject_id") @db.Uuid
+  /// schedulePatternId 컬럼입니다.
+  schedulePatternId       String?       @map("schedule_pattern_id") @db.Uuid
+  /// instructorId 컬럼입니다.
+  instructorId            String        @map("instructor_id") @db.Uuid
+  /// kind 컬럼입니다.
+  kind                    SessionKind
+  /// replacementForSessionId 컬럼입니다.
+  replacementForSessionId String?       @map("replacement_for_session_id") @db.Uuid
+  /// title 컬럼입니다.
+  title                   String?       @db.VarChar(200)
+  /// lessonContent 컬럼입니다.
+  lessonContent           String?       @map("lesson_content") @db.Text
+  /// startsAt 컬럼입니다.
+  startsAt                DateTime      @map("starts_at") @db.Timestamptz(6)
+  /// endsAt 컬럼입니다.
+  endsAt                  DateTime      @map("ends_at") @db.Timestamptz(6)
+  /// room 컬럼입니다.
+  room                    String?       @db.VarChar(100)
+  /// status 컬럼입니다.
+  status                  SessionStatus
+  /// completedMinutes 컬럼입니다.
+  completedMinutes        Int?          @map("completed_minutes")
+  /// canceledAt 컬럼입니다.
+  canceledAt              DateTime?     @map("canceled_at") @db.Timestamptz(6)
+  /// canceledById 컬럼입니다.
+  canceledById            String?       @map("canceled_by") @db.Uuid
+  /// cancelReason 컬럼입니다.
+  cancelReason            String?       @map("cancel_reason") @db.Text
+  /// createdById 컬럼입니다.
+  createdById             String?       @map("created_by") @db.Uuid
+  /// createdAt 컬럼입니다.
+  createdAt               DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// updatedAt 컬럼입니다.
+  updatedAt               DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  class                 Class                  @relation(fields: [classId], references: [id], onDelete: Restrict)
+  classSubject          ClassSubject           @relation(fields: [classSubjectId], references: [id], onDelete: Restrict)
+  courseOfferingSubject CourseOfferingSubject  @relation(fields: [courseOfferingSubjectId], references: [id], onDelete: Restrict)
+  schedulePattern       ClassSchedulePattern?  @relation(fields: [schedulePatternId], references: [id], onDelete: SetNull)
+  instructor            User                   @relation("SessionInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
+  canceledBy            User?                  @relation("SessionCanceler", fields: [canceledById], references: [id], onDelete: SetNull)
+  createdBy             User?                  @relation("SessionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  replacementFor        ClassSession?          @relation("SessionReplacement", fields: [replacementForSessionId], references: [id], onDelete: SetNull)
+  replacementSessions   ClassSession[]         @relation("SessionReplacement")
+  progressReferences    ClassSubjectProgress[] @relation("ProgressLastSession")
+  sessionParticipants   SessionParticipant[]
+  attendanceCodes       AttendanceCode[]
+  attendanceRecords     AttendanceRecord[]
+
+  @@unique([id, classSubjectId], map: "uq_class_sessions_id_class_subject")
+  @@unique([id, courseOfferingSubjectId], map: "uq_class_sessions_id_offering_subject")
+  @@unique([id, classId, classSubjectId], map: "uq_class_sessions_identity")
+  @@index([classId, startsAt], map: "idx_class_sessions_class_starts_at")
+  @@index([classSubjectId, startsAt], map: "idx_class_sessions_subject_starts_at")
+  @@index([instructorId, startsAt], map: "idx_class_sessions_instructor_starts_at")
+  @@index([status, startsAt], map: "idx_class_sessions_status_starts_at")
+  @@index([replacementForSessionId, status], map: "idx_class_sessions_replacement_status")
+  @@map("class_sessions")
+}
+
+/// ClassSubjectProgress 테이블입니다.
+model ClassSubjectProgress {
+  /// id 컬럼입니다.
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// classSubjectId 컬럼입니다.
+  classSubjectId   String   @unique(map: "uq_class_subject_progress_subject") @map("class_subject_id") @db.Uuid
+  /// progressPercent 컬럼입니다.
+  progressPercent  Decimal  @map("progress_percent") @db.Decimal(5, 2)
+  /// completedMinutes 컬럼입니다.
+  completedMinutes Int      @map("completed_minutes")
+  /// lastSessionId 컬럼입니다.
+  lastSessionId    String?  @map("last_session_id") @db.Uuid
+  /// note 컬럼입니다.
+  note             String?  @db.Text
+  /// updatedById 컬럼입니다.
+  updatedById      String?  @map("updated_by") @db.Uuid
+  /// updatedAt 컬럼입니다.
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  classSubject ClassSubject  @relation(fields: [classSubjectId], references: [id], onDelete: Cascade)
+  lastSession  ClassSession? @relation("ProgressLastSession", fields: [lastSessionId], references: [id], onDelete: SetNull)
+  updatedBy    User?         @relation("ProgressUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("class_subject_progress")
+}

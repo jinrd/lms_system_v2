@@ -1,0 +1,196 @@
+/// 학생 또는 강사 대상 공지입니다.
+model Notice {
+  /// 기본 키입니다.
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 공지 대상 유형입니다.
+  type           NoticeType
+  /// 공지 범위입니다.
+  scope          NoticeScope
+  /// 공지 제목입니다.
+  title          String      @db.VarChar(200)
+  /// 공지 내용입니다.
+  content        String      @db.Text
+  /// 중요 공지 여부입니다.
+  important      Boolean
+  /// 게시 시작 시각입니다.
+  publishedFrom  DateTime?   @map("published_from") @db.Timestamptz(6)
+  /// 게시 종료 시각입니다.
+  publishedUntil DateTime?   @map("published_until") @db.Timestamptz(6)
+  /// 작성자입니다.
+  authorId       String?     @map("author_id") @db.Uuid
+  /// 작성 시각입니다.
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 수정 시각입니다.
+  updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  author       User?               @relation("NoticeAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  classTargets NoticeClassTarget[]
+  files        NoticeFile[]
+  reads        NoticeRead[]
+
+  @@index([type, scope, publishedFrom, publishedUntil])
+  @@map("notices")
+}
+
+/// 특정 반 대상 공지의 반 연결입니다.
+model NoticeClassTarget {
+  /// 공지 식별자입니다.
+  noticeId String @map("notice_id") @db.Uuid
+  /// 반 식별자입니다.
+  classId  String @map("class_id") @db.Uuid
+
+  notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  class  Class  @relation(fields: [classId], references: [id], onDelete: Restrict)
+
+  @@id([noticeId, classId])
+  @@map("notice_class_targets")
+}
+
+/// 공지 첨부파일입니다.
+model NoticeFile {
+  /// 공지 식별자입니다.
+  noticeId    String @map("notice_id") @db.Uuid
+  /// 파일 자산 식별자입니다.
+  fileAssetId String @map("file_asset_id") @db.Uuid
+
+  notice    Notice    @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  fileAsset FileAsset @relation(fields: [fileAssetId], references: [id], onDelete: Restrict)
+
+  @@id([noticeId, fileAssetId])
+  @@map("notice_files")
+}
+
+/// 공지 최초 열람 기록입니다.
+model NoticeRead {
+  /// 공지 식별자입니다.
+  noticeId String   @map("notice_id") @db.Uuid
+  /// 열람 사용자 식별자입니다.
+  userId   String   @map("user_id") @db.Uuid
+  /// 최초 열람 시각입니다.
+  readAt   DateTime @map("read_at") @db.Timestamptz(6)
+
+  notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  user   User   @relation("NoticeReader", fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([noticeId, userId])
+  @@index([userId, readAt])
+  @@map("notice_reads")
+}
+
+/// 학생이 등록한 반 관련 또는 일반 문의입니다.
+model Inquiry {
+  /// 기본 키입니다.
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 문의 작성자입니다.
+  authorId  String        @map("author_id") @db.Uuid
+  /// 문의 유형입니다.
+  type      InquiryType
+  /// 반 관련 문의 대상 반입니다.
+  classId   String?       @map("class_id") @db.Uuid
+  /// 문의 제목입니다.
+  title     String        @db.VarChar(200)
+  /// 문의 내용입니다.
+  content   String        @db.Text
+  /// 문의 상태입니다.
+  status    InquiryStatus
+  /// 작성 시각입니다.
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 수정 시각입니다.
+  updatedAt DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  /// 종료 시각입니다.
+  closedAt  DateTime?     @map("closed_at") @db.Timestamptz(6)
+
+  author  User           @relation("InquiryAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  class   Class?         @relation(fields: [classId], references: [id], onDelete: Restrict)
+  replies InquiryReply[]
+  files   InquiryFile[]  @relation("InquiryFiles")
+
+  @@index([status, createdAt])
+  @@map("inquiries")
+}
+
+/// 문의에 등록된 추가 대화입니다.
+model InquiryReply {
+  /// 기본 키입니다.
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 문의 식별자입니다.
+  inquiryId String   @map("inquiry_id") @db.Uuid
+  /// 답글 작성자입니다.
+  authorId  String?  @map("author_id") @db.Uuid
+  /// 답글 내용입니다.
+  content   String   @db.Text
+  /// 작성 시각입니다.
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 수정 시각입니다.
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  inquiry Inquiry       @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  author  User?         @relation("InquiryReplyAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  files   InquiryFile[] @relation("InquiryReplyFiles")
+
+  @@map("inquiry_replies")
+}
+
+/// 문의 원문 또는 답글 첨부파일입니다.
+model InquiryFile {
+  /// 기본 키입니다.
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 문의 식별자입니다.
+  inquiryId   String  @map("inquiry_id") @db.Uuid
+  /// 답글 식별자이며 원문 첨부면 비어 있습니다.
+  replyId     String? @map("reply_id") @db.Uuid
+  /// 파일 자산 식별자입니다.
+  fileAssetId String  @map("file_asset_id") @db.Uuid
+
+  inquiry   Inquiry       @relation("InquiryFiles", fields: [inquiryId], references: [id], onDelete: Cascade)
+  reply     InquiryReply? @relation("InquiryReplyFiles", fields: [replyId], references: [id], onDelete: Cascade)
+  fileAsset FileAsset     @relation(fields: [fileAssetId], references: [id], onDelete: Restrict)
+
+  @@map("inquiry_files")
+}
+
+/// 강사 변경 시 반 인수인계 내용입니다.
+model Handover {
+  /// 기본 키입니다.
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 인수인계 대상 반입니다.
+  classId          String    @map("class_id") @db.Uuid
+  /// 이전 강사입니다.
+  fromInstructorId String?   @map("from_instructor_id") @db.Uuid
+  /// 새 강사입니다.
+  toInstructorId   String    @map("to_instructor_id") @db.Uuid
+  /// 제목입니다.
+  title            String    @db.VarChar(200)
+  /// 인수인계 내용입니다.
+  content          String    @db.Text
+  /// 생성자입니다.
+  createdById      String?   @map("created_by") @db.Uuid
+  /// 생성 시각입니다.
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 새 강사 확인 시각입니다.
+  acknowledgedAt   DateTime? @map("acknowledged_at") @db.Timestamptz(6)
+
+  class          Class          @relation(fields: [classId], references: [id], onDelete: Restrict)
+  fromInstructor User?          @relation("HandoverFromInstructor", fields: [fromInstructorId], references: [id], onDelete: SetNull)
+  toInstructor   User           @relation("HandoverToInstructor", fields: [toInstructorId], references: [id], onDelete: Restrict)
+  createdBy      User?          @relation("HandoverCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  files          HandoverFile[]
+
+  @@index([classId, createdAt])
+  @@index([toInstructorId, acknowledgedAt])
+  @@map("handovers")
+}
+
+/// 강사 인수인계 첨부파일입니다.
+model HandoverFile {
+  /// 인수인계 식별자입니다.
+  handoverId  String @map("handover_id") @db.Uuid
+  /// 파일 자산 식별자입니다.
+  fileAssetId String @map("file_asset_id") @db.Uuid
+
+  handover  Handover  @relation(fields: [handoverId], references: [id], onDelete: Cascade)
+  fileAsset FileAsset @relation(fields: [fileAssetId], references: [id], onDelete: Restrict)
+
+  @@id([handoverId, fileAssetId])
+  @@map("handover_files")
+}

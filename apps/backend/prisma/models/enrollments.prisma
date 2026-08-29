@@ -1,0 +1,124 @@
+/// Enrollment 테이블입니다.
+model Enrollment {
+  /// id 컬럼입니다.
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// studentId 컬럼입니다.
+  studentId         String           @map("student_id") @db.Uuid
+  /// courseOfferingId 컬럼입니다.
+  courseOfferingId  String           @map("course_offering_id") @db.Uuid
+  /// classId 컬럼입니다.
+  classId           String           @map("class_id") @db.Uuid
+  /// type 컬럼입니다.
+  type              EnrollmentType
+  /// status 컬럼입니다.
+  status            EnrollmentStatus
+  /// startsOn 컬럼입니다.
+  startsOn          DateTime         @map("starts_on") @db.Date
+  /// endsOn 컬럼입니다.
+  endsOn            DateTime?        @map("ends_on") @db.Date
+  /// reason 컬럼입니다.
+  reason            String?          @db.Text
+  /// attendanceManaged 컬럼입니다.
+  attendanceManaged Boolean          @map("attendance_managed")
+  /// gradeManaged 컬럼입니다.
+  gradeManaged      Boolean          @map("grade_managed")
+  /// assignedById 컬럼입니다.
+  assignedById      String?          @map("assigned_by") @db.Uuid
+  /// createdAt 컬럼입니다.
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// updatedAt 컬럼입니다.
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  student               User                   @relation("EnrollmentStudent", fields: [studentId], references: [id], onDelete: Restrict)
+  courseOffering        CourseOffering         @relation(fields: [courseOfferingId], references: [id], onDelete: Restrict)
+  class                 Class                  @relation(fields: [classId], references: [id], onDelete: Restrict)
+  assignedBy            User?                  @relation("EnrollmentAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
+  subjects              EnrollmentSubject[]
+  sessionParticipants   SessionParticipant[]
+  attendanceRecords     AttendanceRecord[]
+  examAttempts          ExamAttempt[]
+  assignmentSubmissions AssignmentSubmission[]
+
+  @@unique([id, studentId], map: "uq_enrollments_id_student")
+  @@unique([id, courseOfferingId], map: "uq_enrollments_id_offering")
+  @@unique([id, studentId, classId], map: "uq_enrollments_id_student_class")
+  @@unique([id, studentId, classId, courseOfferingId], map: "uq_enrollments_identity")
+  @@index([studentId, status], map: "idx_enrollments_student_status")
+  @@index([classId, status], map: "idx_enrollments_class_status")
+  @@index([classId, type], map: "idx_enrollments_class_type")
+  @@map("enrollments")
+}
+
+/// EnrollmentSubject 테이블입니다.
+model EnrollmentSubject {
+  /// id 컬럼입니다.
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// enrollmentId 컬럼입니다.
+  enrollmentId            String    @map("enrollment_id") @db.Uuid
+  /// courseOfferingId 컬럼입니다.
+  courseOfferingId        String    @map("course_offering_id") @db.Uuid
+  /// courseOfferingSubjectId 컬럼입니다.
+  courseOfferingSubjectId String    @map("course_offering_subject_id") @db.Uuid
+  /// startsOn 컬럼입니다.
+  startsOn                DateTime  @map("starts_on") @db.Date
+  /// endsOn 컬럼입니다.
+  endsOn                  DateTime? @map("ends_on") @db.Date
+  /// attendanceManaged 컬럼입니다.
+  attendanceManaged       Boolean   @map("attendance_managed")
+  /// gradeManaged 컬럼입니다.
+  gradeManaged            Boolean   @map("grade_managed")
+  /// reason 컬럼입니다.
+  reason                  String?   @db.Text
+  /// createdAt 컬럼입니다.
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// updatedAt 컬럼입니다.
+  updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  enrollment            Enrollment            @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  courseOfferingSubject CourseOfferingSubject @relation(fields: [courseOfferingSubjectId], references: [id], onDelete: Restrict)
+  sessionParticipants   SessionParticipant[]
+  attendanceRecords     AttendanceRecord[]
+
+  @@unique([enrollmentId, courseOfferingSubjectId], map: "uq_enrollment_subjects_enrollment_subject")
+  @@unique([id, enrollmentId, courseOfferingSubjectId], map: "uq_enrollment_subjects_identity")
+  @@index([courseOfferingSubjectId, enrollmentId], map: "idx_enrollment_subjects_offering_subject")
+  @@index([courseOfferingId], map: "idx_enrollment_subjects_offering")
+  @@map("enrollment_subjects")
+}
+
+/// SessionParticipant 테이블입니다.
+model SessionParticipant {
+  /// id 컬럼입니다.
+  id                        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// classSessionId 컬럼입니다.
+  classSessionId            String         @map("class_session_id") @db.Uuid
+  /// studentId 컬럼입니다.
+  studentId                 String         @map("student_id") @db.Uuid
+  /// courseOfferingSubjectId 컬럼입니다.
+  courseOfferingSubjectId   String         @map("course_offering_subject_id") @db.Uuid
+  /// sourceEnrollmentId 컬럼입니다.
+  sourceEnrollmentId        String         @map("source_enrollment_id") @db.Uuid
+  /// sourceEnrollmentSubjectId 컬럼입니다.
+  sourceEnrollmentSubjectId String         @map("source_enrollment_subject_id") @db.Uuid
+  /// type 컬럼입니다.
+  type                      EnrollmentType
+  /// reason 컬럼입니다.
+  reason                    String         @db.Text
+  /// assignedById 컬럼입니다.
+  assignedById              String?        @map("assigned_by") @db.Uuid
+  /// createdAt 컬럼입니다.
+  createdAt                 DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  classSession            ClassSession          @relation(fields: [classSessionId], references: [id], onDelete: Restrict)
+  student                 User                  @relation("SessionParticipantStudent", fields: [studentId], references: [id], onDelete: Restrict)
+  courseOfferingSubject   CourseOfferingSubject @relation(fields: [courseOfferingSubjectId], references: [id], onDelete: Restrict)
+  sourceEnrollment        Enrollment            @relation(fields: [sourceEnrollmentId], references: [id], onDelete: Restrict)
+  sourceEnrollmentSubject EnrollmentSubject     @relation(fields: [sourceEnrollmentSubjectId], references: [id], onDelete: Restrict)
+  assignedBy              User?                 @relation("SessionParticipantAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
+  attendanceRecords       AttendanceRecord[]
+
+  @@unique([classSessionId, studentId], map: "uq_session_participants_session_student")
+  @@unique([id, classSessionId, studentId, sourceEnrollmentId, sourceEnrollmentSubjectId], map: "uq_session_participants_identity")
+  @@index([studentId, classSessionId], map: "idx_session_participants_student_session")
+  @@map("session_participants")
+}

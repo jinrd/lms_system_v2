@@ -1,0 +1,291 @@
+/// 사용자 역할입니다.
+enum UserRole {
+  STUDENT
+  INSTRUCTOR
+  MANAGER
+  PRINCIPAL
+  ADMIN
+
+  @@map("user_role")
+}
+
+/// 사용자 계정 상태입니다.
+enum UserStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  REJECTED
+  INACTIVE
+  DELETE_PENDING
+  DELETED
+
+  @@map("user_status")
+}
+
+/// 성별입니다.
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  UNDISCLOSED
+
+  @@map("gender")
+}
+
+/// 과목 수업 방식입니다.
+enum SubjectMode {
+  THEORY
+  PRACTICE
+  MIXED
+
+  @@map("subject_mode")
+}
+
+/// 개설 강의 상태입니다.
+enum CourseStatus {
+  PLANNED
+  RECRUITING
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+
+  @@map("course_status")
+}
+
+/// 반 상태입니다.
+enum ClassStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+
+  @@map("class_status")
+}
+
+/// 수강 유형입니다.
+enum EnrollmentType {
+  REGULAR
+  SUPPLEMENT
+  MAKEUP
+  RETAKE
+  AUDIT
+
+  @@map("enrollment_type")
+}
+
+/// 수강 상태입니다.
+enum EnrollmentStatus {
+  SCHEDULED
+  ACTIVE
+  COMPLETED
+  CANCELED
+
+  @@map("enrollment_status")
+}
+
+/// 실제 수업 상태입니다.
+enum SessionStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+
+  @@map("session_status")
+}
+
+/// 실제 수업 종류입니다.
+enum SessionKind {
+  REGULAR
+  MAKEUP
+
+  @@map("session_kind")
+}
+
+/// 출석 상태입니다.
+enum AttendanceStatus {
+  UNPROCESSED
+  PRESENT
+  LATE
+  ABSENT
+  EARLY_LEAVE
+  EXCUSED
+
+  @@map("attendance_status")
+}
+
+/// 출석 처리 방식입니다.
+enum AttendanceMethod {
+  SYSTEM_AUTO
+  CODE
+  INSTRUCTOR_MANUAL
+  MANAGER_MANUAL
+  PRINCIPAL_MANUAL
+  ADMIN_MANUAL
+
+  @@map("attendance_method")
+}
+
+/// 출석 코드 상태입니다.
+enum AttendanceCodeStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+
+  @@map("attendance_code_status")
+}
+
+/// 출석 코드 입력 결과입니다.
+enum AttendanceCodeAttemptResult {
+  SUCCESS
+  INVALID
+  BLOCKED
+
+  @@map("attendance_code_attempt_result")
+}
+
+/// 시험 범위입니다.
+enum ExamScope {
+  SUBJECT
+  COMPREHENSIVE
+
+  @@map("exam_scope")
+}
+
+/// 시험 단계입니다.
+enum ExamStage {
+  REGULAR
+  MIDTERM
+  FINAL
+
+  @@map("exam_stage")
+}
+
+/// 시험 파트 유형입니다.
+enum ExamPartType {
+  WRITTEN
+  PRACTICAL
+
+  @@map("exam_part_type")
+}
+
+/// 필기 문제 유형입니다.
+enum QuestionType {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+  SHORT_ANSWER
+
+  @@map("question_type")
+}
+
+/// 문제 난이도입니다.
+enum DifficultyLevel {
+  EASY
+  NORMAL
+  HARD
+
+  @@map("difficulty_level")
+}
+
+/// 시험 상태입니다.
+enum ExamStatus {
+  DRAFT
+  SCHEDULED
+  OPEN
+  CLOSED
+  GRADING
+  COMPLETED
+  CANCELED
+
+  @@map("exam_status")
+}
+
+/// 응시 및 파트 제출 상태입니다.
+enum AttemptStatus {
+  NOT_STARTED
+  NOT_ATTENDED
+  IN_PROGRESS
+  SUBMITTED
+  INCOMPLETE
+  GRADING
+  GRADED
+
+  @@map("attempt_status")
+}
+
+/// 제출 방식입니다.
+enum SubmissionMethod {
+  MANUAL
+  AUTO_TIMEOUT
+  AUTO_PART_CLOSED
+
+  @@map("submission_method")
+}
+
+/// 합격 상태입니다.
+enum PassStatus {
+  PENDING
+  PASS
+  FAIL
+
+  @@map("pass_status")
+}
+
+/// 과제 제출 상태입니다.
+enum AssignmentSubmissionStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  GRADED
+
+  @@map("assignment_submission_status")
+}
+
+/// 공지 대상 유형입니다.
+enum NoticeType {
+  STUDENT
+  INSTRUCTOR
+
+  @@map("notice_type")
+}
+
+/// 공지 범위입니다.
+enum NoticeScope {
+  ALL
+  CLASSES
+
+  @@map("notice_scope")
+}
+
+/// 문의 유형입니다.
+enum InquiryType {
+  CLASS
+  GENERAL
+
+  @@map("inquiry_type")
+}
+
+/// 문의 상태입니다.
+enum InquiryStatus {
+  RECEIVED
+  IN_PROGRESS
+  ANSWERED
+  CLOSED
+
+  @@map("inquiry_status")
+}
+
+/// 파일 처리 상태입니다.
+enum FileStatus {
+  PENDING
+  ACTIVE
+  DELETE_PENDING
+  DELETED
+
+  @@map("file_status")
+}
+
+/// 감사 처리 결과입니다.
+enum AuditResult {
+  SUCCESS
+  FAILURE
+
+  @@map("audit_result")
+}

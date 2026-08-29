@@ -1,0 +1,47 @@
+/// TermsDocument 테이블입니다.
+model TermsDocument {
+  /// id 컬럼입니다.
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// type 컬럼입니다.
+  type        String         @db.VarChar(50)
+  /// version 컬럼입니다.
+  version     String         @db.VarChar(30)
+  /// title 컬럼입니다.
+  title       String         @db.VarChar(200)
+  /// content 컬럼입니다.
+  content     String         @db.Text
+  /// required 컬럼입니다.
+  required    Boolean
+  /// effectiveAt 컬럼입니다.
+  effectiveAt DateTime       @map("effective_at") @db.Timestamptz(6)
+  /// active 컬럼입니다.
+  active      Boolean
+  consents    TermsConsent[]
+
+  @@unique([type, version], map: "uq_terms_documents_type_version")
+  @@index([active, effectiveAt], map: "idx_terms_documents_active_effective_at")
+  @@map("terms_documents")
+}
+
+/// TermsConsent 테이블입니다.
+model TermsConsent {
+  /// id 컬럼입니다.
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// userId 컬럼입니다.
+  userId          String   @map("user_id") @db.Uuid
+  /// termsDocumentId 컬럼입니다.
+  termsDocumentId String   @map("terms_document_id") @db.Uuid
+  /// agreed 컬럼입니다.
+  agreed          Boolean
+  /// agreedAt 컬럼입니다.
+  agreedAt        DateTime @map("agreed_at") @db.Timestamptz(6)
+  /// ipAddress 컬럼입니다.
+  ipAddress       String?  @map("ip_address") @db.Inet
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  termsDocument TermsDocument @relation(fields: [termsDocumentId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, termsDocumentId], map: "uq_terms_consents_user_document")
+  @@index([termsDocumentId], map: "idx_terms_consents_document")
+  @@map("terms_consents")
+}

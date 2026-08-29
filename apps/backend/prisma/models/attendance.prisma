@@ -1,0 +1,120 @@
+/// 수업별 랜덤 출석 코드를 보관합니다.
+model AttendanceCode {
+  /// 기본 키입니다.
+  id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 실제 수업 식별자입니다.
+  classSessionId String               @map("class_session_id") @db.Uuid
+  /// HMAC-SHA-256 코드 해시입니다.
+  codeHash       String               @map("code_hash") @db.Char(64)
+  /// 코드 상태입니다.
+  status         AttendanceCodeStatus
+  /// 코드를 생성한 사용자입니다.
+  generatedById  String               @map("generated_by") @db.Uuid
+  /// 생성 시각입니다.
+  generatedAt    DateTime             @default(now()) @map("generated_at") @db.Timestamptz(6)
+  /// 만료 시각입니다.
+  expiresAt      DateTime             @map("expires_at") @db.Timestamptz(6)
+  /// 폐기 시각입니다.
+  revokedAt      DateTime?            @map("revoked_at") @db.Timestamptz(6)
+
+  classSession ClassSession            @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+  generatedBy  User                    @relation("AttendanceCodeGenerator", fields: [generatedById], references: [id], onDelete: Restrict)
+  attempts     AttendanceCodeAttempt[]
+
+  @@index([classSessionId, status])
+  @@map("attendance_codes")
+}
+
+/// 학생별 출석 코드 입력 시도를 보관합니다.
+model AttendanceCodeAttempt {
+  /// 기본 키입니다.
+  id               String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 출석 코드 식별자입니다.
+  attendanceCodeId String                      @map("attendance_code_id") @db.Uuid
+  /// 학생 식별자입니다.
+  studentId        String                      @map("student_id") @db.Uuid
+  /// 입력 결과입니다.
+  result           AttendanceCodeAttemptResult
+  /// 요청 IP 주소입니다.
+  ipAddress        String?                     @map("ip_address") @db.Inet
+  /// 요청 브라우저 정보입니다.
+  userAgent        String?                     @map("user_agent") @db.Text
+  /// 시도 시각입니다.
+  attemptedAt      DateTime                    @default(now()) @map("attempted_at") @db.Timestamptz(6)
+
+  attendanceCode AttendanceCode @relation(fields: [attendanceCodeId], references: [id], onDelete: Cascade)
+  student        User           @relation("AttendanceCodeAttemptStudent", fields: [studentId], references: [id], onDelete: Restrict)
+
+  @@index([attendanceCodeId, studentId, result, attemptedAt])
+  @@index([ipAddress, attemptedAt])
+  @@map("attendance_code_attempts")
+}
+
+/// 학생의 실제 수업별 출석 결과를 보관합니다.
+model AttendanceRecord {
+  /// 기본 키입니다.
+  id                      String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 실제 수업 식별자입니다.
+  classSessionId          String            @map("class_session_id") @db.Uuid
+  /// 개설 강의 과목 식별자입니다.
+  courseOfferingSubjectId String            @map("course_offering_subject_id") @db.Uuid
+  /// 수강 등록 식별자입니다.
+  enrollmentId            String            @map("enrollment_id") @db.Uuid
+  /// 수강 과목 식별자입니다.
+  enrollmentSubjectId     String            @map("enrollment_subject_id") @db.Uuid
+  /// 일회성 참여 식별자입니다.
+  sessionParticipantId    String?           @map("session_participant_id") @db.Uuid
+  /// 학생 식별자입니다.
+  studentId               String            @map("student_id") @db.Uuid
+  /// 출석 상태입니다.
+  status                  AttendanceStatus
+  /// 출석 처리 방식입니다.
+  method                  AttendanceMethod?
+  /// 출석 확인 시각입니다.
+  checkedAt               DateTime?         @map("checked_at") @db.Timestamptz(6)
+  /// 수동 처리자입니다.
+  processedById           String?           @map("processed_by") @db.Uuid
+  /// 생성 시각입니다.
+  createdAt               DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 수정 시각입니다.
+  updatedAt               DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  classSession          ClassSession              @relation(fields: [classSessionId], references: [id], onDelete: Restrict)
+  courseOfferingSubject CourseOfferingSubject     @relation(fields: [courseOfferingSubjectId], references: [id], onDelete: Restrict)
+  enrollment            Enrollment                @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  enrollmentSubject     EnrollmentSubject         @relation(fields: [enrollmentSubjectId], references: [id], onDelete: Restrict)
+  sessionParticipant    SessionParticipant?       @relation(fields: [sessionParticipantId], references: [id], onDelete: Restrict)
+  student               User                      @relation("AttendanceRecordStudent", fields: [studentId], references: [id], onDelete: Restrict)
+  processedBy           User?                     @relation("AttendanceRecordProcessor", fields: [processedById], references: [id], onDelete: SetNull)
+  changeHistories       AttendanceChangeHistory[]
+
+  @@unique([classSessionId, studentId])
+  @@index([studentId, classSessionId])
+  @@index([classSessionId, status])
+  @@index([studentId, status])
+  @@map("attendance_records")
+}
+
+/// 출석 상태 변경 이력을 불변 기록으로 보관합니다.
+model AttendanceChangeHistory {
+  /// 기본 키입니다.
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 출석 기록 식별자입니다.
+  attendanceRecordId String           @map("attendance_record_id") @db.Uuid
+  /// 변경 전 상태입니다.
+  previousStatus     AttendanceStatus @map("previous_status")
+  /// 변경 후 상태입니다.
+  newStatus          AttendanceStatus @map("new_status")
+  /// 변경 사유입니다.
+  reason             String           @db.Text
+  /// 변경 처리자입니다.
+  changedById        String?          @map("changed_by") @db.Uuid
+  /// 변경 시각입니다.
+  changedAt          DateTime         @default(now()) @map("changed_at") @db.Timestamptz(6)
+
+  attendanceRecord AttendanceRecord @relation(fields: [attendanceRecordId], references: [id], onDelete: Restrict)
+  changedBy        User?            @relation("AttendanceChangeActor", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([attendanceRecordId, changedAt])
+  @@map("attendance_change_histories")
+}

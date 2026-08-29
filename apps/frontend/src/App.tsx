@@ -1,0 +1,129 @@
+import {
+  Navigate,
+  RouterProvider,
+  createBrowserRouter,
+} from "react-router-dom";
+import { AuthProvider, GuestOnly, RequireAuth } from "./auth/AuthProvider";
+import { AppShell } from "./components/layout/AppShell";
+import { ErrorState } from "./components/ui/PageStates";
+import { ChangePasswordPage, LoginPage } from "./pages/AuthPages";
+import { DashboardPage, PlaceholderPage } from "./pages";
+
+const placeholderRoutes = [
+  {
+    path: "notices",
+    title: "공지사항",
+    description: "학생과 강사에게 전달할 공지를 관리합니다.",
+  },
+  {
+    path: "inquiries",
+    title: "문의사항",
+    description: "학생 문의와 담당자 답변을 관리합니다.",
+  },
+  {
+    path: "education",
+    title: "교육 분야·과목",
+    description: "교육 분야와 세부 과목을 관리합니다.",
+  },
+  {
+    path: "courses",
+    title: "개설 강의",
+    description: "개설 강의와 포함 과목을 관리합니다.",
+  },
+  {
+    path: "classes",
+    title: "반 관리",
+    description: "반 정보와 담당 강사를 관리합니다.",
+  },
+  {
+    path: "schedule",
+    title: "수업 일정",
+    description: "반복 시간표와 실제 수업 일정을 관리합니다.",
+  },
+  {
+    path: "attendance",
+    title: "출석",
+    description: "수업별 출석 현황과 변경 이력을 관리합니다.",
+  },
+  {
+    path: "learning",
+    title: "과제·시험",
+    description: "과제와 시험 운영 현황을 관리합니다.",
+  },
+  {
+    path: "analytics",
+    title: "운영 통계",
+    description: "출석, 시험, 수강 현황을 분석합니다.",
+  },
+  {
+    path: "users",
+    title: "사용자 관리",
+    description: "학생과 강사 계정을 관리합니다.",
+  },
+  {
+    path: "system",
+    title: "시스템 관리",
+    description: "로그, 백업, 파일과 시스템 설정을 관리합니다.",
+  },
+];
+
+const router = createBrowserRouter([
+  {
+    path: "/login",
+    element: (
+      <GuestOnly>
+        <LoginPage />
+      </GuestOnly>
+    ),
+  },
+  {
+    path: "/change-password",
+    element: (
+      <RequireAuth>
+        <ChangePasswordPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/",
+    element: (
+      <RequireAuth>
+        <AppShell />
+      </RequireAuth>
+    ),
+    errorElement: (
+      <div className="standalone-state">
+        <ErrorState message="페이지를 찾을 수 없습니다." />
+      </div>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Navigate to="/dashboard" replace />,
+      },
+      {
+        path: "dashboard",
+        element: <DashboardPage />,
+      },
+      ...placeholderRoutes.map((route) => ({
+        path: route.path,
+        element: (
+          <PlaceholderPage
+            title={route.title}
+            description={route.description}
+          />
+        ),
+      })),
+    ],
+  },
+]);
+
+function App() {
+  return (
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  );
+}
+
+export default App;

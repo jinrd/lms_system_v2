@@ -1,0 +1,243 @@
+/// 오브젝트 스토리지 파일 메타데이터입니다.
+model FileAsset {
+  /// 기본 키입니다.
+  id                String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 스토리지 공급자입니다.
+  storageProvider   String     @map("storage_provider") @db.VarChar(50)
+  /// 버킷명입니다.
+  bucket            String     @db.VarChar(150)
+  /// 오브젝트 저장 키입니다.
+  objectKey         String     @map("object_key") @db.VarChar(500)
+  /// 원본 파일명입니다.
+  originalName      String     @map("original_name") @db.VarChar(255)
+  /// 검증된 MIME 타입입니다.
+  mimeType          String     @map("mime_type") @db.VarChar(100)
+  /// 파일 크기입니다.
+  sizeBytes         BigInt     @map("size_bytes")
+  /// 파일 체크섬입니다.
+  checksum          String?    @db.VarChar(128)
+  /// 이미지 너비입니다.
+  width             Int?
+  /// 이미지 높이입니다.
+  height            Int?
+  /// 미리보기 오브젝트 키입니다.
+  previewObjectKey  String?    @map("preview_object_key") @db.VarChar(500)
+  /// 미리보기 MIME 타입입니다.
+  previewMimeType   String?    @map("preview_mime_type") @db.VarChar(100)
+  /// 미리보기 파일 크기입니다.
+  previewSizeBytes  BigInt?    @map("preview_size_bytes")
+  /// 파일 상태입니다.
+  status            FileStatus
+  /// 업로드 사용자입니다.
+  uploadedById      String?    @map("uploaded_by") @db.Uuid
+  /// 업로드 당시 역할입니다.
+  uploadedByRole    UserRole?  @map("uploaded_by_role")
+  /// 물리 삭제 예정 시각입니다.
+  deleteAfter       DateTime?  @map("delete_after") @db.Timestamptz(6)
+  /// 삭제 요청 시각입니다.
+  deleteRequestedAt DateTime?  @map("delete_requested_at") @db.Timestamptz(6)
+  /// 삭제 사유입니다.
+  deleteReason      String?    @map("delete_reason") @db.VarChar(100)
+  /// 업로드 시각입니다.
+  createdAt         DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 실제 삭제 시각입니다.
+  deletedAt         DateTime?  @map("deleted_at") @db.Timestamptz(6)
+
+  uploadedBy                User?                      @relation("FileUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  practicalSubmissions      PracticalSubmissionFile[]
+  assignmentSubmissionFiles AssignmentSubmissionFile[]
+  learningMaterialFiles     LearningMaterialFile[]
+  noticeFiles               NoticeFile[]
+  inquiryFiles              InquiryFile[]
+  handoverFiles             HandoverFile[]
+
+  @@unique([storageProvider, bucket, objectKey])
+  @@index([status, deleteAfter])
+  @@index([status, createdAt])
+  @@map("file_assets")
+}
+
+/// 실기 시험 제출 사진 연결입니다.
+model PracticalSubmissionFile {
+  /// 실기 파트 제출 식별자입니다.
+  examPartSubmissionId String @map("exam_part_submission_id") @db.Uuid
+  /// 파일 자산 식별자입니다.
+  fileAssetId          String @map("file_asset_id") @db.Uuid
+  /// 사진 표시 순서입니다.
+  displayOrder         Int    @map("display_order") @db.SmallInt
+
+  examPartSubmission ExamPartSubmission @relation(fields: [examPartSubmissionId], references: [id], onDelete: Cascade)
+  fileAsset          FileAsset          @relation(fields: [fileAssetId], references: [id], onDelete: Restrict)
+
+  @@id([examPartSubmissionId, fileAssetId])
+  @@unique([examPartSubmissionId, displayOrder])
+  @@map("practical_submission_files")
+}
+
+/// 반 또는 반 과목에 부여된 과제입니다.
+model Assignment {
+  /// 기본 키입니다.
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 대상 반 식별자입니다.
+  classId        String    @map("class_id") @db.Uuid
+  /// 선택적 반 과목 식별자입니다.
+  classSubjectId String?   @map("class_subject_id") @db.Uuid
+  /// 과제 제목입니다.
+  title          String    @db.VarChar(200)
+  /// 과제 내용입니다.
+  description    String    @db.Text
+  /// 제출 시작 시각입니다.
+  opensAt        DateTime? @map("opens_at") @db.Timestamptz(6)
+  /// 제출 마감 시각입니다.
+  dueAt          DateTime  @map("due_at") @db.Timestamptz(6)
+  /// 최대 점수입니다.
+  maxScore       Decimal?  @map("max_score") @db.Decimal(6, 2)
+  /// 생성자입니다.
+  createdById    String?   @map("created_by") @db.Uuid
+  /// 생성 시각입니다.
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 수정 시각입니다.
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  class        Class                  @relation(fields: [classId], references: [id], onDelete: Restrict)
+  classSubject ClassSubject?          @relation(fields: [classSubjectId], references: [id], onDelete: Restrict)
+  createdBy    User?                  @relation("AssignmentCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  submissions  AssignmentSubmission[]
+
+  @@unique([id, classId])
+  @@index([classId, dueAt])
+  @@index([classSubjectId, dueAt])
+  @@map("assignments")
+}
+
+/// 학생별 과제 제출 묶음과 채점 상태입니다.
+model AssignmentSubmission {
+  /// 기본 키입니다.
+  id               String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 과제 식별자입니다.
+  assignmentId     String                     @map("assignment_id") @db.Uuid
+  /// 대상 반 식별자입니다.
+  classId          String                     @map("class_id") @db.Uuid
+  /// 학생 식별자입니다.
+  studentId        String                     @map("student_id") @db.Uuid
+  /// 수강 등록 식별자입니다.
+  enrollmentId     String                     @map("enrollment_id") @db.Uuid
+  /// 최신 제출 버전 식별자입니다.
+  currentVersionId String?                    @map("current_version_id") @db.Uuid
+  /// 제출 상태입니다.
+  status           AssignmentSubmissionStatus
+  /// 채점 점수입니다.
+  score            Decimal?                   @db.Decimal(6, 2)
+  /// 강사 피드백입니다.
+  feedback         String?                    @db.Text
+  /// 채점자입니다.
+  gradedById       String?                    @map("graded_by") @db.Uuid
+  /// 채점 시각입니다.
+  gradedAt         DateTime?                  @map("graded_at") @db.Timestamptz(6)
+  /// 생성 시각입니다.
+  createdAt        DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 수정 시각입니다.
+  updatedAt        DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  assignment     Assignment                    @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+  class          Class                         @relation(fields: [classId], references: [id], onDelete: Restrict)
+  student        User                          @relation("AssignmentSubmissionStudent", fields: [studentId], references: [id], onDelete: Restrict)
+  enrollment     Enrollment                    @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  currentVersion AssignmentSubmissionVersion?  @relation("CurrentAssignmentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions       AssignmentSubmissionVersion[] @relation("AssignmentSubmissionVersions")
+  gradedBy       User?                         @relation("AssignmentSubmissionGrader", fields: [gradedById], references: [id], onDelete: SetNull)
+
+  @@unique([assignmentId, studentId])
+  @@map("assignment_submissions")
+}
+
+/// 과제 재제출의 불변 버전입니다.
+model AssignmentSubmissionVersion {
+  /// 기본 키입니다.
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 제출 묶음 식별자입니다.
+  assignmentSubmissionId String   @map("assignment_submission_id") @db.Uuid
+  /// 1부터 증가하는 버전 번호입니다.
+  versionNumber          Int      @map("version_number")
+  /// 학생 입력 내용입니다.
+  content                String?  @db.Text
+  /// 제출 시각입니다.
+  submittedAt            DateTime @map("submitted_at") @db.Timestamptz(6)
+  /// 생성 시각입니다.
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  assignmentSubmission  AssignmentSubmission       @relation("AssignmentSubmissionVersions", fields: [assignmentSubmissionId], references: [id], onDelete: Cascade)
+  currentForSubmissions AssignmentSubmission[]     @relation("CurrentAssignmentVersion")
+  files                 AssignmentSubmissionFile[]
+
+  @@unique([assignmentSubmissionId, versionNumber])
+  @@unique([id, assignmentSubmissionId])
+  @@map("assignment_submission_versions")
+}
+
+/// 과제 제출 버전에 첨부된 파일입니다.
+model AssignmentSubmissionFile {
+  /// 제출 버전 식별자입니다.
+  assignmentSubmissionVersionId String @map("assignment_submission_version_id") @db.Uuid
+  /// 파일 자산 식별자입니다.
+  fileAssetId                   String @map("file_asset_id") @db.Uuid
+  /// 파일 표시 순서입니다.
+  displayOrder                  Int    @map("display_order") @db.SmallInt
+
+  assignmentSubmissionVersion AssignmentSubmissionVersion @relation(fields: [assignmentSubmissionVersionId], references: [id], onDelete: Cascade)
+  fileAsset                   FileAsset                   @relation(fields: [fileAssetId], references: [id], onDelete: Restrict)
+
+  @@id([assignmentSubmissionVersionId, fileAssetId])
+  @@unique([assignmentSubmissionVersionId, displayOrder])
+  @@map("assignment_submission_files")
+}
+
+/// 반 또는 반 과목에 공개되는 학습 자료입니다.
+model LearningMaterial {
+  /// 기본 키입니다.
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 대상 반 식별자입니다.
+  classId        String    @map("class_id") @db.Uuid
+  /// 선택적 반 과목 식별자입니다.
+  classSubjectId String?   @map("class_subject_id") @db.Uuid
+  /// 자료명입니다.
+  title          String    @db.VarChar(200)
+  /// 자료 설명입니다.
+  description    String?   @db.Text
+  /// 공개 시작 시각입니다.
+  visibleFrom    DateTime? @map("visible_from") @db.Timestamptz(6)
+  /// 활성 여부입니다.
+  active         Boolean
+  /// 삭제 시각입니다.
+  removedAt      DateTime? @map("removed_at") @db.Timestamptz(6)
+  /// 삭제 처리자입니다.
+  removedById    String?   @map("removed_by") @db.Uuid
+  /// 생성자입니다.
+  createdById    String?   @map("created_by") @db.Uuid
+  /// 생성 시각입니다.
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 수정 시각입니다.
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  class        Class                  @relation(fields: [classId], references: [id], onDelete: Restrict)
+  classSubject ClassSubject?          @relation(fields: [classSubjectId], references: [id], onDelete: Restrict)
+  removedBy    User?                  @relation("LearningMaterialRemover", fields: [removedById], references: [id], onDelete: SetNull)
+  createdBy    User?                  @relation("LearningMaterialCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  files        LearningMaterialFile[]
+
+  @@map("learning_materials")
+}
+
+/// 학습 자료 첨부파일입니다.
+model LearningMaterialFile {
+  /// 학습 자료 식별자입니다.
+  learningMaterialId String @map("learning_material_id") @db.Uuid
+  /// 파일 자산 식별자입니다.
+  fileAssetId        String @map("file_asset_id") @db.Uuid
+
+  learningMaterial LearningMaterial @relation(fields: [learningMaterialId], references: [id], onDelete: Cascade)
+  fileAsset        FileAsset        @relation(fields: [fileAssetId], references: [id], onDelete: Restrict)
+
+  @@id([learningMaterialId, fileAssetId])
+  @@map("learning_material_files")
+}

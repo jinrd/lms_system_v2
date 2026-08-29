@@ -1,0 +1,200 @@
+/// User 테이블입니다.
+model User {
+  /// id 컬럼입니다.
+  id                         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// loginId 컬럼입니다.
+  loginId                    String?    @map("login_id") @db.VarChar(100)
+  /// email 컬럼입니다.
+  email                      String?    @db.VarChar(255)
+  /// passwordHash 컬럼입니다.
+  passwordHash               String?    @map("password_hash") @db.VarChar(255)
+  /// name 컬럼입니다.
+  name                       String     @db.VarChar(100)
+  /// phone 컬럼입니다.
+  phone                      String?    @db.VarChar(30)
+  /// birthDate 컬럼입니다.
+  birthDate                  DateTime?  @map("birth_date") @db.Date
+  /// gender 컬럼입니다.
+  gender                     Gender?
+  /// role 컬럼입니다.
+  role                       UserRole
+  /// status 컬럼입니다.
+  status                     UserStatus
+  /// mustChangePassword 컬럼입니다.
+  mustChangePassword         Boolean    @default(false) @map("must_change_password")
+  /// temporaryPasswordExpiresAt 컬럼입니다.
+  temporaryPasswordExpiresAt DateTime?  @map("temporary_password_expires_at") @db.Timestamptz(6)
+  /// tokenVersion 컬럼입니다.
+  tokenVersion               Int        @default(0) @map("token_version")
+  /// failedLoginAttempts 컬럼입니다.
+  failedLoginAttempts        Int        @default(0) @map("failed_login_attempts")
+  /// lockedUntil 컬럼입니다.
+  lockedUntil                DateTime?  @map("locked_until") @db.Timestamptz(6)
+  /// passwordChangedAt 컬럼입니다.
+  passwordChangedAt          DateTime?  @map("password_changed_at") @db.Timestamptz(6)
+  /// lastLoginAt 컬럼입니다.
+  lastLoginAt                DateTime?  @map("last_login_at") @db.Timestamptz(6)
+  /// approvedById 컬럼입니다.
+  approvedById               String?    @map("approved_by") @db.Uuid
+  /// approvedAt 컬럼입니다.
+  approvedAt                 DateTime?  @map("approved_at") @db.Timestamptz(6)
+  /// rejectedAt 컬럼입니다.
+  rejectedAt                 DateTime?  @map("rejected_at") @db.Timestamptz(6)
+  /// rejectionReason 컬럼입니다.
+  rejectionReason            String?    @map("rejection_reason") @db.Text
+  /// deactivatedAt 컬럼입니다.
+  deactivatedAt              DateTime?  @map("deactivated_at") @db.Timestamptz(6)
+  /// scheduledDeletionAt 컬럼입니다.
+  scheduledDeletionAt        DateTime?  @map("scheduled_deletion_at") @db.Timestamptz(6)
+  /// deletedAt 컬럼입니다.
+  deletedAt                  DateTime?  @map("deleted_at") @db.Timestamptz(6)
+  /// createdById 컬럼입니다.
+  createdById                String?    @map("created_by") @db.Uuid
+  /// createdAt 컬럼입니다.
+  createdAt                  DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// updatedAt 컬럼입니다.
+  updatedAt                  DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  approvedBy                    User?                       @relation("UserApproval", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedUsers                 User[]                      @relation("UserApproval")
+  createdBy                     User?                       @relation("UserCreation", fields: [createdById], references: [id], onDelete: SetNull)
+  createdUsers                  User[]                      @relation("UserCreation")
+  studentProfile                StudentProfile?
+  statusHistories               UserStatusHistory[]         @relation("StatusHistoryUser")
+  performedStatusChanges        UserStatusHistory[]         @relation("StatusHistoryChangedBy")
+  authSessions                  AuthSession[]
+  termsConsents                 TermsConsent[]
+  courseOfferingsCreated        CourseOffering[]            @relation("CourseOfferingCreator")
+  classesCreated                Class[]                     @relation("ClassCreator")
+  instructorAssignments         ClassInstructorAssignment[] @relation("AssignedInstructor")
+  instructorAssignmentsCreated  ClassInstructorAssignment[] @relation("InstructorAssignmentCreator")
+  sessionsInstructed            ClassSession[]              @relation("SessionInstructor")
+  sessionsCanceled              ClassSession[]              @relation("SessionCanceler")
+  sessionsCreated               ClassSession[]              @relation("SessionCreator")
+  progressUpdates               ClassSubjectProgress[]      @relation("ProgressUpdater")
+  enrollments                   Enrollment[]                @relation("EnrollmentStudent")
+  enrollmentsAssigned           Enrollment[]                @relation("EnrollmentAssigner")
+  sessionParticipations         SessionParticipant[]        @relation("SessionParticipantStudent")
+  sessionParticipationsAssigned SessionParticipant[]        @relation("SessionParticipantAssigner")
+  attendanceCodesGenerated      AttendanceCode[]            @relation("AttendanceCodeGenerator")
+  attendanceCodeAttempts        AttendanceCodeAttempt[]     @relation("AttendanceCodeAttemptStudent")
+  attendanceRecords             AttendanceRecord[]          @relation("AttendanceRecordStudent")
+  attendanceRecordsProcessed    AttendanceRecord[]          @relation("AttendanceRecordProcessor")
+  attendanceChanges             AttendanceChangeHistory[]   @relation("AttendanceChangeActor")
+  questionBanksCreated          QuestionBank[]              @relation("QuestionBankCreator")
+  examTemplatesCreated          ExamTemplate[]              @relation("ExamTemplateCreator")
+  examsTargetLocked             Exam[]                      @relation("ExamTargetLocker")
+  examsCanceled                 Exam[]                      @relation("ExamCanceler")
+  examsResultsReviewed          Exam[]                      @relation("ExamResultsReviewer")
+  examsResultsPublished         Exam[]                      @relation("ExamResultsPublisher")
+  examsCreated                  Exam[]                      @relation("ExamCreator")
+  examAttempts                  ExamAttempt[]               @relation("ExamAttemptStudent")
+  examPartsGraded               ExamPartSubmission[]        @relation("ExamPartSubmissionGrader")
+  practicalScoresGraded         PracticalScore[]            @relation("PracticalScoreGrader")
+  examResultRevisions           ExamResultRevision[]        @relation("ExamResultRevisionActor")
+  filesUploaded                 FileAsset[]                 @relation("FileUploader")
+  assignmentsCreated            Assignment[]                @relation("AssignmentCreator")
+  assignmentSubmissions         AssignmentSubmission[]      @relation("AssignmentSubmissionStudent")
+  assignmentSubmissionsGraded   AssignmentSubmission[]      @relation("AssignmentSubmissionGrader")
+  learningMaterialsRemoved      LearningMaterial[]          @relation("LearningMaterialRemover")
+  learningMaterialsCreated      LearningMaterial[]          @relation("LearningMaterialCreator")
+  noticesAuthored               Notice[]                    @relation("NoticeAuthor")
+  noticesRead                   NoticeRead[]                @relation("NoticeReader")
+  inquiriesAuthored             Inquiry[]                   @relation("InquiryAuthor")
+  inquiryRepliesAuthored        InquiryReply[]              @relation("InquiryReplyAuthor")
+  handoversFrom                 Handover[]                  @relation("HandoverFromInstructor")
+  handoversTo                   Handover[]                  @relation("HandoverToInstructor")
+  handoversCreated              Handover[]                  @relation("HandoverCreator")
+  auditLogs                     AuditLog[]                  @relation("AuditLogActor")
+  systemLogs                    SystemLog[]                 @relation("SystemLogUser")
+  systemSettingsUpdated         SystemSetting[]             @relation("SystemSettingUpdater")
+
+  @@index([loginId], map: "idx_users_login_id")
+  @@index([role, status], map: "idx_users_role_status")
+  @@index([name], map: "idx_users_name")
+  @@index([phone], map: "idx_users_phone")
+  @@map("users")
+}
+
+/// StudentProfile 테이블입니다.
+model StudentProfile {
+  /// userId 컬럼입니다.
+  userId            String    @id @map("user_id") @db.Uuid
+  /// isMinorAtSignup 컬럼입니다.
+  isMinorAtSignup   Boolean   @map("is_minor_at_signup")
+  /// guardianName 컬럼입니다.
+  guardianName      String?   @map("guardian_name") @db.VarChar(100)
+  /// guardianPhone 컬럼입니다.
+  guardianPhone     String?   @map("guardian_phone") @db.VarChar(30)
+  /// guardianRemovedAt 컬럼입니다.
+  guardianRemovedAt DateTime? @map("guardian_removed_at") @db.Timestamptz(6)
+  /// createdAt 컬럼입니다.
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// updatedAt 컬럼입니다.
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("student_profiles")
+}
+
+/// UserStatusHistory 테이블입니다.
+model UserStatusHistory {
+  /// id 컬럼입니다.
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// userId 컬럼입니다.
+  userId         String     @map("user_id") @db.Uuid
+  /// previousStatus 컬럼입니다.
+  previousStatus UserStatus @map("previous_status")
+  /// newStatus 컬럼입니다.
+  newStatus      UserStatus @map("new_status")
+  /// reason 컬럼입니다.
+  reason         String     @db.Text
+  /// changedById 컬럼입니다.
+  changedById    String?    @map("changed_by") @db.Uuid
+  /// changedAt 컬럼입니다.
+  changedAt      DateTime   @default(now()) @map("changed_at") @db.Timestamptz(6)
+
+  user      User  @relation("StatusHistoryUser", fields: [userId], references: [id], onDelete: Restrict)
+  changedBy User? @relation("StatusHistoryChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, changedAt(sort: Desc)], map: "idx_user_status_histories_user_changed_at")
+  @@map("user_status_histories")
+}
+
+/// AuthSession 테이블입니다.
+model AuthSession {
+  /// id 컬럼입니다.
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// userId 컬럼입니다.
+  userId               String    @map("user_id") @db.Uuid
+  /// deviceIdentifierHash 컬럼입니다.
+  deviceIdentifierHash String    @map("device_identifier_hash") @db.Char(64)
+  /// deviceName 컬럼입니다.
+  deviceName           String?   @map("device_name") @db.VarChar(150)
+  /// refreshTokenHash 컬럼입니다.
+  refreshTokenHash     String    @map("refresh_token_hash") @db.Char(64)
+  /// tokenVersion 컬럼입니다.
+  tokenVersion         Int       @map("token_version")
+  /// ipAddress 컬럼입니다.
+  ipAddress            String?   @map("ip_address") @db.Inet
+  /// userAgent 컬럼입니다.
+  userAgent            String?   @map("user_agent") @db.Text
+  /// lastUsedAt 컬럼입니다.
+  lastUsedAt           DateTime  @map("last_used_at") @db.Timestamptz(6)
+  /// expiresAt 컬럼입니다.
+  expiresAt            DateTime  @map("expires_at") @db.Timestamptz(6)
+  /// revokedAt 컬럼입니다.
+  revokedAt            DateTime? @map("revoked_at") @db.Timestamptz(6)
+  /// revokeReason 컬럼입니다.
+  revokeReason         String?   @map("revoke_reason") @db.VarChar(100)
+  /// createdAt 컬럼입니다.
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceIdentifierHash], map: "uq_auth_sessions_user_device")
+  @@index([userId, revokedAt, expiresAt], map: "idx_auth_sessions_user_active")
+  @@index([refreshTokenHash], map: "idx_auth_sessions_refresh_token_hash")
+  @@map("auth_sessions")
+}

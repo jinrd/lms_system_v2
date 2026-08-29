@@ -1,0 +1,500 @@
+/// 실제 시행되는 시험입니다.
+model Exam {
+  /// 기본 키입니다.
+  id                   String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 개설 강의 식별자입니다.
+  courseOfferingId     String     @map("course_offering_id") @db.Uuid
+  /// 원본 템플릿 식별자입니다.
+  sourceTemplateId     String?    @map("source_template_id") @db.Uuid
+  /// 복제 원본 시험 식별자입니다.
+  sourceExamId         String?    @map("source_exam_id") @db.Uuid
+  /// 시험 제목입니다.
+  title                String     @db.VarChar(200)
+  /// 시험 설명입니다.
+  description          String?    @db.Text
+  /// 시험 범위입니다.
+  scope                ExamScope
+  /// 시험 단계입니다.
+  stage                ExamStage
+  /// 시험 상태입니다.
+  status               ExamStatus
+  /// 전체 응시 시작 시각입니다.
+  opensAt              DateTime   @map("opens_at") @db.Timestamptz(6)
+  /// 전체 응시 종료 시각입니다.
+  closesAt             DateTime   @map("closes_at") @db.Timestamptz(6)
+  /// 대상 명단 잠금 시각입니다.
+  targetLockedAt       DateTime?  @map("target_locked_at") @db.Timestamptz(6)
+  /// 대상 명단 잠금 처리자입니다.
+  targetLockedById     String?    @map("target_locked_by") @db.Uuid
+  /// 취소 시각입니다.
+  canceledAt           DateTime?  @map("canceled_at") @db.Timestamptz(6)
+  /// 취소 처리자입니다.
+  canceledById         String?    @map("canceled_by") @db.Uuid
+  /// 취소 사유입니다.
+  cancelReason         String?    @map("cancel_reason") @db.Text
+  /// 결과 확인 시각입니다.
+  resultsReviewedAt    DateTime?  @map("results_reviewed_at") @db.Timestamptz(6)
+  /// 결과 확인자입니다.
+  resultsReviewedById  String?    @map("results_reviewed_by") @db.Uuid
+  /// 결과 공개 시각입니다.
+  resultsPublishedAt   DateTime?  @map("results_published_at") @db.Timestamptz(6)
+  /// 결과 공개자입니다.
+  resultsPublishedById String?    @map("results_published_by") @db.Uuid
+  /// 생성자입니다.
+  createdById          String?    @map("created_by") @db.Uuid
+  /// 생성 시각입니다.
+  createdAt            DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 수정 시각입니다.
+  updatedAt            DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  courseOffering      CourseOffering       @relation(fields: [courseOfferingId], references: [id], onDelete: Restrict)
+  sourceTemplate      ExamTemplate?        @relation(fields: [sourceTemplateId], references: [id], onDelete: SetNull)
+  sourceExam          Exam?                @relation("ExamSource", fields: [sourceExamId], references: [id], onDelete: SetNull)
+  clonedExams         Exam[]               @relation("ExamSource")
+  targetLockedBy      User?                @relation("ExamTargetLocker", fields: [targetLockedById], references: [id], onDelete: SetNull)
+  canceledBy          User?                @relation("ExamCanceler", fields: [canceledById], references: [id], onDelete: SetNull)
+  resultsReviewedBy   User?                @relation("ExamResultsReviewer", fields: [resultsReviewedById], references: [id], onDelete: SetNull)
+  resultsPublishedBy  User?                @relation("ExamResultsPublisher", fields: [resultsPublishedById], references: [id], onDelete: SetNull)
+  createdBy           User?                @relation("ExamCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  subjects            ExamSubject[]
+  classTargets        ExamClassTarget[]
+  parts               ExamPart[]
+  attempts            ExamAttempt[]
+  examQuestions       ExamQuestion[]
+  examPartSubmissions ExamPartSubmission[]
+
+  @@unique([id, courseOfferingId])
+  @@index([courseOfferingId, status])
+  @@index([status, opensAt, closesAt])
+  @@map("exams")
+}
+
+/// 시험 평가 대상 과목입니다.
+model ExamSubject {
+  /// 시험 식별자입니다.
+  examId                  String @map("exam_id") @db.Uuid
+  /// 개설 강의 식별자입니다.
+  courseOfferingId        String @map("course_offering_id") @db.Uuid
+  /// 개설 강의 과목 식별자입니다.
+  courseOfferingSubjectId String @map("course_offering_subject_id") @db.Uuid
+
+  exam                  Exam                  @relation(fields: [examId], references: [id], onDelete: Cascade)
+  courseOffering        CourseOffering        @relation(fields: [courseOfferingId], references: [id], onDelete: Restrict)
+  courseOfferingSubject CourseOfferingSubject @relation(fields: [courseOfferingSubjectId], references: [id], onDelete: Restrict)
+
+  @@id([examId, courseOfferingSubjectId])
+  @@map("exam_subjects")
+}
+
+/// 시험 대상 반입니다.
+model ExamClassTarget {
+  /// 시험 식별자입니다.
+  examId           String @map("exam_id") @db.Uuid
+  /// 개설 강의 식별자입니다.
+  courseOfferingId String @map("course_offering_id") @db.Uuid
+  /// 반 식별자입니다.
+  classId          String @map("class_id") @db.Uuid
+
+  exam           Exam           @relation(fields: [examId], references: [id], onDelete: Cascade)
+  courseOffering CourseOffering @relation(fields: [courseOfferingId], references: [id], onDelete: Restrict)
+  class          Class          @relation(fields: [classId], references: [id], onDelete: Restrict)
+
+  @@id([examId, classId])
+  @@map("exam_class_targets")
+}
+
+/// 실제 시험의 필기 또는 실기 파트 스냅샷입니다.
+model ExamPart {
+  /// 기본 키입니다.
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 시험 식별자입니다.
+  examId            String       @map("exam_id") @db.Uuid
+  /// 파트 유형입니다.
+  type              ExamPartType
+  /// 총점입니다.
+  totalScore        Decimal      @map("total_score") @db.Decimal(6, 2)
+  /// 합격 점수입니다.
+  passScore         Decimal      @map("pass_score") @db.Decimal(6, 2)
+  /// 파트 시작 시각입니다.
+  opensAt           DateTime     @map("opens_at") @db.Timestamptz(6)
+  /// 파트 종료 시각입니다.
+  closesAt          DateTime     @map("closes_at") @db.Timestamptz(6)
+  /// 필기 제한 시간입니다.
+  durationMinutes   Int?         @map("duration_minutes")
+  /// 최소 파일 수입니다.
+  minFiles          Int?         @map("min_files") @db.SmallInt
+  /// 최대 파일 수입니다.
+  maxFiles          Int?         @map("max_files") @db.SmallInt
+  /// 파일당 최대 크기입니다.
+  maxFileSizeBytes  BigInt?      @map("max_file_size_bytes")
+  /// 전체 파일 최대 크기입니다.
+  maxTotalSizeBytes BigInt?      @map("max_total_size_bytes")
+  /// 응시 안내입니다.
+  instructions      String?      @db.Text
+
+  exam                      Exam                       @relation(fields: [examId], references: [id], onDelete: Cascade)
+  questions                 ExamQuestion[]
+  practicalCriteria         ExamPracticalCriterion[]
+  submissions               ExamPartSubmission[]
+  examAttemptQuestionOrders ExamAttemptQuestionOrder[]
+  examAttemptOptionOrders   ExamAttemptOptionOrder[]
+  examAnswers               ExamAnswer[]
+  practicalScores           PracticalScore[]
+
+  @@unique([examId, type])
+  @@unique([id, examId])
+  @@map("exam_parts")
+}
+
+/// 실제 시험 필기 문제 스냅샷입니다.
+model ExamQuestion {
+  /// 기본 키입니다.
+  id                      String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 시험 식별자입니다.
+  examId                  String       @map("exam_id") @db.Uuid
+  /// 시험 파트 식별자입니다.
+  examPartId              String       @map("exam_part_id") @db.Uuid
+  /// 개설 강의 과목 식별자입니다.
+  courseOfferingSubjectId String       @map("course_offering_subject_id") @db.Uuid
+  /// 문제은행 원본 식별자입니다.
+  sourceQuestionId        String?      @map("source_question_id") @db.Uuid
+  /// 문제 유형입니다.
+  type                    QuestionType
+  /// 문제 내용입니다.
+  prompt                  String       @db.Text
+  /// 해설입니다.
+  explanation             String?      @db.Text
+  /// 배점입니다.
+  score                   Decimal      @db.Decimal(6, 2)
+  /// 표시 순서입니다.
+  displayOrder            Int          @map("display_order")
+  /// 단답형 정규화 규칙 버전입니다.
+  normalizationVersion    String?      @map("normalization_version") @db.VarChar(30)
+
+  exam                  Exam                         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  examPart              ExamPart                     @relation(fields: [examPartId], references: [id], onDelete: Cascade)
+  courseOfferingSubject CourseOfferingSubject        @relation(fields: [courseOfferingSubjectId], references: [id], onDelete: Restrict)
+  sourceQuestion        QuestionBank?                @relation("ExamQuestionSource", fields: [sourceQuestionId], references: [id], onDelete: SetNull)
+  options               ExamQuestionOption[]
+  acceptedAnswers       ExamQuestionAcceptedAnswer[]
+  questionOrders        ExamAttemptQuestionOrder[]
+  optionOrders          ExamAttemptOptionOrder[]
+  answers               ExamAnswer[]
+  selectedOptions       ExamAnswerSelectedOption[]
+
+  @@unique([examPartId, displayOrder])
+  @@unique([id, examPartId])
+  @@map("exam_questions")
+}
+
+/// 실제 시험 객관식 보기 스냅샷입니다.
+model ExamQuestionOption {
+  /// 기본 키입니다.
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 시험 문제 식별자입니다.
+  examQuestionId String  @map("exam_question_id") @db.Uuid
+  /// 보기 내용입니다.
+  content        String  @db.Text
+  /// 표시 순서입니다.
+  displayOrder   Int     @map("display_order")
+  /// 정답 여부입니다.
+  isCorrect      Boolean @map("is_correct")
+
+  examQuestion    ExamQuestion               @relation(fields: [examQuestionId], references: [id], onDelete: Cascade)
+  optionOrders    ExamAttemptOptionOrder[]
+  selectedOptions ExamAnswerSelectedOption[]
+
+  @@unique([examQuestionId, displayOrder])
+  @@unique([id, examQuestionId])
+  @@map("exam_question_options")
+}
+
+/// 실제 시험 단답형 허용 정답 스냅샷입니다.
+model ExamQuestionAcceptedAnswer {
+  /// 기본 키입니다.
+  id               String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 시험 문제 식별자입니다.
+  examQuestionId   String @map("exam_question_id") @db.Uuid
+  /// 표시용 정답입니다.
+  answerText       String @map("answer_text") @db.Text
+  /// 정규화 정답입니다.
+  normalizedAnswer String @map("normalized_answer") @db.Text
+
+  examQuestion ExamQuestion @relation(fields: [examQuestionId], references: [id], onDelete: Cascade)
+
+  @@unique([examQuestionId, normalizedAnswer])
+  @@map("exam_question_accepted_answers")
+}
+
+/// 실제 시험 실기 평가 기준 스냅샷입니다.
+model ExamPracticalCriterion {
+  /// 기본 키입니다.
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 시험 파트 식별자입니다.
+  examPartId   String  @map("exam_part_id") @db.Uuid
+  /// 평가 항목명입니다.
+  name         String  @db.VarChar(200)
+  /// 평가 설명입니다.
+  description  String? @db.Text
+  /// 최대 점수입니다.
+  maxScore     Decimal @map("max_score") @db.Decimal(6, 2)
+  /// 표시 순서입니다.
+  displayOrder Int     @map("display_order")
+
+  examPart        ExamPart         @relation(fields: [examPartId], references: [id], onDelete: Cascade)
+  practicalScores PracticalScore[]
+
+  @@unique([examPartId, displayOrder])
+  @@unique([id, examPartId])
+  @@map("exam_practical_criteria")
+}
+
+/// 학생의 시험 전체 응시 기록입니다.
+model ExamAttempt {
+  /// 기본 키입니다.
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 시험 식별자입니다.
+  examId           String        @map("exam_id") @db.Uuid
+  /// 개설 강의 식별자입니다.
+  courseOfferingId String        @map("course_offering_id") @db.Uuid
+  /// 대상 반 식별자입니다.
+  classId          String        @map("class_id") @db.Uuid
+  /// 학생 식별자입니다.
+  studentId        String        @map("student_id") @db.Uuid
+  /// 응시 자격 수강 식별자입니다.
+  enrollmentId     String        @map("enrollment_id") @db.Uuid
+  /// 응시 상태입니다.
+  status           AttemptStatus
+  /// 최초 시작 시각입니다.
+  startedAt        DateTime?     @map("started_at") @db.Timestamptz(6)
+  /// 최종 제출 시각입니다.
+  submittedAt      DateTime?     @map("submitted_at") @db.Timestamptz(6)
+  /// 필기 점수입니다.
+  writtenScore     Decimal?      @map("written_score") @db.Decimal(6, 2)
+  /// 실기 점수입니다.
+  practicalScore   Decimal?      @map("practical_score") @db.Decimal(6, 2)
+  /// 필기 합격 상태입니다.
+  writtenResult    PassStatus    @map("written_result")
+  /// 실기 합격 상태입니다.
+  practicalResult  PassStatus    @map("practical_result")
+  /// 최종 합격 상태입니다.
+  finalResult      PassStatus    @map("final_result")
+  /// 최종 채점 시각입니다.
+  gradedAt         DateTime?     @map("graded_at") @db.Timestamptz(6)
+  /// 낙관적 잠금 버전입니다.
+  version          Int
+  /// 생성 시각입니다.
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 수정 시각입니다.
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  exam            Exam                 @relation(fields: [examId], references: [id], onDelete: Restrict)
+  courseOffering  CourseOffering       @relation(fields: [courseOfferingId], references: [id], onDelete: Restrict)
+  class           Class                @relation(fields: [classId], references: [id], onDelete: Restrict)
+  student         User                 @relation("ExamAttemptStudent", fields: [studentId], references: [id], onDelete: Restrict)
+  enrollment      Enrollment           @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  partSubmissions ExamPartSubmission[]
+  resultRevisions ExamResultRevision[]
+
+  @@unique([examId, studentId])
+  @@unique([id, examId])
+  @@index([studentId, status])
+  @@index([examId, status])
+  @@map("exam_attempts")
+}
+
+/// 학생의 시험 파트별 제출 상태입니다.
+model ExamPartSubmission {
+  /// 기본 키입니다.
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 시험 식별자입니다.
+  examId           String            @map("exam_id") @db.Uuid
+  /// 시험 응시 식별자입니다.
+  examAttemptId    String            @map("exam_attempt_id") @db.Uuid
+  /// 시험 파트 식별자입니다.
+  examPartId       String            @map("exam_part_id") @db.Uuid
+  /// 제출 상태입니다.
+  status           AttemptStatus
+  /// 파트 점수입니다.
+  score            Decimal?          @db.Decimal(6, 2)
+  /// 합격 상태입니다.
+  result           PassStatus
+  /// 시작 시각입니다.
+  startedAt        DateTime?         @map("started_at") @db.Timestamptz(6)
+  /// 개인 마감 시각입니다.
+  deadlineAt       DateTime?         @map("deadline_at") @db.Timestamptz(6)
+  /// 마지막 저장 시각입니다.
+  lastSavedAt      DateTime?         @map("last_saved_at") @db.Timestamptz(6)
+  /// 제출 시각입니다.
+  submittedAt      DateTime?         @map("submitted_at") @db.Timestamptz(6)
+  /// 제출 방식입니다.
+  submissionMethod SubmissionMethod? @map("submission_method")
+  /// 채점자 식별자입니다.
+  gradedById       String?           @map("graded_by") @db.Uuid
+  /// 채점 시각입니다.
+  gradedAt         DateTime?         @map("graded_at") @db.Timestamptz(6)
+  /// 강사 코멘트입니다.
+  comment          String?           @db.Text
+  /// 낙관적 잠금 버전입니다.
+  version          Int
+
+  exam                     Exam                       @relation(fields: [examId], references: [id], onDelete: Restrict)
+  examAttempt              ExamAttempt                @relation(fields: [examAttemptId], references: [id], onDelete: Cascade)
+  examPart                 ExamPart                   @relation(fields: [examPartId], references: [id], onDelete: Restrict)
+  gradedBy                 User?                      @relation("ExamPartSubmissionGrader", fields: [gradedById], references: [id], onDelete: SetNull)
+  questionOrders           ExamAttemptQuestionOrder[]
+  optionOrders             ExamAttemptOptionOrder[]
+  answers                  ExamAnswer[]
+  practicalScores          PracticalScore[]
+  practicalSubmissionFiles PracticalSubmissionFile[]
+
+  @@unique([examAttemptId, examPartId])
+  @@unique([id, examPartId])
+  @@index([status, deadlineAt])
+  @@map("exam_part_submissions")
+}
+
+/// 학생별 필기 문제 표시 순서입니다.
+model ExamAttemptQuestionOrder {
+  /// 파트 제출 식별자입니다.
+  examPartSubmissionId String @map("exam_part_submission_id") @db.Uuid
+  /// 시험 파트 식별자입니다.
+  examPartId           String @map("exam_part_id") @db.Uuid
+  /// 시험 문제 식별자입니다.
+  examQuestionId       String @map("exam_question_id") @db.Uuid
+  /// 표시 순서입니다.
+  displayOrder         Int    @map("display_order")
+
+  examPartSubmission ExamPartSubmission @relation(fields: [examPartSubmissionId], references: [id], onDelete: Cascade)
+  examPart           ExamPart           @relation(fields: [examPartId], references: [id], onDelete: Restrict)
+  examQuestion       ExamQuestion       @relation(fields: [examQuestionId], references: [id], onDelete: Restrict)
+
+  @@id([examPartSubmissionId, examQuestionId])
+  @@unique([examPartSubmissionId, displayOrder])
+  @@map("exam_attempt_question_orders")
+}
+
+/// 학생별 객관식 보기 표시 순서입니다.
+model ExamAttemptOptionOrder {
+  /// 파트 제출 식별자입니다.
+  examPartSubmissionId String @map("exam_part_submission_id") @db.Uuid
+  /// 시험 파트 식별자입니다.
+  examPartId           String @map("exam_part_id") @db.Uuid
+  /// 시험 문제 식별자입니다.
+  examQuestionId       String @map("exam_question_id") @db.Uuid
+  /// 시험 보기 식별자입니다.
+  examQuestionOptionId String @map("exam_question_option_id") @db.Uuid
+  /// 표시 순서입니다.
+  displayOrder         Int    @map("display_order")
+
+  examPartSubmission ExamPartSubmission @relation(fields: [examPartSubmissionId], references: [id], onDelete: Cascade)
+  examPart           ExamPart           @relation(fields: [examPartId], references: [id], onDelete: Restrict)
+  examQuestion       ExamQuestion       @relation(fields: [examQuestionId], references: [id], onDelete: Restrict)
+  examQuestionOption ExamQuestionOption @relation(fields: [examQuestionOptionId], references: [id], onDelete: Restrict)
+
+  @@id([examPartSubmissionId, examQuestionOptionId])
+  @@unique([examPartSubmissionId, examQuestionId, displayOrder])
+  @@map("exam_attempt_option_orders")
+}
+
+/// 학생의 필기 문제별 답안입니다.
+model ExamAnswer {
+  /// 기본 키입니다.
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 파트 제출 식별자입니다.
+  examPartSubmissionId String   @map("exam_part_submission_id") @db.Uuid
+  /// 시험 파트 식별자입니다.
+  examPartId           String   @map("exam_part_id") @db.Uuid
+  /// 시험 문제 식별자입니다.
+  examQuestionId       String   @map("exam_question_id") @db.Uuid
+  /// 단답형 원문 답안입니다.
+  subjectiveText       String?  @map("subjective_text") @db.Text
+  /// 정규화 답안입니다.
+  normalizedText       String?  @map("normalized_text") @db.Text
+  /// 정답 여부입니다.
+  isCorrect            Boolean? @map("is_correct")
+  /// 획득 점수입니다.
+  awardedScore         Decimal? @map("awarded_score") @db.Decimal(6, 2)
+  /// 마지막 저장 시각입니다.
+  savedAt              DateTime @map("saved_at") @db.Timestamptz(6)
+  /// 낙관적 잠금 버전입니다.
+  version              Int
+
+  examPartSubmission ExamPartSubmission         @relation(fields: [examPartSubmissionId], references: [id], onDelete: Cascade)
+  examPart           ExamPart                   @relation(fields: [examPartId], references: [id], onDelete: Restrict)
+  examQuestion       ExamQuestion               @relation(fields: [examQuestionId], references: [id], onDelete: Restrict)
+  selectedOptions    ExamAnswerSelectedOption[]
+
+  @@unique([examPartSubmissionId, examQuestionId])
+  @@unique([id, examQuestionId])
+  @@map("exam_answers")
+}
+
+/// 객관식 답안에서 선택한 보기입니다.
+model ExamAnswerSelectedOption {
+  /// 시험 답안 식별자입니다.
+  examAnswerId         String @map("exam_answer_id") @db.Uuid
+  /// 시험 문제 식별자입니다.
+  examQuestionId       String @map("exam_question_id") @db.Uuid
+  /// 선택한 보기 식별자입니다.
+  examQuestionOptionId String @map("exam_question_option_id") @db.Uuid
+
+  examAnswer         ExamAnswer         @relation(fields: [examAnswerId], references: [id], onDelete: Cascade)
+  examQuestion       ExamQuestion       @relation(fields: [examQuestionId], references: [id], onDelete: Restrict)
+  examQuestionOption ExamQuestionOption @relation(fields: [examQuestionOptionId], references: [id], onDelete: Restrict)
+
+  @@id([examAnswerId, examQuestionOptionId])
+  @@map("exam_answer_selected_options")
+}
+
+/// 실기 평가 항목별 점수입니다.
+model PracticalScore {
+  /// 기본 키입니다.
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 파트 제출 식별자입니다.
+  examPartSubmissionId String   @map("exam_part_submission_id") @db.Uuid
+  /// 시험 파트 식별자입니다.
+  examPartId           String   @map("exam_part_id") @db.Uuid
+  /// 실기 평가 기준 식별자입니다.
+  criterionId          String   @map("criterion_id") @db.Uuid
+  /// 부여 점수입니다.
+  score                Decimal  @db.Decimal(6, 2)
+  /// 항목별 의견입니다.
+  comment              String?  @db.Text
+  /// 채점자 식별자입니다.
+  gradedById           String?  @map("graded_by") @db.Uuid
+  /// 채점 시각입니다.
+  gradedAt             DateTime @map("graded_at") @db.Timestamptz(6)
+
+  examPartSubmission ExamPartSubmission     @relation(fields: [examPartSubmissionId], references: [id], onDelete: Cascade)
+  examPart           ExamPart               @relation(fields: [examPartId], references: [id], onDelete: Restrict)
+  criterion          ExamPracticalCriterion @relation(fields: [criterionId], references: [id], onDelete: Restrict)
+  gradedBy           User?                  @relation("PracticalScoreGrader", fields: [gradedById], references: [id], onDelete: SetNull)
+
+  @@unique([examPartSubmissionId, criterionId])
+  @@map("practical_scores")
+}
+
+/// 시험 결과 정정 이력입니다.
+model ExamResultRevision {
+  /// 기본 키입니다.
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 시험 응시 식별자입니다.
+  examAttemptId  String   @map("exam_attempt_id") @db.Uuid
+  /// 변경 전 결과입니다.
+  previousResult Json     @map("previous_result") @db.JsonB
+  /// 변경 후 결과입니다.
+  newResult      Json     @map("new_result") @db.JsonB
+  /// 정정 사유입니다.
+  reason         String   @db.Text
+  /// 변경 처리자입니다.
+  changedById    String?  @map("changed_by") @db.Uuid
+  /// 변경 시각입니다.
+  changedAt      DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
+
+  examAttempt ExamAttempt @relation(fields: [examAttemptId], references: [id], onDelete: Restrict)
+  changedBy   User?       @relation("ExamResultRevisionActor", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([examAttemptId, changedAt])
+  @@map("exam_result_revisions")
+}
