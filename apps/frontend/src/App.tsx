@@ -13,6 +13,7 @@ import { EducationPage } from "./features/education/EducationPage";
 import { CoursesPage } from "./features/courses/CoursePage";
 import { ClassesPage } from "./features/classes/ClassesPage";
 import { UsersPage } from "./features/users/UsersPage";
+import { TermsPage } from "./features/terms/TermsPage";
 
 type PlaceholderRoute = {
   path: string;
@@ -125,6 +126,14 @@ const router = createBrowserRouter([
         element: (
           <RequireRole roles={["MANAGER", "PRINCIPAL", "ADMIN"]}>
             <UsersPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: "terms",
+        element: (
+          <RequireRole roles={["ADMIN"]}>
+            <TermsPage />
           </RequireRole>
         ),
       },

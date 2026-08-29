@@ -7,6 +7,7 @@ import {
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTermsDocumentDto } from './dto/create-terms-document.dto';
+import { UpdateTermsDocumentDto } from './dto/update-terms-document.dto';
 
 export type TermsDocumentResponse = {
   id: string;
@@ -206,6 +207,107 @@ export class TermsService {
     });
 
     return this.toResponse(document);
+  }
+
+  async updateVersion(
+    id: string,
+    dto: UpdateTermsDocumentDto,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<TermsDocumentResponse> {
+    const type = dto.type;
+    const version = dto.version.trim();
+    const title = dto.title.trim();
+    const content = dto.content.trim();
+    const effectiveAt = new Date(dto.effectiveAt);
+
+    if (!version || !title || !content) {
+      throw new BadRequestException('버전, 제목과 내용이 필요합니다.');
+    }
+
+    try {
+      const document = await this.prisma.$transaction(async (tx) => {
+        const target = await tx.termsDocument.findUnique({ where: { id } });
+
+        if (!target) {
+          throw new NotFoundException('약관 문서를 찾을 수 없습니다.');
+        }
+
+        if (target.active && effectiveAt > new Date()) {
+          throw new BadRequestException(
+            '활성 약관의 시행 시각을 미래로 변경할 수 없습니다.',
+          );
+        }
+
+        const lockTypes = Array.from(new Set([target.type, type])).sort();
+        for (const lockType of lockTypes) {
+          await tx.$executeRaw`
+            SELECT pg_advisory_xact_lock(hashtext(${lockType}))
+          `;
+        }
+
+        if (target.active && target.type !== type) {
+          await tx.termsDocument.updateMany({
+            where: { type, active: true },
+            data: { active: false },
+          });
+        }
+
+        const updated = await tx.termsDocument.update({
+          where: { id },
+          data: {
+            type,
+            version,
+            title,
+            content,
+            required: dto.required,
+            effectiveAt,
+          },
+        });
+
+        await tx.auditLog.create({
+          data: {
+            actorId: actor.id,
+            actorRole: actor.role,
+            action: 'TERMS_DOCUMENT_UPDATED',
+            resourceType: 'TERMS_DOCUMENT',
+            resourceId: updated.id,
+            beforeData: {
+              type: target.type,
+              version: target.version,
+              title: target.title,
+              content: target.content,
+              required: target.required,
+              effectiveAt: target.effectiveAt.toISOString(),
+              active: target.active,
+            },
+            afterData: {
+              type: updated.type,
+              version: updated.version,
+              title: updated.title,
+              content: updated.content,
+              required: updated.required,
+              effectiveAt: updated.effectiveAt.toISOString(),
+              active: updated.active,
+            },
+            ipAddress,
+            result: 'SUCCESS',
+          },
+        });
+
+        return updated;
+      });
+
+      return this.toResponse(document);
+    } catch (error: unknown) {
+      if (this.isUniqueConstraintError(error)) {
+        throw new ConflictException(
+          '같은 유형과 버전의 약관이 이미 존재합니다.',
+        );
+      }
+
+      throw error;
+    }
   }
 
   private toResponse(document: {

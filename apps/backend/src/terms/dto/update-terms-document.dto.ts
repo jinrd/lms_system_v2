@@ -7,7 +7,7 @@ import {
 } from 'class-validator';
 import { TERMS_TYPES, type TermsType } from '../terms.constants';
 
-export class CreateTermsDocumentDto {
+export class UpdateTermsDocumentDto {
   @IsIn(TERMS_TYPES)
   type!: TermsType;
 
@@ -28,7 +28,4 @@ export class CreateTermsDocumentDto {
 
   @IsDateString()
   effectiveAt!: string;
-
-  @IsBoolean()
-  activate!: boolean;
 }
