@@ -11,6 +11,7 @@ import { DashboardPage, PlaceholderPage } from "./pages";
 import { RequireRole } from "./auth/RequireRole";
 import { EducationPage } from "./features/education/EducationPage";
 import { CoursesPage } from "./features/courses/CoursePage";
+import { ClassesPage } from "./features/classes/ClassesPage";
 
 type PlaceholderRoute = {
   path: string;
@@ -28,11 +29,6 @@ const placeholderRoutes: PlaceholderRoute[] = [
     path: "inquiries",
     title: "문의사항",
     description: "학생 문의와 담당자 답변을 관리합니다.",
-  },
-  {
-    path: "classes",
-    title: "반 관리",
-    description: "반 정보와 담당 강사를 관리합니다.",
   },
   {
     path: "schedule",
@@ -117,6 +113,14 @@ const router = createBrowserRouter([
         element: (
           <RequireRole roles={["MANAGER", "PRINCIPAL", "ADMIN"]}>
             <CoursesPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: "classes",
+        element: (
+          <RequireRole roles={["MANAGER", "PRINCIPAL", "ADMIN"]}>
+            <ClassesPage />
           </RequireRole>
         ),
       },
