@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,9 +10,12 @@ import {
   ClassStatus,
   SessionKind,
   SessionStatus,
+  UserRole,
 } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
+import { ChangeClassSessionStatusDto } from './dto/change-class-session-status.dto';
 import { ClassSessionRangeDto } from './dto/class-session-range.dto';
+import { UpdateClassSessionDto } from './dto/update-class-session.dto';
 
 export type ClassSessionResponse = {
   id: string;
@@ -71,8 +75,9 @@ export class ClassSessionsService {
     courseOfferingId: string,
     classId: string,
     range: ClassSessionRangeDto,
+    actor: AuthenticatedUser,
   ): Promise<ClassSessionResponse[]> {
-    await this.assertClassExists(courseOfferingId, classId);
+    await this.assertClassAccess(courseOfferingId, classId, actor);
 
     const { rangeStart, rangeEndExclusive } = this.validateRange(range);
 
@@ -330,12 +335,261 @@ export class ClassSessionsService {
       };
     });
 
-    const sessions = await this.findAll(courseOfferingId, classId, range);
+    const sessions = await this.findAll(
+      courseOfferingId,
+      classId,
+      range,
+      actor,
+    );
 
     return {
       ...result,
       sessions,
     };
+  }
+
+  async update(
+    courseOfferingId: string,
+    classId: string,
+    sessionId: string,
+    dto: UpdateClassSessionDto,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<ClassSessionResponse> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`
+        SELECT id
+        FROM class_sessions
+        WHERE id = ${sessionId}::uuid
+        FOR UPDATE
+      `;
+
+      const current = await tx.classSession.findFirst({
+        where: {
+          id: sessionId,
+          classId,
+          class: { courseOfferingId },
+        },
+        include: { class: true },
+      });
+
+      if (!current) {
+        throw new NotFoundException('실제 수업을 찾을 수 없습니다.');
+      }
+
+      this.assertSessionActor(current.instructorId, actor);
+
+      if (
+        current.status === SessionStatus.COMPLETED ||
+        current.status === SessionStatus.CANCELED
+      ) {
+        throw new ConflictException(
+          '완료되거나 취소된 수업은 수정할 수 없습니다.',
+        );
+      }
+
+      const scheduleChanged =
+        dto.startsAt !== undefined || dto.endsAt !== undefined;
+
+      if (scheduleChanged && current.status !== SessionStatus.SCHEDULED) {
+        throw new ConflictException(
+          '예정 상태의 수업만 시간을 변경할 수 있습니다.',
+        );
+      }
+
+      const startsAt = dto.startsAt ? new Date(dto.startsAt) : current.startsAt;
+      const endsAt = dto.endsAt ? new Date(dto.endsAt) : current.endsAt;
+
+      if (startsAt >= endsAt) {
+        throw new BadRequestException(
+          '종료 시각은 시작 시각보다 늦어야 합니다.',
+        );
+      }
+
+      if (this.toSeoulDateString(startsAt) !== this.toSeoulDateString(endsAt)) {
+        throw new BadRequestException(
+          '수업 시작과 종료는 같은 날짜여야 합니다.',
+        );
+      }
+
+      const sessionDate = this.toSeoulDateString(startsAt);
+      const classStartDate = this.toDateString(current.class.startDate);
+      const classEndDate = this.toDateString(current.class.endDate);
+
+      if (sessionDate < classStartDate || sessionDate > classEndDate) {
+        throw new BadRequestException(
+          '수업 일자는 반 운영 기간 안에 있어야 합니다.',
+        );
+      }
+
+      if (scheduleChanged) {
+        const overlapping = await tx.classSession.findFirst({
+          where: {
+            id: { not: current.id },
+            classId,
+            status: { not: SessionStatus.CANCELED },
+            startsAt: { lt: endsAt },
+            endsAt: { gt: startsAt },
+          },
+          select: { id: true },
+        });
+
+        if (overlapping) {
+          throw new ConflictException(
+            '같은 반에 시간이 겹치는 실제 수업이 있습니다.',
+          );
+        }
+      }
+
+      const title =
+        dto.title === undefined ? current.title : this.optionalText(dto.title);
+      const lessonContent =
+        dto.lessonContent === undefined
+          ? current.lessonContent
+          : this.optionalText(dto.lessonContent);
+      const room =
+        dto.room === undefined ? current.room : this.optionalText(dto.room);
+
+      await tx.classSession.update({
+        where: { id: current.id },
+        data: {
+          title,
+          lessonContent,
+          startsAt,
+          endsAt,
+          room,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorRole: actor.role,
+          action: 'CLASS_SESSION_UPDATED',
+          resourceType: 'CLASS_SESSION',
+          resourceId: current.id,
+          beforeData: {
+            title: current.title,
+            lessonContent: current.lessonContent,
+            startsAt: current.startsAt.toISOString(),
+            endsAt: current.endsAt.toISOString(),
+            room: current.room,
+          },
+          afterData: {
+            title,
+            lessonContent,
+            startsAt: startsAt.toISOString(),
+            endsAt: endsAt.toISOString(),
+            room,
+          },
+          ipAddress,
+          result: 'SUCCESS',
+        },
+      });
+    });
+
+    return this.findOne(courseOfferingId, classId, sessionId);
+  }
+
+  async changeStatus(
+    courseOfferingId: string,
+    classId: string,
+    sessionId: string,
+    dto: ChangeClassSessionStatusDto,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<ClassSessionResponse> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`
+        SELECT id
+        FROM class_sessions
+        WHERE id = ${sessionId}::uuid
+        FOR UPDATE
+      `;
+
+      const current = await tx.classSession.findFirst({
+        where: {
+          id: sessionId,
+          classId,
+          class: { courseOfferingId },
+        },
+      });
+
+      if (!current) {
+        throw new NotFoundException('실제 수업을 찾을 수 없습니다.');
+      }
+
+      this.assertSessionActor(current.instructorId, actor);
+
+      const allowedStatus =
+        current.status === SessionStatus.SCHEDULED
+          ? SessionStatus.IN_PROGRESS
+          : current.status === SessionStatus.IN_PROGRESS
+            ? SessionStatus.COMPLETED
+            : null;
+
+      if (dto.status !== allowedStatus) {
+        throw new ConflictException(
+          `${current.status} 상태에서 ${dto.status} 상태로 변경할 수 없습니다.`,
+        );
+      }
+
+      const completedMinutes =
+        dto.status === SessionStatus.COMPLETED
+          ? (dto.completedMinutes ?? null)
+          : null;
+
+      await tx.classSession.update({
+        where: { id: current.id },
+        data: {
+          status: dto.status,
+          completedMinutes,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorRole: actor.role,
+          action: 'CLASS_SESSION_STATUS_CHANGED',
+          resourceType: 'CLASS_SESSION',
+          resourceId: current.id,
+          beforeData: {
+            status: current.status,
+            completedMinutes: current.completedMinutes,
+          },
+          afterData: {
+            status: dto.status,
+            completedMinutes,
+          },
+          ipAddress,
+          result: 'SUCCESS',
+        },
+      });
+    });
+
+    return this.findOne(courseOfferingId, classId, sessionId);
+  }
+
+  private async findOne(
+    courseOfferingId: string,
+    classId: string,
+    sessionId: string,
+  ): Promise<ClassSessionResponse> {
+    const session = await this.prisma.classSession.findFirst({
+      where: {
+        id: sessionId,
+        classId,
+        class: { courseOfferingId },
+      },
+      include: SESSION_INCLUDE,
+    });
+
+    if (!session) {
+      throw new NotFoundException('실제 수업을 찾을 수 없습니다.');
+    }
+
+    return this.toResponse(session);
   }
 
   private validateRange(range: ClassSessionRangeDto): {
@@ -383,9 +637,10 @@ export class ClassSessionsService {
     };
   }
 
-  private async assertClassExists(
+  private async assertClassAccess(
     courseOfferingId: string,
     classId: string,
+    actor: AuthenticatedUser,
   ): Promise<void> {
     const classItem = await this.prisma.class.findFirst({
       where: {
@@ -400,6 +655,48 @@ export class ClassSessionsService {
     if (!classItem) {
       throw new NotFoundException('반을 찾을 수 없습니다.');
     }
+
+    if (actor.role === UserRole.INSTRUCTOR) {
+      const assignmentCount = await this.prisma.classInstructorAssignment.count(
+        {
+          where: {
+            classId,
+            instructorId: actor.id,
+          },
+        },
+      );
+
+      if (assignmentCount === 0) {
+        throw new ForbiddenException(
+          '담당 이력이 있는 반의 수업만 조회할 수 있습니다.',
+        );
+      }
+    }
+  }
+
+  private assertSessionActor(
+    instructorId: string,
+    actor: AuthenticatedUser,
+  ): void {
+    if (actor.role === UserRole.INSTRUCTOR && instructorId !== actor.id) {
+      throw new ForbiddenException(
+        '본인이 담당하는 수업만 관리할 수 있습니다.',
+      );
+    }
+  }
+
+  private optionalText(value?: string): string | null {
+    const normalized = value?.trim();
+
+    return normalized ? normalized : null;
+  }
+
+  private toSeoulDateString(date: Date): string {
+    const seoulOffsetMilliseconds = 9 * 60 * 60 * 1000;
+
+    return new Date(date.getTime() + seoulOffsetMilliseconds)
+      .toISOString()
+      .slice(0, 10);
   }
 
   private addDays(date: Date, days: number): Date {

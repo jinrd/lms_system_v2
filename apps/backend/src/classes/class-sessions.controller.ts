@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   Req,
@@ -18,7 +19,9 @@ import {
   type ClassSessionResponse,
   ClassSessionsService,
 } from './class-sessions.service';
+import { ChangeClassSessionStatusDto } from './dto/change-class-session-status.dto';
 import { ClassSessionRangeDto } from './dto/class-session-range.dto';
+import { UpdateClassSessionDto } from './dto/update-class-session.dto';
 
 const MANAGEMENT_ROLES = [
   UserRole.MANAGER,
@@ -26,11 +29,17 @@ const MANAGEMENT_ROLES = [
   UserRole.ADMIN,
 ] as const;
 
+const SESSION_MANAGEMENT_ROLES = [
+  UserRole.INSTRUCTOR,
+  ...MANAGEMENT_ROLES,
+] as const;
+
 @Roles(...MANAGEMENT_ROLES)
 @Controller('course-offerings/:courseOfferingId/classes/:classId/sessions')
 export class ClassSessionsController {
   constructor(private readonly classSessionsService: ClassSessionsService) {}
 
+  @Roles(...SESSION_MANAGEMENT_ROLES)
   @Get()
   findAll(
     @Param('courseOfferingId', ParseUUIDPipe)
@@ -38,8 +47,14 @@ export class ClassSessionsController {
     @Param('classId', ParseUUIDPipe)
     classId: string,
     @Query() query: ClassSessionRangeDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ClassSessionResponse[]> {
-    return this.classSessionsService.findAll(courseOfferingId, classId, query);
+    return this.classSessionsService.findAll(
+      courseOfferingId,
+      classId,
+      query,
+      actor,
+    );
   }
 
   @Post('generate')
@@ -55,6 +70,52 @@ export class ClassSessionsController {
     return this.classSessionsService.generate(
       courseOfferingId,
       classId,
+      dto,
+      actor,
+      request.ip,
+    );
+  }
+
+  @Roles(...SESSION_MANAGEMENT_ROLES)
+  @Patch(':sessionId')
+  update(
+    @Param('courseOfferingId', ParseUUIDPipe)
+    courseOfferingId: string,
+    @Param('classId', ParseUUIDPipe)
+    classId: string,
+    @Param('sessionId', ParseUUIDPipe)
+    sessionId: string,
+    @Body() dto: UpdateClassSessionDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ClassSessionResponse> {
+    return this.classSessionsService.update(
+      courseOfferingId,
+      classId,
+      sessionId,
+      dto,
+      actor,
+      request.ip,
+    );
+  }
+
+  @Roles(...SESSION_MANAGEMENT_ROLES)
+  @Patch(':sessionId/status')
+  changeStatus(
+    @Param('courseOfferingId', ParseUUIDPipe)
+    courseOfferingId: string,
+    @Param('classId', ParseUUIDPipe)
+    classId: string,
+    @Param('sessionId', ParseUUIDPipe)
+    sessionId: string,
+    @Body() dto: ChangeClassSessionStatusDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ClassSessionResponse> {
+    return this.classSessionsService.changeStatus(
+      courseOfferingId,
+      classId,
+      sessionId,
       dto,
       actor,
       request.ip,
