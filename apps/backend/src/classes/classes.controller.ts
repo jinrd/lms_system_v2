@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -73,6 +76,22 @@ export class ClassesController {
       courseOfferingId,
       classId,
       dto,
+      actor,
+      request.ip,
+    );
+  }
+
+  @Delete(':classId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(
+    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
+    @Param('classId', ParseUUIDPipe) classId: string,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<void> {
+    await this.classesService.remove(
+      courseOfferingId,
+      classId,
       actor,
       request.ip,
     );

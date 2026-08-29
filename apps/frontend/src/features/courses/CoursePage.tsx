@@ -47,7 +47,7 @@ const STATUS_TRANSITIONS: Record<CourseStatus, readonly CourseStatus[]> = {
   RECRUITING: ["IN_PROGRESS", "CANCELED"],
   IN_PROGRESS: ["COMPLETED", "CANCELED"],
   COMPLETED: [],
-  CANCELED: [],
+  CANCELED: ["PLANNED"],
 };
 
 type CourseEditor =
@@ -350,8 +350,7 @@ export function CoursesPage() {
                 </div>
 
                 <div className="cluster">
-                  {selectedCourse.status !== "COMPLETED" &&
-                    selectedCourse.status !== "CANCELED" && (
+                  {selectedCourse.status !== "COMPLETED" && (
                       <button
                         type="button"
                         className="button button--secondary"

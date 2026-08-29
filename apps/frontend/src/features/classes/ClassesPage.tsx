@@ -4,6 +4,7 @@ import {
   ChevronRight,
   CirclePlus,
   Pencil,
+  Trash2,
   Users,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,12 +20,15 @@ import {
   changeClassStatus,
   createClass,
   getClasses,
+  removeClass,
   updateClass,
   type ClassInput,
   type ClassItem,
   type ClassStatus,
 } from "./classes.api";
 import { ClassInstructorsPanel } from "./ClassInstructorsPanel";
+import { ClassSchedulePanel } from "./ClassSchedulePanel";
+import { ClassSubjectsPanel } from "./ClassSubjectsPanel";
 
 const STATUS_LABELS: Record<ClassStatus, string> = {
   PLANNED: "예정",
@@ -51,6 +55,7 @@ type ClassEditor =
   | {
       type: "class";
       item?: ClassItem;
+      courseOfferingId?: string;
     }
   | {
       type: "status";
@@ -91,11 +96,23 @@ export function ClassesPage() {
   });
 
   const courses = coursesQuery.data?.items ?? [];
+  const availableCreationCourses = courses.filter(
+    (course) =>
+      course.status !== "COMPLETED" &&
+      course.status !== "CANCELED" &&
+      course.subjectCount > 0,
+  );
   const selectedCourse =
     courses.find((course) => course.id === selectedCourseId) ??
     courses[0] ??
     null;
   const effectiveCourseId = selectedCourse?.id ?? null;
+  const editorCourseId =
+    editor?.type === "class"
+      ? (editor.item?.courseOfferingId ?? editor.courseOfferingId ?? null)
+      : null;
+  const editorCourse =
+    courses.find((course) => course.id === editorCourseId) ?? null;
 
   const classesQuery = useQuery({
     queryKey: ["course-offerings", effectiveCourseId, "classes", status, page],
@@ -121,22 +138,21 @@ export function ClassesPage() {
   const saveMutation = useMutation({
     mutationFn: async ({
       item,
+      courseOfferingId,
       input,
     }: {
       item?: ClassItem;
+      courseOfferingId: string;
       input: ClassInput;
     }) => {
-      if (!effectiveCourseId) {
-        throw new Error("개설 강의를 먼저 선택해 주세요.");
-      }
-
       if (item) {
-        return updateClass(effectiveCourseId, item.id, input);
+        return updateClass(courseOfferingId, item.id, input);
       }
 
-      return createClass(effectiveCourseId, input);
+      return createClass(courseOfferingId, input);
     },
     onSuccess: async (saved) => {
+      setSelectedCourseId(saved.courseOfferingId);
       setSelectedClassId(saved.id);
       setEditor(null);
       await refreshClasses();
@@ -163,6 +179,15 @@ export function ClassesPage() {
     },
   });
 
+  const removeMutation = useMutation({
+    mutationFn: (item: ClassItem) =>
+      removeClass(item.courseOfferingId, item.id),
+    onSuccess: async () => {
+      setSelectedClassId(null);
+      await refreshClasses();
+    },
+  });
+
   const handleClassSubmit = (
     event: FormEvent<HTMLFormElement>,
     item?: ClassItem,
@@ -173,6 +198,9 @@ export function ClassesPage() {
 
     saveMutation.mutate({
       item,
+      courseOfferingId: String(
+        formData.get("courseOfferingId") ?? item?.courseOfferingId ?? "",
+      ),
       input: {
         name: String(formData.get("name") ?? "").trim(),
         description: optionalString(formData, "description"),
@@ -223,8 +251,18 @@ export function ClassesPage() {
         <button
           type="button"
           className="button button--primary"
-          disabled={!selectedCourse || selectedCourse.subjectCount === 0}
-          onClick={() => setEditor({ type: "class" })}
+          disabled={availableCreationCourses.length === 0}
+          onClick={() => {
+            const initialCourse =
+              availableCreationCourses.find(
+                (course) => course.id === effectiveCourseId,
+              ) ?? availableCreationCourses[0];
+
+            setEditor({
+              type: "class",
+              courseOfferingId: initialCourse.id,
+            });
+          }}
         >
           <CirclePlus size={18} />반 추가
         </button>
@@ -393,19 +431,39 @@ export function ClassesPage() {
 
                   <div className="cluster">
                     {selectedClass.status === "PLANNED" && (
-                      <button
-                        type="button"
-                        className="button button--secondary"
-                        onClick={() =>
-                          setEditor({
-                            type: "class",
-                            item: selectedClass,
-                          })
-                        }
-                      >
-                        <Pencil size={16} />
-                        수정
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className="button button--danger"
+                          disabled={removeMutation.isPending}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `${selectedClass.name} 반을 삭제하시겠습니까?\n삭제한 반은 복구할 수 없습니다.`,
+                              )
+                            ) {
+                              removeMutation.mutate(selectedClass);
+                            }
+                          }}
+                        >
+                          <Trash2 size={16} />
+                          삭제
+                        </button>
+
+                        <button
+                          type="button"
+                          className="button button--secondary"
+                          onClick={() =>
+                            setEditor({
+                              type: "class",
+                              item: selectedClass,
+                            })
+                          }
+                        >
+                          <Pencil size={16} />
+                          수정
+                        </button>
+                      </>
                     )}
 
                     {STATUS_TRANSITIONS[selectedClass.status].length > 0 && (
@@ -426,6 +484,13 @@ export function ClassesPage() {
                 </header>
 
                 <div className="card-body stack">
+                  {removeMutation.isError &&
+                    removeMutation.variables?.id === selectedClass.id && (
+                    <div className="form-alert" role="alert">
+                      {getErrorMessage(removeMutation.error)}
+                    </div>
+                    )}
+
                   <div className="detail-grid">
                     <div className="detail-item">
                       <span>상태</span>
@@ -476,39 +541,16 @@ export function ClassesPage() {
                     onChanged={refreshClasses}
                   />
 
-                  <section className="nested-section">
-                    <header className="nested-section__header">
-                      <div>
-                        <h3>운영 과목</h3>
-                        <p>반 생성 시 개설 강의에서 자동 복사된 과목입니다.</p>
-                      </div>
-                    </header>
-
-                    {selectedClass.subjects.length ? (
-                      <div className="compact-list">
-                        {selectedClass.subjects.map((subject) => (
-                          <article
-                            className="compact-row compact-row--simple"
-                            key={subject.id}
-                          >
-                            <div className="sequence-badge">
-                              {subject.sequence}
-                            </div>
-
-                            <div className="compact-row__body">
-                              <strong>{subject.subjectName}</strong>
-                              <p>반 운영 과목</p>
-                            </div>
-                          </article>
-                        ))}
-                      </div>
-                    ) : (
-                      <EmptyState
-                        title="반에 연결된 과목이 없습니다."
-                        description="개설 강의 과목 구성을 확인해 주세요."
-                      />
-                    )}
-                  </section>
+                  <ClassSubjectsPanel
+                    courseOfferingId={selectedCourse.id}
+                    classItem={selectedClass}
+                    onChanged={refreshClasses}
+                  />
+                  <ClassSchedulePanel
+                    key={selectedClass.id}
+                    courseOfferingId={selectedCourse.id}
+                    classItem={selectedClass}
+                  />
                 </div>
               </>
             ) : (
@@ -521,16 +563,48 @@ export function ClassesPage() {
         </section>
       )}
 
-      {editor?.type === "class" && selectedCourse && (
+      {editor?.type === "class" && editorCourse && (
         <Modal
           title={editor.item ? "반 수정" : "반 추가"}
-          description={`${selectedCourse.name}에서 운영할 반을 설정합니다.`}
+          description="반이 소속될 개설 강의와 운영 정보를 설정합니다."
           onClose={() => setEditor(null)}
         >
           <form
+            key={editorCourse.id}
             className="stack"
             onSubmit={(event) => handleClassSubmit(event, editor.item)}
           >
+            {!editor.item && (
+              <label className="form-field form-field--flush">
+                <span>개설 강의</span>
+                <select
+                  name="courseOfferingId"
+                  value={editorCourse.id}
+                  onChange={(event) =>
+                    setEditor({
+                      type: "class",
+                      courseOfferingId: event.target.value,
+                    })
+                  }
+                  required
+                >
+                  {availableCreationCourses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.name} · 과목 {course.subjectCount}개
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {editor.item && (
+              <input
+                type="hidden"
+                name="courseOfferingId"
+                value={editor.item.courseOfferingId}
+              />
+            )}
+
             <label className="form-field form-field--flush">
               <span>반명</span>
               <input
@@ -556,10 +630,10 @@ export function ClassesPage() {
                 <input
                   name="startDate"
                   type="date"
-                  min={selectedCourse.startDate}
-                  max={selectedCourse.endDate}
+                  min={editorCourse.startDate}
+                  max={editorCourse.endDate}
                   defaultValue={
-                    editor.item?.startDate ?? selectedCourse.startDate
+                    editor.item?.startDate ?? editorCourse.startDate
                   }
                   required
                 />
@@ -570,9 +644,9 @@ export function ClassesPage() {
                 <input
                   name="endDate"
                   type="date"
-                  min={selectedCourse.startDate}
-                  max={selectedCourse.endDate}
-                  defaultValue={editor.item?.endDate ?? selectedCourse.endDate}
+                  min={editorCourse.startDate}
+                  max={editorCourse.endDate}
+                  defaultValue={editor.item?.endDate ?? editorCourse.endDate}
                   required
                 />
               </label>

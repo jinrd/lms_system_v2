@@ -2237,3 +2237,90 @@ button {
   font-size: 11px;
   line-height: 1.5;
 }
+
+.schedule-panel__body {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.schedule-panel__body .tabs {
+  margin-bottom: 0;
+}
+
+.schedule-toolbar {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.schedule-toolbar .button {
+  min-height: var(--control-height);
+}
+
+.schedule-list {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.weekday-badge,
+.date-badge {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-md);
+  color: var(--primary);
+  background: #eef2ff;
+  place-items: center;
+}
+
+.weekday-badge {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.date-badge {
+  align-content: center;
+  gap: 1px;
+  text-align: center;
+}
+
+.date-badge strong {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.date-badge span {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.schedule-panel__body > .info-banner + .info-banner {
+  margin-top: -8px;
+}
+
+@media (max-width: 767px) {
+  .schedule-panel__body {
+    padding: 12px;
+  }
+
+  .schedule-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .schedule-toolbar .button {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 480px) {
+  .schedule-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-toolbar .button {
+    grid-column: auto;
+  }
+}

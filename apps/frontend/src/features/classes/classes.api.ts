@@ -112,6 +112,18 @@ export function changeClassStatus(
   );
 }
 
+export function removeClass(
+  courseOfferingId: string,
+  classId: string,
+): Promise<void> {
+  return apiRequest<void>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}`,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
 export type ClassInstructorAssignment = {
   id: string;
   classId: string;
@@ -158,6 +170,184 @@ export function assignClassInstructor(
     {
       method: "POST",
       body: input,
+    },
+  );
+}
+
+export type ClassSchedulePattern = {
+  id: string;
+  classId: string;
+  classSubjectId: string;
+  courseOfferingSubjectId: string;
+  subjectId: string;
+  subjectName: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  room: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateClassSchedulePatternInput = {
+  classSubjectId: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  room?: string;
+};
+
+export type UpdateClassSchedulePatternInput =
+  Partial<CreateClassSchedulePatternInput> & {
+    active?: boolean;
+  };
+
+export function getClassSchedulePatterns(
+  courseOfferingId: string,
+  classId: string,
+): Promise<ClassSchedulePattern[]> {
+  return apiRequest<ClassSchedulePattern[]>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/schedule-patterns`,
+  );
+}
+
+export function createClassSchedulePattern(
+  courseOfferingId: string,
+  classId: string,
+  input: CreateClassSchedulePatternInput,
+): Promise<ClassSchedulePattern> {
+  return apiRequest<ClassSchedulePattern>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/schedule-patterns`,
+    {
+      method: "POST",
+      body: input,
+    },
+  );
+}
+
+export function updateClassSchedulePattern(
+  courseOfferingId: string,
+  classId: string,
+  patternId: string,
+  input: UpdateClassSchedulePatternInput,
+): Promise<ClassSchedulePattern> {
+  return apiRequest<ClassSchedulePattern>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/schedule-patterns/${patternId}`,
+    {
+      method: "PATCH",
+      body: input,
+    },
+  );
+}
+
+export type SessionKind = "REGULAR" | "MAKEUP";
+
+export type SessionStatus =
+  | "SCHEDULED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELED";
+
+export type ClassSession = {
+  id: string;
+  classId: string;
+  classSubjectId: string;
+  courseOfferingSubjectId: string;
+  schedulePatternId: string | null;
+  subjectId: string;
+  subjectName: string;
+  instructor: {
+    id: string;
+    name: string;
+    loginId: string | null;
+  };
+  kind: SessionKind;
+  title: string | null;
+  lessonContent: string | null;
+  startsAt: string;
+  endsAt: string;
+  room: string | null;
+  status: SessionStatus;
+  completedMinutes: number | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ClassSessionRange = {
+  startDate: string;
+  endDate: string;
+};
+
+export type ClassSessionGenerationResult = {
+  createdCount: number;
+  skippedCount: number;
+  sessions: ClassSession[];
+};
+
+export function getClassSessions(
+  courseOfferingId: string,
+  classId: string,
+  range: ClassSessionRange,
+): Promise<ClassSession[]> {
+  const searchParams = new URLSearchParams({
+    startDate: range.startDate,
+    endDate: range.endDate,
+  });
+
+  return apiRequest<ClassSession[]>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/sessions?${searchParams.toString()}`,
+  );
+}
+
+export function generateClassSessions(
+  courseOfferingId: string,
+  classId: string,
+  range: ClassSessionRange,
+): Promise<ClassSessionGenerationResult> {
+  return apiRequest<ClassSessionGenerationResult>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/sessions/generate`,
+    {
+      method: "POST",
+      body: range,
+    },
+  );
+}
+
+export type ClassSubjectDetail = {
+  id: string;
+  classId: string;
+  courseOfferingId: string;
+  courseOfferingSubjectId: string;
+  subjectId: string;
+  subjectName: string;
+  educationFieldId: string;
+  educationFieldName: string;
+  sequence: number;
+  createdAt: string;
+};
+
+export function getClassSubjects(
+  courseOfferingId: string,
+  classId: string,
+): Promise<ClassSubjectDetail[]> {
+  return apiRequest<ClassSubjectDetail[]>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/subjects`,
+  );
+}
+
+export function addClassSubject(
+  courseOfferingId: string,
+  classId: string,
+  courseOfferingSubjectId: string,
+): Promise<ClassSubjectDetail> {
+  return apiRequest<ClassSubjectDetail>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/subjects`,
+    {
+      method: "POST",
+      body: {
+        courseOfferingSubjectId,
+      },
     },
   );
 }

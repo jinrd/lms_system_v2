@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types';
-import { ClassStatus } from '../generated/prisma/enums';
+import { ClassStatus, CourseStatus } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangeClassStatusDto } from './dto/change-class-status.dto';
 import { ClassQueryDto } from './dto/class-query.dto';
@@ -207,6 +207,14 @@ export class ClassesService {
         if (!courseOffering) {
           throw new NotFoundException('개설 강의를 찾을 수 없습니다.');
         }
+        if (
+          courseOffering.status === CourseStatus.COMPLETED ||
+          courseOffering.status === CourseStatus.CANCELED
+        ) {
+          throw new ConflictException(
+            '완료되거나 취소된 개설 강의에는 반을 만들 수 없습니다.',
+          );
+        }
         this.assertWithinCoursePeriod(
           startDate,
           endDate,
@@ -402,6 +410,71 @@ export class ClassesService {
     });
 
     return this.findOne(courseOfferingId, classId);
+  }
+
+  async remove(
+    courseOfferingId: string,
+    classId: string,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<void> {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`
+          SELECT id
+          FROM classes
+          WHERE id = ${classId}::uuid
+          FOR UPDATE
+        `;
+
+        const current = await tx.class.findFirst({
+          where: { id: classId, courseOfferingId },
+        });
+
+        if (!current) {
+          throw new NotFoundException('반을 찾을 수 없습니다.');
+        }
+        if (current.status !== ClassStatus.PLANNED) {
+          throw new ConflictException('예정 상태의 반만 삭제할 수 있습니다.');
+        }
+
+        await tx.class.delete({ where: { id: current.id } });
+
+        await tx.auditLog.create({
+          data: {
+            actorId: actor.id,
+            actorRole: actor.role,
+            action: 'CLASS_DELETED',
+            resourceType: 'CLASS',
+            resourceId: current.id,
+            beforeData: {
+              courseOfferingId: current.courseOfferingId,
+              name: current.name,
+              startDate: this.toDateString(current.startDate),
+              endDate: this.toDateString(current.endDate),
+              capacity: current.capacity,
+              status: current.status,
+            },
+            reason: '예정 반 삭제',
+            ipAddress,
+            result: 'SUCCESS',
+          },
+        });
+      });
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error.code === 'P2003' || error.code === 'P2014')
+      ) {
+        throw new ConflictException(
+          '수업·수강 등 운영 데이터가 연결된 반은 삭제할 수 없습니다.',
+        );
+      }
+
+      throw error;
+    }
   }
 
   private async assertCourseOfferingExists(id: string): Promise<void> {

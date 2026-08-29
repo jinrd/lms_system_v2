@@ -46,7 +46,7 @@ const ALLOWED_STATUS_TRANSITIONS: Readonly<
   [CourseStatus.RECRUITING]: [CourseStatus.IN_PROGRESS, CourseStatus.CANCELED],
   [CourseStatus.IN_PROGRESS]: [CourseStatus.COMPLETED, CourseStatus.CANCELED],
   [CourseStatus.COMPLETED]: [],
-  [CourseStatus.CANCELED]: [],
+  [CourseStatus.CANCELED]: [CourseStatus.PLANNED],
 };
 
 @Injectable()
@@ -197,13 +197,8 @@ export class CourseOfferingsService {
         throw new NotFoundException('개설 강의를 찾을 수 없습니다.');
       }
 
-      if (
-        existing.status === CourseStatus.COMPLETED ||
-        existing.status === CourseStatus.CANCELED
-      ) {
-        throw new ConflictException(
-          '종료되거나 취소된 강의는 수정할 수 없습니다.',
-        );
+      if (existing.status === CourseStatus.COMPLETED) {
+        throw new ConflictException('완료된 강의는 수정할 수 없습니다.');
       }
 
       const startDate = dto.startDate
