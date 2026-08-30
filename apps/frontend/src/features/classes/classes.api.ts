@@ -56,10 +56,11 @@ export function getClasses(
   courseOfferingId: string,
   status?: ClassStatus,
   page = 1,
+  limit = 20,
 ): Promise<ClassPage> {
   const searchParams = new URLSearchParams({
     page: String(page),
-    limit: "20",
+    limit: String(limit),
   });
 
   if (status) {

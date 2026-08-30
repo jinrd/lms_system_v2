@@ -104,3 +104,50 @@ export function createRegularEnrollment(
     },
   );
 }
+
+export type ChangeEnrollmentStatusInput = {
+  status: EnrollmentStatus;
+  effectiveOn?: string;
+  reason: string;
+};
+
+export type TransferEnrollmentInput = {
+  targetClassId: string;
+  transferOn: string;
+  reason: string;
+};
+
+export type EnrollmentTransferResult = {
+  previousEnrollment: Enrollment;
+  newEnrollment: Enrollment;
+};
+
+export function changeEnrollmentStatus(
+  courseOfferingId: string,
+  classId: string,
+  enrollmentId: string,
+  input: ChangeEnrollmentStatusInput,
+): Promise<Enrollment> {
+  return apiRequest<Enrollment>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/enrollments/${enrollmentId}/status`,
+    {
+      method: "PATCH",
+      body: input,
+    },
+  );
+}
+
+export function transferEnrollment(
+  courseOfferingId: string,
+  classId: string,
+  enrollmentId: string,
+  input: TransferEnrollmentInput,
+): Promise<EnrollmentTransferResult> {
+  return apiRequest<EnrollmentTransferResult>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/enrollments/${enrollmentId}/transfer`,
+    {
+      method: "POST",
+      body: input,
+    },
+  );
+}

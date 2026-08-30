@@ -20,6 +20,7 @@ import {
   getClassEnrollments,
   type EnrollmentStatus,
 } from "./enrollments.api";
+import { EnrollmentActions } from "./EnrollmentActions";
 
 type ClassEnrollmentsPanelProps = {
   courseOfferingId: string;
@@ -280,6 +281,12 @@ export function ClassEnrollmentsPanel({
                       {enrollment.subjects.length}개
                     </small>
                   </div>
+                  <EnrollmentActions
+                    courseOfferingId={courseOfferingId}
+                    classItem={classItem}
+                    enrollment={enrollment}
+                    onChanged={refreshEnrollments}
+                  />
                 </article>
               ))}
             </div>
