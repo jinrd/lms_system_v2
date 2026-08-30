@@ -1,4 +1,6 @@
 import {
+  Ban,
+  CalendarPlus,
   CalendarDays,
   CalendarRange,
   CirclePlus,
@@ -15,15 +17,19 @@ import {
   LoadingState,
 } from "../../components/ui/PageStates";
 import {
+  cancelClassSession,
   createClassSchedulePattern,
+  createMakeupSession,
   generateClassSessions,
   getClassSchedulePatterns,
   getClassSessions,
   updateClassSchedulePattern,
   type ClassItem,
   type ClassSchedulePattern,
+  type ClassSession,
   type SessionStatus,
 } from "./classes.api";
+import { useAuth } from "../../auth/AuthProvider";
 
 type ClassSchedulePanelProps = {
   courseOfferingId: string;
@@ -31,6 +37,17 @@ type ClassSchedulePanelProps = {
 };
 
 type ScheduleTab = "patterns" | "sessions";
+
+type SessionAction =
+  | {
+      type: "cancel";
+      session: ClassSession;
+    }
+  | {
+      type: "makeup";
+      session: ClassSession;
+    }
+  | null;
 
 const DAY_LABELS: Record<number, string> = {
   1: "월요일",
@@ -107,21 +124,40 @@ function formatSessionTime(value: string): string {
     hour12: false,
   }).format(new Date(value));
 }
+function toLocalDateTime(value: string): string {
+  const date = new Date(value);
+  const seoulOffset = 9 * 60 * 60 * 1000;
 
+  return new Date(date.getTime() + seoulOffset).toISOString().slice(0, 16);
+}
+
+function addDaysToDateTime(value: string, days: number): string {
+  const date = new Date(value);
+  date.setUTCDate(date.getUTCDate() + days);
+
+  return toLocalDateTime(date.toISOString());
+}
+
+function toIsoDateTime(value: string): string {
+  return new Date(`${value}:00+09:00`).toISOString();
+}
 export function ClassSchedulePanel({
   courseOfferingId,
   classItem,
 }: ClassSchedulePanelProps) {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<ScheduleTab>("patterns");
   const [editor, setEditor] = useState<ClassSchedulePattern | "create" | null>(
     null,
   );
+  const [sessionAction, setSessionAction] = useState<SessionAction>(null);
   const [startDate, setStartDate] = useState(() =>
     getInitialStartDate(classItem),
   );
   const [endDate, setEndDate] = useState(() => getInitialEndDate(classItem));
-
+  const canCancelSession =
+    user?.role === "MANAGER" || user?.role === "PRINCIPAL";
   const patternQueryKey = [
     "course-offerings",
     courseOfferingId,
@@ -223,7 +259,61 @@ export function ClassSchedulePanel({
       });
     },
   });
+  const refreshSessions = async (): Promise<void> => {
+    await queryClient.invalidateQueries({
+      queryKey: [
+        "course-offerings",
+        courseOfferingId,
+        "classes",
+        classItem.id,
+        "sessions",
+      ],
+    });
+  };
 
+  const cancelMutation = useMutation({
+    mutationFn: ({
+      session,
+      reason,
+    }: {
+      session: ClassSession;
+      reason: string;
+    }) =>
+      cancelClassSession(courseOfferingId, classItem.id, session.id, reason),
+    onSuccess: async () => {
+      setSessionAction(null);
+      await refreshSessions();
+    },
+  });
+
+  const makeupMutation = useMutation({
+    mutationFn: ({
+      session,
+      startsAt,
+      endsAt,
+      title,
+      room,
+      reason,
+    }: {
+      session: ClassSession;
+      startsAt: string;
+      endsAt: string;
+      title?: string;
+      room?: string;
+      reason: string;
+    }) =>
+      createMakeupSession(courseOfferingId, classItem.id, session.id, {
+        startsAt,
+        endsAt,
+        title,
+        room,
+        reason,
+      }),
+    onSuccess: async () => {
+      setSessionAction(null);
+      await refreshSessions();
+    },
+  });
   const handlePatternSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
 
@@ -239,6 +329,40 @@ export function ClassSchedulePanel({
       endTime: String(formData.get("endTime") ?? ""),
       room: room || undefined,
       active: pattern === undefined || formData.get("active") === "on",
+    });
+  };
+
+  const handleCancelSubmit = (
+    event: FormEvent<HTMLFormElement>,
+    session: ClassSession,
+  ): void => {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+
+    cancelMutation.mutate({
+      session,
+      reason: String(formData.get("reason") ?? "").trim(),
+    });
+  };
+
+  const handleMakeupSubmit = (
+    event: FormEvent<HTMLFormElement>,
+    session: ClassSession,
+  ): void => {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+    const title = String(formData.get("title") ?? "").trim();
+    const room = String(formData.get("room") ?? "").trim();
+
+    makeupMutation.mutate({
+      session,
+      startsAt: toIsoDateTime(String(formData.get("startsAt") ?? "")),
+      endsAt: toIsoDateTime(String(formData.get("endsAt") ?? "")),
+      title: title || undefined,
+      room: room || undefined,
+      reason: String(formData.get("reason") ?? "").trim(),
     });
   };
 
@@ -507,6 +631,12 @@ export function ClassSchedulePanel({
                             {session.title || session.subjectName}
                           </strong>
 
+                          {session.kind === "MAKEUP" && (
+                            <span className="status-badge status-badge--primary">
+                              보강
+                            </span>
+                          )}
+
                           <span
                             className={`status-badge ${
                               SESSION_STATUS_CLASSES[session.status]
@@ -526,7 +656,50 @@ export function ClassSchedulePanel({
                           {session.instructor.name} ·{" "}
                           {session.room || "강의실 미설정"}
                         </small>
+                        {session.status === "CANCELED" &&
+                          session.cancelReason && (
+                            <div className="timeline-item__reason">
+                              취소 사유: {session.cancelReason}
+                            </div>
+                          )}
                       </div>
+
+                      {canCancelSession && (
+                        <div className="data-row__actions">
+                          {(session.status === "SCHEDULED" ||
+                            session.status === "IN_PROGRESS") && (
+                            <button
+                              type="button"
+                              className="button button--danger button--compact"
+                              onClick={() =>
+                                setSessionAction({ type: "cancel", session })
+                              }
+                            >
+                              <Ban size={14} />
+                              취소
+                            </button>
+                          )}
+
+                          {session.kind === "REGULAR" &&
+                            session.status === "CANCELED" &&
+                            !sessions.some(
+                              (candidate) =>
+                                candidate.replacementForSessionId ===
+                                  session.id && candidate.status !== "CANCELED",
+                            ) && (
+                              <button
+                                type="button"
+                                className="button button--primary button--compact"
+                                onClick={() =>
+                                  setSessionAction({ type: "makeup", session })
+                                }
+                              >
+                                <CalendarPlus size={14} />
+                                보강 생성
+                              </button>
+                            )}
+                        </div>
+                      )}
                     </article>
                   ))}
                 </div>
@@ -658,6 +831,167 @@ export function ClassSchedulePanel({
                 disabled={savePatternMutation.isPending}
               >
                 {savePatternMutation.isPending ? "저장 중..." : "저장"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {sessionAction?.type === "cancel" && (
+        <Modal
+          title="실제 수업 취소"
+          description={`${sessionAction.session.title || sessionAction.session.subjectName} 수업을 취소합니다.`}
+          onClose={() => setSessionAction(null)}
+        >
+          <form
+            className="stack"
+            onSubmit={(event) =>
+              handleCancelSubmit(event, sessionAction.session)
+            }
+          >
+            <div className="info-banner">
+              <Ban size={19} />
+              <div>
+                <strong>수업 취소</strong>
+                <p>
+                  활성 출석 코드가 폐기되며 취소된 수업은 출석률 계산에서
+                  제외됩니다.
+                </p>
+              </div>
+            </div>
+
+            <label className="form-field form-field--flush">
+              <span>취소 사유</span>
+              <textarea name="reason" rows={4} maxLength={1000} required />
+            </label>
+
+            {cancelMutation.isError && (
+              <div className="form-alert" role="alert">
+                {getErrorMessage(cancelMutation.error)}
+              </div>
+            )}
+
+            <div className="dialog__actions">
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={() => setSessionAction(null)}
+              >
+                닫기
+              </button>
+              <button
+                type="submit"
+                className="button button--danger"
+                disabled={cancelMutation.isPending}
+              >
+                {cancelMutation.isPending ? "취소 처리 중..." : "수업 취소"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {sessionAction?.type === "makeup" && (
+        <Modal
+          title="보강 수업 생성"
+          description={`${sessionAction.session.title || sessionAction.session.subjectName} 취소 수업의 보강 일정을 만듭니다.`}
+          onClose={() => setSessionAction(null)}
+        >
+          <form
+            className="stack"
+            onSubmit={(event) =>
+              handleMakeupSubmit(event, sessionAction.session)
+            }
+          >
+            <div className="info-banner">
+              <CalendarPlus size={19} />
+              <div>
+                <strong>원수업</strong>
+                <p>
+                  {formatSessionDate(sessionAction.session.startsAt)}{" "}
+                  {formatSessionTime(sessionAction.session.startsAt)}~
+                  {formatSessionTime(sessionAction.session.endsAt)}
+                </p>
+              </div>
+            </div>
+
+            <label className="form-field form-field--flush">
+              <span>보강 수업명</span>
+              <input
+                name="title"
+                maxLength={200}
+                defaultValue={`${sessionAction.session.title || sessionAction.session.subjectName} 보강`}
+              />
+            </label>
+
+            <div className="form-grid">
+              <label className="form-field form-field--flush">
+                <span>시작 시각</span>
+                <input
+                  name="startsAt"
+                  type="datetime-local"
+                  min={`${classItem.startDate}T00:00`}
+                  max={`${classItem.endDate}T23:59`}
+                  defaultValue={addDaysToDateTime(
+                    sessionAction.session.startsAt,
+                    7,
+                  )}
+                  required
+                />
+              </label>
+
+              <label className="form-field form-field--flush">
+                <span>종료 시각</span>
+                <input
+                  name="endsAt"
+                  type="datetime-local"
+                  min={`${classItem.startDate}T00:00`}
+                  max={`${classItem.endDate}T23:59`}
+                  defaultValue={addDaysToDateTime(
+                    sessionAction.session.endsAt,
+                    7,
+                  )}
+                  required
+                />
+              </label>
+            </div>
+
+            <label className="form-field">
+              <span>강의실</span>
+              <input
+                name="room"
+                maxLength={100}
+                defaultValue={
+                  sessionAction.session.room ?? classItem.room ?? ""
+                }
+              />
+            </label>
+
+            <label className="form-field">
+              <span>보강 생성 사유</span>
+              <textarea name="reason" rows={4} maxLength={1000} required />
+            </label>
+
+            {makeupMutation.isError && (
+              <div className="form-alert" role="alert">
+                {getErrorMessage(makeupMutation.error)}
+              </div>
+            )}
+
+            <div className="dialog__actions">
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={() => setSessionAction(null)}
+              >
+                취소
+              </button>
+              <button
+                type="submit"
+                className="button button--primary"
+                disabled={makeupMutation.isPending}
+              >
+                {makeupMutation.isPending ? "생성 중..." : "보강 수업 생성"}
               </button>
             </div>
           </form>

@@ -17,6 +17,7 @@ import { UsersModule } from './users/users.module';
 import { EducationModule } from './education/education.module';
 import { CoursesModule } from './courses/courses.module';
 import { ClassesModule } from './classes/classes.module';
+import { EnrollmentsModule } from './enrollments/enrollments.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { ClassesModule } from './classes/classes.module';
     EducationModule,
     CoursesModule,
     ClassesModule,
+    EnrollmentsModule,
   ],
   controllers: [HealthController],
   providers: [

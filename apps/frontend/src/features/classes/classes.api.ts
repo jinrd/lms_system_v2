@@ -422,3 +422,42 @@ export function changeClassSessionStatus(
     },
   );
 }
+export type CreateMakeupSessionInput = {
+  startsAt: string;
+  endsAt: string;
+  title?: string;
+  room?: string;
+  reason: string;
+};
+
+export function cancelClassSession(
+  courseOfferingId: string,
+  classId: string,
+  sessionId: string,
+  reason: string,
+): Promise<ClassSession> {
+  return apiRequest<ClassSession>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/sessions/${sessionId}/cancel`,
+    {
+      method: "POST",
+      body: {
+        reason,
+      },
+    },
+  );
+}
+
+export function createMakeupSession(
+  courseOfferingId: string,
+  classId: string,
+  sessionId: string,
+  input: CreateMakeupSessionInput,
+): Promise<ClassSession> {
+  return apiRequest<ClassSession>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/sessions/${sessionId}/makeup`,
+    {
+      method: "POST",
+      body: input,
+    },
+  );
+}
