@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   Req,
@@ -13,11 +14,14 @@ import type { AuthenticatedUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../generated/prisma/enums';
+import { ChangeEnrollmentStatusDto } from './dto/change-enrollment-status.dto';
 import { CreateRegularEnrollmentDto } from './dto/create-regular-enrollment.dto';
 import { EnrollmentQueryDto } from './dto/enrollment-query.dto';
+import { TransferEnrollmentDto } from './dto/transfer-enrollment.dto';
 import {
   type EnrollmentPageResponse,
   type EnrollmentResponse,
+  type EnrollmentTransferResponse,
   EnrollmentsService,
 } from './enrollments.service';
 
@@ -52,6 +56,44 @@ export class EnrollmentsController {
     return this.enrollmentsService.createRegular(
       courseOfferingId,
       classId,
+      dto,
+      actor,
+      request.ip,
+    );
+  }
+
+  @Patch(':enrollmentId/status')
+  changeStatus(
+    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
+    @Param('classId', ParseUUIDPipe) classId: string,
+    @Param('enrollmentId', ParseUUIDPipe) enrollmentId: string,
+    @Body() dto: ChangeEnrollmentStatusDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<EnrollmentResponse> {
+    return this.enrollmentsService.changeStatus(
+      courseOfferingId,
+      classId,
+      enrollmentId,
+      dto,
+      actor,
+      request.ip,
+    );
+  }
+
+  @Post(':enrollmentId/transfer')
+  transfer(
+    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
+    @Param('classId', ParseUUIDPipe) classId: string,
+    @Param('enrollmentId', ParseUUIDPipe) enrollmentId: string,
+    @Body() dto: TransferEnrollmentDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<EnrollmentTransferResponse> {
+    return this.enrollmentsService.transfer(
+      courseOfferingId,
+      classId,
+      enrollmentId,
       dto,
       actor,
       request.ip,
