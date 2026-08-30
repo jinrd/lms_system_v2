@@ -24,6 +24,7 @@ import {
   type EnrollmentTransferResponse,
   EnrollmentsService,
 } from './enrollments.service';
+import { CreateSubjectEnrollmentDto } from './dto/create-subject-enrollment.dto';
 
 const MANAGEMENT_ROLES = [
   UserRole.MANAGER,
@@ -54,6 +55,23 @@ export class EnrollmentsController {
     @Req() request: Request,
   ): Promise<EnrollmentResponse> {
     return this.enrollmentsService.createRegular(
+      courseOfferingId,
+      classId,
+      dto,
+      actor,
+      request.ip,
+    );
+  }
+
+  @Post('subjects')
+  createSubjectEnrollment(
+    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
+    @Param('classId', ParseUUIDPipe) classId: string,
+    @Body() dto: CreateSubjectEnrollmentDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<EnrollmentResponse> {
+    return this.enrollmentsService.createSubjectEnrollment(
       courseOfferingId,
       classId,
       dto,

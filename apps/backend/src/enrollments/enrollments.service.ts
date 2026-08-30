@@ -17,6 +17,7 @@ import { CreateRegularEnrollmentDto } from './dto/create-regular-enrollment.dto'
 import { EnrollmentQueryDto } from './dto/enrollment-query.dto';
 import { TransferEnrollmentDto } from './dto/transfer-enrollment.dto';
 import { ChangeEnrollmentStatusDto } from './dto/change-enrollment-status.dto';
+import { CreateSubjectEnrollmentDto } from './dto/create-subject-enrollment.dto';
 
 export type EnrollmentResponse = {
   id: string;
@@ -367,6 +368,280 @@ export class EnrollmentsService {
 
     return this.findOne(courseOfferingId, classId, enrollmentId);
   }
+
+  async createSubjectEnrollment(
+    courseOfferingId: string,
+    classId: string,
+    dto: CreateSubjectEnrollmentDto,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<EnrollmentResponse> {
+    if (
+      dto.type !== EnrollmentType.SUPPLEMENT &&
+      dto.type !== EnrollmentType.MAKEUP
+    ) {
+      throw new BadRequestException(
+        '과목 단위 참여는 보충 또는 보강 유형만 가능합니다.',
+      );
+    }
+
+    const startsOn = this.toDate(dto.startsOn);
+    const endsOn = this.toDate(dto.endsOn);
+    const reason = dto.reason.trim();
+    const attendanceManaged = dto.attendanceManaged ?? true;
+    const gradeManaged = dto.gradeManaged ?? false;
+
+    if (startsOn > endsOn) {
+      throw new BadRequestException(
+        '과목 참여 종료일은 시작일보다 빠를 수 없습니다.',
+      );
+    }
+
+    const enrollmentId = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`
+        SELECT id
+        FROM course_offerings
+        WHERE id = ${courseOfferingId}::uuid
+        FOR UPDATE
+      `;
+
+      const sourceEnrollment = await tx.enrollment.findFirst({
+        where: {
+          id: dto.sourceEnrollmentId,
+          courseOfferingId,
+          type: EnrollmentType.REGULAR,
+          status: {
+            in: [EnrollmentStatus.SCHEDULED, EnrollmentStatus.ACTIVE],
+          },
+        },
+        include: {
+          student: {
+            select: {
+              status: true,
+            },
+          },
+        },
+      });
+
+      if (!sourceEnrollment) {
+        throw new NotFoundException(
+          '학생의 활성 기본 수강 등록을 찾을 수 없습니다.',
+        );
+      }
+
+      if (sourceEnrollment.student.status !== UserStatus.ACTIVE) {
+        throw new ConflictException(
+          '활성 상태의 학생만 과목 단위 참여가 가능합니다.',
+        );
+      }
+
+      if (sourceEnrollment.classId === classId) {
+        throw new ConflictException(
+          '기본 수강 중인 반에는 별도의 보충·보강 과목을 등록할 수 없습니다.',
+        );
+      }
+
+      if (
+        startsOn < sourceEnrollment.startsOn ||
+        (sourceEnrollment.endsOn && endsOn > sourceEnrollment.endsOn)
+      ) {
+        throw new BadRequestException(
+          '보충·보강 기간은 기본 수강 기간 안에 있어야 합니다.',
+        );
+      }
+
+      const targetClass = await tx.class.findFirst({
+        where: {
+          id: classId,
+          courseOfferingId,
+        },
+        include: {
+          classSubjects: {
+            where: {
+              courseOfferingSubjectId: dto.courseOfferingSubjectId,
+            },
+            select: {
+              id: true,
+              courseOfferingSubjectId: true,
+            },
+          },
+        },
+      });
+
+      if (!targetClass) {
+        throw new NotFoundException('참여할 반을 찾을 수 없습니다.');
+      }
+
+      if (
+        targetClass.status === ClassStatus.COMPLETED ||
+        targetClass.status === ClassStatus.CANCELED
+      ) {
+        throw new ConflictException(
+          '완료되거나 취소된 반에는 과목 참여를 등록할 수 없습니다.',
+        );
+      }
+
+      if (startsOn < targetClass.startDate || endsOn > targetClass.endDate) {
+        throw new BadRequestException(
+          '과목 참여 기간은 대상 반 운영 기간 안에 있어야 합니다.',
+        );
+      }
+
+      if (targetClass.classSubjects.length === 0) {
+        throw new NotFoundException(
+          '대상 반에서 운영하는 과목을 찾을 수 없습니다.',
+        );
+      }
+
+      let targetEnrollment = await tx.enrollment.findFirst({
+        where: {
+          studentId: sourceEnrollment.studentId,
+          courseOfferingId,
+          classId,
+          type: dto.type,
+          status: {
+            in: [EnrollmentStatus.SCHEDULED, EnrollmentStatus.ACTIVE],
+          },
+        },
+        include: {
+          subjects: {
+            select: {
+              courseOfferingSubjectId: true,
+            },
+          },
+        },
+      });
+
+      if (
+        targetEnrollment?.subjects.some(
+          (subject) =>
+            subject.courseOfferingSubjectId === dto.courseOfferingSubjectId,
+        )
+      ) {
+        throw new ConflictException(
+          '이미 해당 과목에 보충·보강 등록되어 있습니다.',
+        );
+      }
+
+      if (!targetEnrollment) {
+        const currentParticipantCount = await tx.enrollment.count({
+          where: {
+            classId,
+            status: {
+              in: [EnrollmentStatus.SCHEDULED, EnrollmentStatus.ACTIVE],
+            },
+          },
+        });
+
+        if (currentParticipantCount >= targetClass.capacity) {
+          throw new ConflictException('대상 반의 정원을 초과할 수 없습니다.');
+        }
+
+        targetEnrollment = await tx.enrollment.create({
+          data: {
+            studentId: sourceEnrollment.studentId,
+            courseOfferingId,
+            classId,
+            type: dto.type,
+            status: this.getInitialStatus(startsOn, endsOn),
+            startsOn,
+            endsOn,
+            reason,
+            attendanceManaged,
+            gradeManaged,
+            assignedById: actor.id,
+          },
+          include: {
+            subjects: {
+              select: {
+                courseOfferingSubjectId: true,
+              },
+            },
+          },
+        });
+      } else {
+        const mergedStartsOn =
+          startsOn < targetEnrollment.startsOn
+            ? startsOn
+            : targetEnrollment.startsOn;
+
+        const mergedEndsOn =
+          !targetEnrollment.endsOn || endsOn > targetEnrollment.endsOn
+            ? endsOn
+            : targetEnrollment.endsOn;
+
+        const mergedStatus =
+          mergedStartsOn <= this.getToday()
+            ? EnrollmentStatus.ACTIVE
+            : EnrollmentStatus.SCHEDULED;
+
+        targetEnrollment = await tx.enrollment.update({
+          where: {
+            id: targetEnrollment.id,
+          },
+          data: {
+            startsOn: mergedStartsOn,
+            endsOn: mergedEndsOn,
+            status: mergedStatus,
+            attendanceManaged:
+              targetEnrollment.attendanceManaged || attendanceManaged,
+            gradeManaged: targetEnrollment.gradeManaged || gradeManaged,
+          },
+          include: {
+            subjects: {
+              select: {
+                courseOfferingSubjectId: true,
+              },
+            },
+          },
+        });
+      }
+
+      const enrollmentSubject = await tx.enrollmentSubject.create({
+        data: {
+          enrollmentId: targetEnrollment.id,
+          courseOfferingId,
+          courseOfferingSubjectId: dto.courseOfferingSubjectId,
+          startsOn,
+          endsOn,
+          attendanceManaged,
+          gradeManaged,
+          reason,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorRole: actor.role,
+          action: 'ENROLLMENT_SUBJECT_PARTICIPATION_ADDED',
+          resourceType: 'ENROLLMENT_SUBJECT',
+          resourceId: enrollmentSubject.id,
+          afterData: {
+            enrollmentId: targetEnrollment.id,
+            sourceEnrollmentId: sourceEnrollment.id,
+            studentId: sourceEnrollment.studentId,
+            courseOfferingId,
+            classId,
+            courseOfferingSubjectId: dto.courseOfferingSubjectId,
+            type: dto.type,
+            startsOn: dto.startsOn,
+            endsOn: dto.endsOn,
+            attendanceManaged,
+            gradeManaged,
+            reason,
+          },
+          ipAddress,
+          result: 'SUCCESS',
+        },
+      });
+
+      return targetEnrollment.id;
+    });
+
+    return this.findOne(courseOfferingId, classId, enrollmentId);
+  }
+
   async changeStatus(
     courseOfferingId: string,
     classId: string,
