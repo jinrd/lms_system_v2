@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import {
+  AttendanceCodeStatus,
   ClassStatus,
   SessionKind,
   SessionStatus,
@@ -16,6 +17,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ChangeClassSessionStatusDto } from './dto/change-class-session-status.dto';
 import { ClassSessionRangeDto } from './dto/class-session-range.dto';
 import { UpdateClassSessionDto } from './dto/update-class-session.dto';
+import { CreateMakeupSessionDto } from './dto/create-makeup-session.dto';
+import { CancelClassSessionDto } from './dto/cancel-class-session.dto';
 
 export type ClassSessionResponse = {
   id: string;
@@ -40,6 +43,13 @@ export type ClassSessionResponse = {
   completedMinutes: number | null;
   createdAt: string;
   updatedAt: string;
+  replacementForSessionId: string | null;
+  canceledAt: string | null;
+  canceledBy: {
+    id: string;
+    name: string;
+  } | null;
+  cancelReason: string | null;
 };
 
 export type ClassSessionGenerationResponse = {
@@ -64,6 +74,12 @@ const SESSION_INCLUDE = {
       id: true,
       name: true,
       loginId: true,
+    },
+  },
+  canceledBy: {
+    select: {
+      id: true,
+      name: true,
     },
   },
 } as const;
@@ -606,6 +622,299 @@ export class ClassSessionsService {
     return this.findOne(courseOfferingId, classId, sessionId);
   }
 
+  async cancel(
+    courseOfferingId: string,
+    classId: string,
+    sessionId: string,
+    dto: CancelClassSessionDto,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<ClassSessionResponse> {
+    const reason = dto.reason.trim();
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`
+      SELECT id
+      FROM class_sessions
+      WHERE id = ${sessionId}::uuid
+      FOR UPDATE
+    `;
+
+      const current = await tx.classSession.findFirst({
+        where: {
+          id: sessionId,
+          classId,
+          class: {
+            courseOfferingId,
+          },
+        },
+      });
+
+      if (!current) {
+        throw new NotFoundException('실제 수업을 찾을 수 없습니다.');
+      }
+
+      if (
+        current.status === SessionStatus.COMPLETED ||
+        current.status === SessionStatus.CANCELED
+      ) {
+        throw new ConflictException(
+          '완료되거나 이미 취소된 수업은 취소할 수 없습니다.',
+        );
+      }
+
+      const canceledAt = new Date();
+
+      const revokedCodes = await tx.attendanceCode.updateMany({
+        where: {
+          classSessionId: current.id,
+          status: AttendanceCodeStatus.ACTIVE,
+        },
+        data: {
+          status: AttendanceCodeStatus.REVOKED,
+          revokedAt: canceledAt,
+        },
+      });
+
+      await tx.classSession.update({
+        where: {
+          id: current.id,
+        },
+        data: {
+          status: SessionStatus.CANCELED,
+          canceledAt,
+          canceledById: actor.id,
+          cancelReason: reason,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorRole: actor.role,
+          action: 'CLASS_SESSION_CANCELED',
+          resourceType: 'CLASS_SESSION',
+          resourceId: current.id,
+          beforeData: {
+            status: current.status,
+            canceledAt: current.canceledAt?.toISOString() ?? null,
+            canceledById: current.canceledById,
+            cancelReason: current.cancelReason,
+          },
+          afterData: {
+            status: SessionStatus.CANCELED,
+            canceledAt: canceledAt.toISOString(),
+            canceledById: actor.id,
+            cancelReason: reason,
+            revokedAttendanceCodeCount: revokedCodes.count,
+          },
+          reason,
+          ipAddress,
+          result: 'SUCCESS',
+        },
+      });
+    });
+
+    return this.findOne(courseOfferingId, classId, sessionId);
+  }
+
+  async createMakeup(
+    courseOfferingId: string,
+    classId: string,
+    originalSessionId: string,
+    dto: CreateMakeupSessionDto,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<ClassSessionResponse> {
+    const startsAt = new Date(dto.startsAt);
+    const endsAt = new Date(dto.endsAt);
+    const reason = dto.reason.trim();
+
+    if (startsAt >= endsAt) {
+      throw new BadRequestException(
+        '보강 종료 시각은 시작 시각보다 늦어야 합니다.',
+      );
+    }
+
+    if (this.toSeoulDateString(startsAt) !== this.toSeoulDateString(endsAt)) {
+      throw new BadRequestException('보강 시작과 종료는 같은 날짜여야 합니다.');
+    }
+
+    const makeupId = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`
+        SELECT id
+        FROM class_sessions
+        WHERE id = ${originalSessionId}::uuid
+        FOR UPDATE
+      `;
+
+      const original = await tx.classSession.findFirst({
+        where: {
+          id: originalSessionId,
+          classId,
+          class: {
+            courseOfferingId,
+          },
+        },
+        include: {
+          class: true,
+          classSubject: {
+            include: {
+              courseOfferingSubject: {
+                include: {
+                  subject: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!original) {
+        throw new NotFoundException('보강 대상 원수업을 찾을 수 없습니다.');
+      }
+
+      if (original.kind !== SessionKind.REGULAR) {
+        throw new ConflictException('정규 수업만 보강 대상이 될 수 있습니다.');
+      }
+
+      if (original.status !== SessionStatus.CANCELED) {
+        throw new ConflictException(
+          '취소된 수업에 대해서만 보강 수업을 만들 수 있습니다.',
+        );
+      }
+
+      const sessionDate = this.toSeoulDateString(startsAt);
+      const classStartDate = this.toDateString(original.class.startDate);
+      const classEndDate = this.toDateString(original.class.endDate);
+
+      if (sessionDate < classStartDate || sessionDate > classEndDate) {
+        throw new BadRequestException(
+          '보강 일자는 반 운영 기간 안에 있어야 합니다.',
+        );
+      }
+
+      const existingMakeup = await tx.classSession.findFirst({
+        where: {
+          replacementForSessionId: original.id,
+          status: {
+            not: SessionStatus.CANCELED,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (existingMakeup) {
+        throw new ConflictException(
+          '이미 취소되지 않은 보강 수업이 존재합니다.',
+        );
+      }
+
+      const assignmentDate = new Date(`${sessionDate}T00:00:00.000Z`);
+
+      const assignment = await tx.classInstructorAssignment.findFirst({
+        where: {
+          classId,
+          assignedFrom: {
+            lte: assignmentDate,
+          },
+          OR: [
+            {
+              assignedTo: null,
+            },
+            {
+              assignedTo: {
+                gte: assignmentDate,
+              },
+            },
+          ],
+        },
+        orderBy: {
+          assignedFrom: 'desc',
+        },
+      });
+
+      if (!assignment) {
+        throw new ConflictException('보강 일자에 배정된 담당 강사가 없습니다.');
+      }
+
+      const overlapping = await tx.classSession.findFirst({
+        where: {
+          classId,
+          status: {
+            not: SessionStatus.CANCELED,
+          },
+          startsAt: {
+            lt: endsAt,
+          },
+          endsAt: {
+            gt: startsAt,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (overlapping) {
+        throw new ConflictException('같은 반에 시간이 겹치는 수업이 있습니다.');
+      }
+
+      const defaultTitle = `${
+        original.title ??
+        original.classSubject.courseOfferingSubject.subject.name
+      } 보강`;
+
+      const created = await tx.classSession.create({
+        data: {
+          classId,
+          classSubjectId: original.classSubjectId,
+          courseOfferingSubjectId: original.courseOfferingSubjectId,
+          schedulePatternId: null,
+          instructorId: assignment.instructorId,
+          kind: SessionKind.MAKEUP,
+          replacementForSessionId: original.id,
+          title: this.optionalText(dto.title) ?? defaultTitle,
+          startsAt,
+          endsAt,
+          room:
+            this.optionalText(dto.room) ?? original.room ?? original.class.room,
+          status: SessionStatus.SCHEDULED,
+          createdById: actor.id,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorRole: actor.role,
+          action: 'MAKEUP_SESSION_CREATED',
+          resourceType: 'CLASS_SESSION',
+          resourceId: created.id,
+          afterData: {
+            originalSessionId: original.id,
+            classId,
+            classSubjectId: original.classSubjectId,
+            instructorId: assignment.instructorId,
+            startsAt: startsAt.toISOString(),
+            endsAt: endsAt.toISOString(),
+            room: created.room,
+            status: created.status,
+          },
+          reason,
+          ipAddress,
+          result: 'SUCCESS',
+        },
+      });
+
+      return created.id;
+    });
+
+    return this.findOne(courseOfferingId, classId, makeupId);
+  }
+
   private async findOne(
     courseOfferingId: string,
     classId: string,
@@ -802,6 +1111,13 @@ export class ClassSessionsService {
       name: string;
       loginId: string | null;
     };
+    replacementForSessionId: string | null;
+    canceledAt: Date | null;
+    cancelReason: string | null;
+    canceledBy: {
+      id: string;
+      name: string;
+    } | null;
   }): ClassSessionResponse {
     return {
       id: session.id,
@@ -822,6 +1138,10 @@ export class ClassSessionsService {
       completedMinutes: session.completedMinutes,
       createdAt: session.createdAt.toISOString(),
       updatedAt: session.updatedAt.toISOString(),
+      replacementForSessionId: session.replacementForSessionId,
+      canceledAt: session.canceledAt?.toISOString() ?? null,
+      canceledBy: session.canceledBy,
+      cancelReason: session.cancelReason,
     };
   }
 }

@@ -272,6 +272,13 @@ export type ClassSession = {
   completedMinutes: number | null;
   createdAt: string;
   updatedAt: string;
+  replacementForSessionId: string | null;
+  canceledAt: string | null;
+  canceledBy: {
+    id: string;
+    name: string;
+  } | null;
+  cancelReason: string | null;
 };
 
 export type ClassSessionRange = {

@@ -22,6 +22,8 @@ import {
 import { ChangeClassSessionStatusDto } from './dto/change-class-session-status.dto';
 import { ClassSessionRangeDto } from './dto/class-session-range.dto';
 import { UpdateClassSessionDto } from './dto/update-class-session.dto';
+import { CreateMakeupSessionDto } from './dto/create-makeup-session.dto';
+import { CancelClassSessionDto } from './dto/cancel-class-session.dto';
 
 const MANAGEMENT_ROLES = [
   UserRole.MANAGER,
@@ -33,6 +35,8 @@ const SESSION_MANAGEMENT_ROLES = [
   UserRole.INSTRUCTOR,
   ...MANAGEMENT_ROLES,
 ] as const;
+
+const CANCELLATION_ROLES = [UserRole.MANAGER, UserRole.PRINCIPAL] as const;
 
 @Roles(...MANAGEMENT_ROLES)
 @Controller('course-offerings/:courseOfferingId/classes/:classId/sessions')
@@ -113,6 +117,52 @@ export class ClassSessionsController {
     @Req() request: Request,
   ): Promise<ClassSessionResponse> {
     return this.classSessionsService.changeStatus(
+      courseOfferingId,
+      classId,
+      sessionId,
+      dto,
+      actor,
+      request.ip,
+    );
+  }
+
+  @Roles(...CANCELLATION_ROLES)
+  @Post(':sessionId/cancel')
+  cancel(
+    @Param('courseOfferingId', ParseUUIDPipe)
+    courseOfferingId: string,
+    @Param('classId', ParseUUIDPipe)
+    classId: string,
+    @Param('sessionId', ParseUUIDPipe)
+    sessionId: string,
+    @Body() dto: CancelClassSessionDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ClassSessionResponse> {
+    return this.classSessionsService.cancel(
+      courseOfferingId,
+      classId,
+      sessionId,
+      dto,
+      actor,
+      request.ip,
+    );
+  }
+
+  @Roles(...CANCELLATION_ROLES)
+  @Post(':sessionId/makeup')
+  createMakeup(
+    @Param('courseOfferingId', ParseUUIDPipe)
+    courseOfferingId: string,
+    @Param('classId', ParseUUIDPipe)
+    classId: string,
+    @Param('sessionId', ParseUUIDPipe)
+    sessionId: string,
+    @Body() dto: CreateMakeupSessionDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ClassSessionResponse> {
+    return this.classSessionsService.createMakeup(
       courseOfferingId,
       classId,
       sessionId,
