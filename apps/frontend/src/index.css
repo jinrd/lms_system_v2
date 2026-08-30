@@ -2324,3 +2324,88 @@ button {
     grid-column: auto;
   }
 }
+
+.instructor-schedule-filter {
+  justify-content: space-between;
+}
+
+.date-navigation {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.instructor-session-list {
+  display: grid;
+}
+
+.instructor-session-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.instructor-session-card:last-child {
+  border-bottom: 0;
+}
+
+.instructor-session-card__body {
+  min-width: 0;
+}
+
+.instructor-session-card__body > p {
+  margin: 8px 0 5px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.instructor-session-card__body > small {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  color: #8490a2;
+}
+
+.instructor-session-card__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.session-content-preview {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--surface-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 767px) {
+  .instructor-schedule-filter {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .date-navigation {
+    justify-content: space-between;
+  }
+
+  .instructor-session-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 16px;
+  }
+
+  .instructor-session-card__actions {
+    grid-column: 1 / -1;
+  }
+
+  .instructor-session-card__actions .button {
+    flex: 1;
+  }
+}

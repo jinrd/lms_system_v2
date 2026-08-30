@@ -281,6 +281,7 @@ export type ClassSessionRange = {
 
 export type ClassSessionGenerationResult = {
   createdCount: number;
+  removedCount: number;
   skippedCount: number;
   sessions: ClassSession[];
 };
@@ -347,6 +348,69 @@ export function addClassSubject(
       method: "POST",
       body: {
         courseOfferingSubjectId,
+      },
+    },
+  );
+}
+
+export type InstructorClass = {
+  id: string;
+  courseOfferingId: string;
+  courseOfferingName: string;
+  name: string;
+  room: string | null;
+  startDate: string;
+  endDate: string;
+  status: ClassStatus;
+  subjectCount: number;
+  assignment: {
+    assignedFrom: string;
+    assignedTo: string | null;
+    current: boolean;
+  };
+};
+
+export type UpdateClassSessionInput = {
+  title?: string;
+  lessonContent?: string;
+  startsAt?: string;
+  endsAt?: string;
+  room?: string;
+};
+
+export function getInstructorClasses(): Promise<InstructorClass[]> {
+  return apiRequest<InstructorClass[]>("/instructor/classes");
+}
+
+export function updateClassSession(
+  courseOfferingId: string,
+  classId: string,
+  sessionId: string,
+  input: UpdateClassSessionInput,
+): Promise<ClassSession> {
+  return apiRequest<ClassSession>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/sessions/${sessionId}`,
+    {
+      method: "PATCH",
+      body: input,
+    },
+  );
+}
+
+export function changeClassSessionStatus(
+  courseOfferingId: string,
+  classId: string,
+  sessionId: string,
+  status: "IN_PROGRESS" | "COMPLETED",
+  completedMinutes?: number,
+): Promise<ClassSession> {
+  return apiRequest<ClassSession>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/sessions/${sessionId}/status`,
+    {
+      method: "PATCH",
+      body: {
+        status,
+        ...(completedMinutes !== undefined ? { completedMinutes } : {}),
       },
     },
   );

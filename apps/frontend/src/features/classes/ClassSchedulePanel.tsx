@@ -406,7 +406,7 @@ export function ClassSchedulePanel({
                 onClick={() => {
                   if (
                     window.confirm(
-                      `${startDate}부터 ${endDate}까지 실제 수업을 생성하시겠습니까?`,
+                      `${startDate}부터 ${endDate}까지 현재 반복 시간표를 기준으로 실제 수업을 생성·동기화하시겠습니까?`,
                     )
                   ) {
                     generateMutation.mutate();
@@ -414,7 +414,9 @@ export function ClassSchedulePanel({
                 }}
               >
                 <RefreshCw size={17} />
-                {generateMutation.isPending ? "생성 중..." : "실제 수업 생성"}
+                {generateMutation.isPending
+                  ? "동기화 중..."
+                  : "실제 수업 생성·동기화"}
               </button>
             </div>
 
@@ -454,7 +456,8 @@ export function ClassSchedulePanel({
                   <strong>실제 수업 생성 완료</strong>
                   <p>
                     {generateMutation.data.createdCount}개 생성,{" "}
-                    {generateMutation.data.skippedCount}개 기존 수업 건너뜀
+                    {generateMutation.data.removedCount}개 변경 전 일정 제거,{" "}
+                    {generateMutation.data.skippedCount}개 기존 일정 유지
                   </p>
                 </div>
               </div>

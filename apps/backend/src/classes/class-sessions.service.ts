@@ -44,6 +44,7 @@ export type ClassSessionResponse = {
 
 export type ClassSessionGenerationResponse = {
   createdCount: number;
+  removedCount: number;
   skippedCount: number;
   sessions: ClassSessionResponse[];
 };
@@ -213,19 +214,19 @@ export class ClassSessionsService {
           },
         },
         select: {
+          id: true,
           schedulePatternId: true,
+          classSubjectId: true,
+          instructorId: true,
           startsAt: true,
+          endsAt: true,
+          room: true,
+          status: true,
+          kind: true,
         },
       });
 
-      const existingKeys = new Set(
-        existingSessions.map(
-          (session) =>
-            `${session.schedulePatternId}:${session.startsAt.toISOString()}`,
-        ),
-      );
-
-      const candidates: Array<{
+      const desiredSessions: Array<{
         classId: string;
         classSubjectId: string;
         courseOfferingSubjectId: string;
@@ -239,8 +240,6 @@ export class ClassSessionsService {
         status: SessionStatus;
         createdById: string;
       }> = [];
-
-      let skippedCount = 0;
 
       for (
         let date = new Date(startDate);
@@ -278,14 +277,7 @@ export class ClassSessionsService {
           const startsAt = new Date(`${dateString}T${startTime}:00+09:00`);
           const endsAt = new Date(`${dateString}T${endTime}:00+09:00`);
 
-          const key = `${pattern.id}:${startsAt.toISOString()}`;
-
-          if (existingKeys.has(key)) {
-            skippedCount += 1;
-            continue;
-          }
-
-          candidates.push({
+          desiredSessions.push({
             classId,
             classSubjectId: pattern.classSubjectId,
             courseOfferingSubjectId:
@@ -300,10 +292,51 @@ export class ClassSessionsService {
             status: SessionStatus.SCHEDULED,
             createdById: actor.id,
           });
-
-          existingKeys.add(key);
         }
       }
+
+      const desiredKeys = new Set(
+        desiredSessions.map((session) => this.toGeneratedSessionKey(session)),
+      );
+      const staleSessions = existingSessions.filter(
+        (session) =>
+          session.status === SessionStatus.SCHEDULED &&
+          session.kind === SessionKind.REGULAR &&
+          !desiredKeys.has(this.toGeneratedSessionKey(session)),
+      );
+      const staleSessionIds = staleSessions.map((session) => session.id);
+
+      if (staleSessionIds.length > 0) {
+        const [participantCount, attendanceCount] = await Promise.all([
+          tx.sessionParticipant.count({
+            where: { classSessionId: { in: staleSessionIds } },
+          }),
+          tx.attendanceRecord.count({
+            where: { classSessionId: { in: staleSessionIds } },
+          }),
+        ]);
+
+        if (participantCount > 0 || attendanceCount > 0) {
+          throw new ConflictException(
+            '변경 전 예정 수업에 참여자 또는 출석 기록이 있어 자동 동기화할 수 없습니다.',
+          );
+        }
+
+        await tx.classSession.deleteMany({
+          where: { id: { in: staleSessionIds } },
+        });
+      }
+
+      const staleIdSet = new Set(staleSessionIds);
+      const existingKeys = new Set(
+        existingSessions
+          .filter((session) => !staleIdSet.has(session.id))
+          .map((session) => this.toGeneratedSessionKey(session)),
+      );
+      const candidates = desiredSessions.filter(
+        (session) => !existingKeys.has(this.toGeneratedSessionKey(session)),
+      );
+      const skippedCount = desiredSessions.length - candidates.length;
 
       if (candidates.length > 0) {
         await tx.classSession.createMany({
@@ -322,6 +355,7 @@ export class ClassSessionsService {
             startDate: range.startDate,
             endDate: range.endDate,
             createdCount: candidates.length,
+            removedCount: staleSessionIds.length,
             skippedCount,
           },
           ipAddress,
@@ -331,6 +365,7 @@ export class ClassSessionsService {
 
       return {
         createdCount: candidates.length,
+        removedCount: staleSessionIds.length,
         skippedCount,
       };
     });
@@ -697,6 +732,24 @@ export class ClassSessionsService {
     return new Date(date.getTime() + seoulOffsetMilliseconds)
       .toISOString()
       .slice(0, 10);
+  }
+
+  private toGeneratedSessionKey(session: {
+    schedulePatternId: string | null;
+    classSubjectId: string;
+    instructorId: string;
+    startsAt: Date;
+    endsAt: Date;
+    room: string | null;
+  }): string {
+    return [
+      session.schedulePatternId,
+      session.classSubjectId,
+      session.instructorId,
+      session.startsAt.toISOString(),
+      session.endsAt.toISOString(),
+      session.room ?? '',
+    ].join('|');
   }
 
   private addDays(date: Date, days: number): Date {

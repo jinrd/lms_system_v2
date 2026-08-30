@@ -100,7 +100,7 @@ const navigationGroups: NavigationGroup[] = [
         label: "수업 일정",
         path: "/schedule",
         icon: CalendarDays,
-        roles: ALL_ROLES,
+        roles: ["INSTRUCTOR"],
       },
     ],
   },

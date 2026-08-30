@@ -9,6 +9,8 @@ import { ClassSubjectsController } from './class-subjects.controller';
 import { ClassSubjectsService } from './class-subjects.service';
 import { ClassesController } from './classes.controller';
 import { ClassesService } from './classes.service';
+import { InstructorClassesController } from './instructor-classes.controller';
+import { InstructorClassesService } from './instructor-classes.service';
 
 @Module({
   controllers: [
@@ -17,6 +19,7 @@ import { ClassesService } from './classes.service';
     ClassSchedulePatternsController,
     ClassSessionsController,
     ClassSubjectsController,
+    InstructorClassesController,
   ],
   providers: [
     ClassesService,
@@ -24,6 +27,7 @@ import { ClassesService } from './classes.service';
     ClassSchedulePatternsService,
     ClassSessionsService,
     ClassSubjectsService,
+    InstructorClassesService,
   ],
   exports: [
     ClassesService,
