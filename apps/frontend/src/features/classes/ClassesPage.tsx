@@ -29,6 +29,7 @@ import {
 import { ClassInstructorsPanel } from "./ClassInstructorsPanel";
 import { ClassSchedulePanel } from "./ClassSchedulePanel";
 import { ClassSubjectsPanel } from "./ClassSubjectsPanel";
+import { ClassEnrollmentsPanel } from "../enrollments/ClassEnrollmentsPanel";
 
 const STATUS_LABELS: Record<ClassStatus, string> = {
   PLANNED: "예정",
@@ -486,9 +487,9 @@ export function ClassesPage() {
                 <div className="card-body stack">
                   {removeMutation.isError &&
                     removeMutation.variables?.id === selectedClass.id && (
-                    <div className="form-alert" role="alert">
-                      {getErrorMessage(removeMutation.error)}
-                    </div>
+                      <div className="form-alert" role="alert">
+                        {getErrorMessage(removeMutation.error)}
+                      </div>
                     )}
 
                   <div className="detail-grid">
@@ -542,6 +543,12 @@ export function ClassesPage() {
                   />
 
                   <ClassSubjectsPanel
+                    courseOfferingId={selectedCourse.id}
+                    classItem={selectedClass}
+                    onChanged={refreshClasses}
+                  />
+                  <ClassEnrollmentsPanel
+                    key={`enrollments-${selectedClass.id}`}
                     courseOfferingId={selectedCourse.id}
                     classItem={selectedClass}
                     onChanged={refreshClasses}

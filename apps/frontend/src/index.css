@@ -2409,3 +2409,46 @@ button {
     flex: 1;
   }
 }
+.nested-section__body {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.section-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  justify-content: space-between;
+}
+
+.section-toolbar .form-field {
+  width: min(100%, 320px);
+}
+
+.section-toolbar__summary {
+  flex: 0 0 auto;
+  padding-bottom: 11px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .section-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .section-toolbar .form-field {
+    width: 100%;
+  }
+
+  .section-toolbar .button {
+    width: 100%;
+  }
+
+  .section-toolbar__summary {
+    padding-bottom: 0;
+  }
+}

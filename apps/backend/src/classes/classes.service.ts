@@ -5,7 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types';
-import { ClassStatus, CourseStatus } from '../generated/prisma/enums';
+import {
+  ClassStatus,
+  CourseStatus,
+  EnrollmentStatus,
+  EnrollmentType,
+} from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangeClassStatusDto } from './dto/change-class-status.dto';
 import { ClassQueryDto } from './dto/class-query.dto';
@@ -81,7 +86,17 @@ const CLASS_INCLUDE = {
   },
   _count: {
     select: {
-      enrollments: true,
+      enrollments: {
+        where: {
+          type: EnrollmentType.REGULAR,
+          status: {
+            in: [
+              EnrollmentStatus.SCHEDULED,
+              EnrollmentStatus.ACTIVE,
+            ] as EnrollmentStatus[],
+          },
+        },
+      },
     },
   },
 } as const;
