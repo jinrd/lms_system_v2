@@ -30,6 +30,7 @@ import { ClassInstructorsPanel } from "./ClassInstructorsPanel";
 import { ClassSchedulePanel } from "./ClassSchedulePanel";
 import { ClassSubjectsPanel } from "./ClassSubjectsPanel";
 import { ClassEnrollmentsPanel } from "../enrollments/ClassEnrollmentsPanel";
+import { SubjectEnrollmentPanel } from "../enrollments/SubjectEnrollmentPanel";
 
 const STATUS_LABELS: Record<ClassStatus, string> = {
   PLANNED: "예정",
@@ -549,6 +550,12 @@ export function ClassesPage() {
                   />
                   <ClassEnrollmentsPanel
                     key={`enrollments-${selectedClass.id}`}
+                    courseOfferingId={selectedCourse.id}
+                    classItem={selectedClass}
+                    onChanged={refreshClasses}
+                  />
+                  <SubjectEnrollmentPanel
+                    key={`subject-enrollments-${selectedClass.id}`}
                     courseOfferingId={selectedCourse.id}
                     classItem={selectedClass}
                     onChanged={refreshClasses}

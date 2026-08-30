@@ -151,3 +151,49 @@ export function transferEnrollment(
     },
   );
 }
+
+export type SubjectEnrollmentType = "SUPPLEMENT" | "MAKEUP";
+
+export type CreateSubjectEnrollmentInput = {
+  sourceEnrollmentId: string;
+  courseOfferingSubjectId: string;
+  type: SubjectEnrollmentType;
+  startsOn: string;
+  endsOn: string;
+  attendanceManaged?: boolean;
+  gradeManaged?: boolean;
+  reason: string;
+};
+
+export function getSubjectEnrollmentCandidates(
+  courseOfferingId: string,
+  targetClassId: string,
+  keyword?: string,
+): Promise<EnrollmentPage> {
+  const searchParams = new URLSearchParams({
+    page: "1",
+    limit: "100",
+  });
+
+  if (keyword) {
+    searchParams.set("keyword", keyword);
+  }
+
+  return apiRequest<EnrollmentPage>(
+    `/course-offerings/${courseOfferingId}/classes/${targetClassId}/enrollments/subject-candidates?${searchParams.toString()}`,
+  );
+}
+
+export function createSubjectEnrollment(
+  courseOfferingId: string,
+  classId: string,
+  input: CreateSubjectEnrollmentInput,
+): Promise<Enrollment> {
+  return apiRequest<Enrollment>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/enrollments/subjects`,
+    {
+      method: "POST",
+      body: input,
+    },
+  );
+}

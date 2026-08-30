@@ -37,6 +37,19 @@ const MANAGEMENT_ROLES = [
 export class EnrollmentsController {
   constructor(private readonly enrollmentsService: EnrollmentsService) {}
 
+  @Get('subject-candidates')
+  findSubjectCandidates(
+    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
+    @Param('classId', ParseUUIDPipe) classId: string,
+    @Query() query: EnrollmentQueryDto,
+  ): Promise<EnrollmentPageResponse> {
+    return this.enrollmentsService.findSubjectCandidates(
+      courseOfferingId,
+      classId,
+      query,
+    );
+  }
+
   @Get()
   findAll(
     @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,

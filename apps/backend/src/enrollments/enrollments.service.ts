@@ -188,6 +188,87 @@ export class EnrollmentsService {
     };
   }
 
+  async findSubjectCandidates(
+    courseOfferingId: string,
+    targetClassId: string,
+    query: EnrollmentQueryDto,
+  ): Promise<EnrollmentPageResponse> {
+    await this.assertClassExists(courseOfferingId, targetClassId);
+
+    const keyword = query.keyword?.trim();
+    const skip = (query.page - 1) * query.limit;
+
+    const where = {
+      courseOfferingId,
+      classId: {
+        not: targetClassId,
+      },
+      type: EnrollmentType.REGULAR,
+      status: {
+        in: [
+          EnrollmentStatus.SCHEDULED,
+          EnrollmentStatus.ACTIVE,
+        ] as EnrollmentStatus[],
+      },
+      student: {
+        status: UserStatus.ACTIVE,
+        ...(keyword
+          ? {
+              OR: [
+                {
+                  name: {
+                    contains: keyword,
+                    mode: 'insensitive' as const,
+                  },
+                },
+                {
+                  loginId: {
+                    contains: keyword,
+                    mode: 'insensitive' as const,
+                  },
+                },
+                {
+                  phone: {
+                    contains: keyword,
+                  },
+                },
+              ],
+            }
+          : {}),
+      },
+    };
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.enrollment.findMany({
+        where,
+        include: ENROLLMENT_INCLUDE,
+        orderBy: [
+          {
+            student: {
+              name: 'asc',
+            },
+          },
+          {
+            startsOn: 'desc',
+          },
+        ],
+        skip,
+        take: query.limit,
+      }),
+      this.prisma.enrollment.count({ where }),
+    ]);
+
+    return {
+      items: items.map((item) => this.toResponse(item)),
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        totalPages: Math.ceil(total / query.limit),
+      },
+    };
+  }
+
   async createRegular(
     courseOfferingId: string,
     classId: string,
