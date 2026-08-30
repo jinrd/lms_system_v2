@@ -5,7 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import type { UserRole } from '../../generated/prisma/enums';
+import { UserRole } from '../../generated/prisma/enums';
 import type { AuthenticatedRequest } from '../auth.types';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 
@@ -25,7 +25,10 @@ export class RolesGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
 
-    if (!requiredRoles.includes(request.user.role)) {
+    if (
+      request.user.role !== UserRole.ADMIN &&
+      !requiredRoles.includes(request.user.role)
+    ) {
       throw new ForbiddenException('해당 기능을 사용할 권한이 없습니다.');
     }
 

@@ -100,7 +100,7 @@ const navigationGroups: NavigationGroup[] = [
         label: "수업 일정",
         path: "/schedule",
         icon: CalendarDays,
-        roles: ["INSTRUCTOR"],
+        roles: ["INSTRUCTOR", "ADMIN", "MANAGER", "PRINCIPAL"],
       },
     ],
   },
@@ -177,7 +177,9 @@ export function AppShell() {
   const visibleGroups = navigationGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => item.roles.includes(user.role)),
+      items: group.items.filter(
+        (item) => user.role === "ADMIN" || item.roles.includes(user.role),
+      ),
     }))
     .filter((group) => group.items.length > 0);
 

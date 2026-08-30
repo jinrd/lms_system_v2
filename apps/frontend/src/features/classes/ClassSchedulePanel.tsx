@@ -157,7 +157,9 @@ export function ClassSchedulePanel({
   );
   const [endDate, setEndDate] = useState(() => getInitialEndDate(classItem));
   const canCancelSession =
-    user?.role === "MANAGER" || user?.role === "PRINCIPAL";
+    user?.role === "MANAGER" ||
+    user?.role === "PRINCIPAL" ||
+    user?.role === "ADMIN";
   const patternQueryKey = [
     "course-offerings",
     courseOfferingId,

@@ -11,7 +11,7 @@ type RequireRoleProps = {
 export function RequireRole({ roles, children }: RequireRoleProps) {
   const { user } = useAuth();
 
-  if (!user || !roles.includes(user.role)) {
+  if (!user || (user.role !== "ADMIN" && !roles.includes(user.role))) {
     return <ErrorState message="이 페이지에 접근할 권한이 없습니다." />;
   }
 
