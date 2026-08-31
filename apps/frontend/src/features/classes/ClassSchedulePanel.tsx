@@ -30,6 +30,7 @@ import {
   type SessionStatus,
 } from "./classes.api";
 import { useAuth } from "../../auth/AuthProvider";
+import { SessionParticipantsAction } from "../enrollments/SessionParticipantsAction";
 
 type ClassSchedulePanelProps = {
   courseOfferingId: string;
@@ -668,6 +669,11 @@ export function ClassSchedulePanel({
 
                       {canCancelSession && (
                         <div className="data-row__actions">
+                          <SessionParticipantsAction
+                            courseOfferingId={courseOfferingId}
+                            classItem={classItem}
+                            session={session}
+                          />
                           {(session.status === "SCHEDULED" ||
                             session.status === "IN_PROGRESS") && (
                             <button

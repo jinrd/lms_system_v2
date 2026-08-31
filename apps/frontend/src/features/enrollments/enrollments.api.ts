@@ -197,3 +197,55 @@ export function createSubjectEnrollment(
     },
   );
 }
+
+export type SessionParticipant = {
+  id: string;
+  classSessionId: string;
+  student: {
+    id: string;
+    loginId: string | null;
+    name: string;
+    phone: string | null;
+  };
+  courseOfferingSubjectId: string;
+  sourceEnrollmentId: string;
+  sourceEnrollmentSubjectId: string;
+  type: SubjectEnrollmentType;
+  reason: string;
+  assignedBy: {
+    id: string;
+    name: string;
+  } | null;
+  createdAt: string;
+};
+
+export type AssignSessionParticipantInput = {
+  sourceEnrollmentId: string;
+  type: SubjectEnrollmentType;
+  reason: string;
+};
+
+export function getSessionParticipants(
+  courseOfferingId: string,
+  classId: string,
+  sessionId: string,
+): Promise<SessionParticipant[]> {
+  return apiRequest<SessionParticipant[]>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/sessions/${sessionId}/participants`,
+  );
+}
+
+export function assignSessionParticipant(
+  courseOfferingId: string,
+  classId: string,
+  sessionId: string,
+  input: AssignSessionParticipantInput,
+): Promise<SessionParticipant> {
+  return apiRequest<SessionParticipant>(
+    `/course-offerings/${courseOfferingId}/classes/${classId}/sessions/${sessionId}/participants`,
+    {
+      method: "POST",
+      body: input,
+    },
+  );
+}
