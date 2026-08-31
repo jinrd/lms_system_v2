@@ -18,6 +18,7 @@ import { EducationModule } from './education/education.module';
 import { CoursesModule } from './courses/courses.module';
 import { ClassesModule } from './classes/classes.module';
 import { EnrollmentsModule } from './enrollments/enrollments.module';
+import { AttendanceModule } from './attendance/attendance.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { EnrollmentsModule } from './enrollments/enrollments.module';
           })
           .required(),
         JWT_ACCESS_SECRET: Joi.string().min(32).required(),
+        ATTENDANCE_CODE_SECRET: Joi.string().min(32).required(),
         JWT_ISSUER: Joi.string().required(),
         JWT_AUDIENCE: Joi.string().required(),
         CORS_ORIGIN: Joi.string().required(),
@@ -53,6 +55,7 @@ import { EnrollmentsModule } from './enrollments/enrollments.module';
     CoursesModule,
     ClassesModule,
     EnrollmentsModule,
+    AttendanceModule,
   ],
   controllers: [HealthController],
   providers: [
