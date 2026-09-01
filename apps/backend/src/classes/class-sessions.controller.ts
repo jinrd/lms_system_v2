@@ -17,6 +17,7 @@ import { UserRole } from '../generated/prisma/enums';
 import {
   type ClassSessionGenerationResponse,
   type ClassSessionResponse,
+  type SessionJournalHistoryResponse,
   ClassSessionsService,
 } from './class-sessions.service';
 import { ChangeClassSessionStatusDto } from './dto/change-class-session-status.dto';
@@ -107,6 +108,20 @@ export class ClassSessionsController {
       dto,
       actor,
       request.ip,
+    );
+  }
+
+  @Roles(...SESSION_MANAGEMENT_ROLES)
+  @Get(':sessionId/journal/histories')
+  findJournalHistories(
+    @Param('classId', ParseUUIDPipe) classId: string,
+    @Param('sessionId', ParseUUIDPipe) sessionId: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<SessionJournalHistoryResponse[]> {
+    return this.classSessionsService.findJournalHistories(
+      classId,
+      sessionId,
+      actor,
     );
   }
 

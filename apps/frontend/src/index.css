@@ -2637,3 +2637,45 @@ button {
     padding-bottom: 0;
   }
 }
+
+/* 수업 일지 변경 이력 */
+.journal-history > summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.journal-history ol {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.journal-history li {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.journal-history li > strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.journal-history li > p {
+  margin: 0;
+}
+
+.journal-history__content {
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}

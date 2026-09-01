@@ -6,10 +6,7 @@ import {
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import type { Prisma } from '../generated/prisma/client';
-import {
-  toSeoulDateString,
-  todaySeoulDateString,
-} from '../common/seoul-date';
+import { toSeoulDateString, todaySeoulDateString } from '../common/seoul-date';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateClassSchedulePatternDto } from './dto/create-class-schedule-pattern.dto';
 import { UpdateClassSchedulePatternDto } from './dto/update-class-schedule-pattern.dto';

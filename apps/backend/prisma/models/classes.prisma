@@ -214,6 +214,12 @@ model ClassSession {
   actualEndedAt           DateTime?     @map("actual_ended_at") @db.Timestamptz(6)
   /// 수업 일지를 최초 작성한 시각입니다.
   journalWrittenAt        DateTime?     @map("journal_written_at") @db.Timestamptz(6)
+  /// 수업 일지를 최초 작성한 사람입니다.
+  journalWrittenById      String?       @map("journal_written_by") @db.Uuid
+  /// 수업 일지를 마지막으로 수정한 시각입니다.
+  journalUpdatedAt        DateTime?     @map("journal_updated_at") @db.Timestamptz(6)
+  /// 수업 일지를 마지막으로 수정한 사람입니다.
+  journalUpdatedById      String?       @map("journal_updated_by") @db.Uuid
 
   class                 Class                  @relation(fields: [classId], references: [id], onDelete: Restrict)
   classSubject          ClassSubject           @relation(fields: [classSubjectId], references: [id], onDelete: Restrict)
@@ -222,6 +228,9 @@ model ClassSession {
   schedulePattern       ClassSchedulePattern?  @relation(fields: [schedulePatternId], references: [id], onDelete: SetNull)
   instructor            User                   @relation("SessionInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
   canceledBy            User?                  @relation("SessionCanceler", fields: [canceledById], references: [id], onDelete: SetNull)
+  journalWrittenBy      User?                  @relation("SessionJournalAuthor", fields: [journalWrittenById], references: [id], onDelete: SetNull)
+  journalUpdatedBy      User?                  @relation("SessionJournalEditor", fields: [journalUpdatedById], references: [id], onDelete: SetNull)
+  journalHistories      ClassSessionJournalHistory[]
   createdBy             User?                  @relation("SessionCreator", fields: [createdById], references: [id], onDelete: SetNull)
   replacementFor        ClassSession?          @relation("SessionReplacement", fields: [replacementForSessionId], references: [id], onDelete: SetNull)
   replacementSessions   ClassSession[]         @relation("SessionReplacement")
@@ -240,3 +249,21 @@ model ClassSession {
   @@map("class_sessions")
 }
 
+
+/// 수업 일지의 변경 이력입니다. 작성과 수정 모두 한 건씩 남깁니다.
+model ClassSessionJournalHistory {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  classSessionId      String   @map("class_session_id") @db.Uuid
+  previousTitle       String?  @map("previous_title") @db.VarChar(200)
+  previousLessonContent String? @map("previous_lesson_content") @db.Text
+  newTitle            String   @map("new_title") @db.VarChar(200)
+  newLessonContent    String   @map("new_lesson_content") @db.Text
+  changedById         String?  @map("changed_by") @db.Uuid
+  changedAt           DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
+
+  classSession ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+  changedBy    User?        @relation("SessionJournalChanger", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([classSessionId, changedAt], map: "idx_class_session_journal_histories_session")
+  @@map("class_session_journal_histories")
+}

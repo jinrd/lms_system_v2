@@ -15,6 +15,7 @@ import {
   UserRole,
 } from '../generated/prisma/enums';
 import { toSeoulDateString } from '../common/seoul-date';
+import { SessionMaintenanceService } from '../maintenance/session-maintenance.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangeClassSessionStatusDto } from './dto/change-class-session-status.dto';
 import { ClassSessionRangeDto } from './dto/class-session-range.dto';
@@ -45,6 +46,9 @@ export type ClassSessionResponse = {
   status: SessionStatus;
   completedMinutes: number | null;
   journalWrittenAt: string | null;
+  journalWrittenBy: { id: string; name: string } | null;
+  journalUpdatedAt: string | null;
+  journalUpdatedBy: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
   replacementForSessionId: string | null;
@@ -86,11 +90,36 @@ const SESSION_INCLUDE = {
       name: true,
     },
   },
+  journalWrittenBy: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
+  journalUpdatedBy: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
 } as const;
+
+export type SessionJournalHistoryResponse = {
+  id: string;
+  previousTitle: string | null;
+  previousLessonContent: string | null;
+  newTitle: string;
+  newLessonContent: string;
+  changedBy: { id: string; name: string } | null;
+  changedAt: string;
+};
 
 @Injectable()
 export class ClassSessionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sessionMaintenance: SessionMaintenanceService,
+  ) {}
 
   async findAll(
     classId: string,
@@ -100,7 +129,7 @@ export class ClassSessionsService {
     await this.assertClassAccess(classId, actor);
 
     const { rangeStart, rangeEndExclusive } = this.validateRange(range);
-    await this.synchronizeSessionStates(classId);
+    await this.sessionMaintenance.runIfStale();
 
     const sessions = await this.prisma.classSession.findMany({
       where: {
@@ -641,12 +670,30 @@ export class ClassSessionsService {
     const now = new Date();
 
     await this.prisma.$transaction(async (tx) => {
+      const firstWrite = current.journalWrittenAt === null;
+
       await tx.classSession.update({
         where: { id: current.id },
         data: {
           title,
           lessonContent,
           journalWrittenAt: current.journalWrittenAt ?? now,
+          journalWrittenById: current.journalWrittenById ?? actor.id,
+          ...(firstWrite
+            ? {}
+            : { journalUpdatedAt: now, journalUpdatedById: actor.id }),
+        },
+      });
+
+      // 작성과 수정 모두 이력을 한 건씩 남긴다.
+      await tx.classSessionJournalHistory.create({
+        data: {
+          classSessionId: current.id,
+          previousTitle: firstWrite ? null : current.title,
+          previousLessonContent: firstWrite ? null : current.lessonContent,
+          newTitle: title,
+          newLessonContent: lessonContent,
+          changedById: actor.id,
         },
       });
       await tx.auditLog.create({
@@ -670,6 +717,40 @@ export class ClassSessionsService {
     });
 
     return this.findOne(classId, sessionId);
+  }
+
+  /** 수업 일지의 작성·수정 이력을 최신순으로 반환한다. */
+  async findJournalHistories(
+    classId: string,
+    sessionId: string,
+    actor: AuthenticatedUser,
+  ): Promise<SessionJournalHistoryResponse[]> {
+    const session = await this.prisma.classSession.findFirst({
+      where: { id: sessionId, classId },
+      select: { id: true, instructorId: true },
+    });
+
+    if (!session) {
+      throw new NotFoundException('수업을 찾을 수 없습니다.');
+    }
+
+    this.assertSessionActor(session.instructorId, actor);
+
+    const histories = await this.prisma.classSessionJournalHistory.findMany({
+      where: { classSessionId: sessionId },
+      include: { changedBy: { select: { id: true, name: true } } },
+      orderBy: { changedAt: 'desc' },
+    });
+
+    return histories.map((history) => ({
+      id: history.id,
+      previousTitle: history.previousTitle,
+      previousLessonContent: history.previousLessonContent,
+      newTitle: history.newTitle,
+      newLessonContent: history.newLessonContent,
+      changedBy: history.changedBy,
+      changedAt: history.changedAt.toISOString(),
+    }));
   }
 
   async cancel(
@@ -1034,59 +1115,6 @@ export class ClassSessionsService {
     }
   }
 
-  private async synchronizeSessionStates(classId: string): Promise<void> {
-    const now = new Date();
-
-    await this.prisma.$transaction(async (tx) => {
-      // 예정 시작 시각이 지난 수업을 자동으로 진행 상태로 전환한다.
-      await tx.classSession.updateMany({
-        where: {
-          classId,
-          status: SessionStatus.SCHEDULED,
-          startsAt: { lte: now },
-          endsAt: { gt: now },
-        },
-        data: {
-          status: SessionStatus.IN_PROGRESS,
-          actualStartedAt: now,
-        },
-      });
-
-      // 예정 종료 시각이 지난 수업을 자동으로 완료 처리한다.
-      // 아무도 시작하지 않아 예정 상태로 남은 수업도 함께 완료한다.
-      await tx.classSession.updateMany({
-        where: {
-          classId,
-          status: {
-            in: [SessionStatus.SCHEDULED, SessionStatus.IN_PROGRESS],
-          },
-          endsAt: { lte: now },
-        },
-        data: {
-          status: SessionStatus.COMPLETED,
-          actualEndedAt: now,
-        },
-      });
-
-      // 종료된 수업의 미처리 출석을 자동 결석 처리한다.
-      // 휴강(취소) 수업은 출석률 계산에서 제외하므로 자동 결석 대상이 아니다.
-      await tx.attendanceRecord.updateMany({
-        where: {
-          classSession: {
-            classId,
-            endsAt: { lte: now },
-            status: { not: SessionStatus.CANCELED },
-          },
-          status: AttendanceStatus.UNPROCESSED,
-        },
-        data: {
-          status: AttendanceStatus.ABSENT,
-          method: AttendanceMethod.SYSTEM_AUTO,
-        },
-      });
-    });
-  }
-
   private assertSessionActor(
     instructorId: string,
     actor: AuthenticatedUser,
@@ -1162,6 +1190,9 @@ export class ClassSessionsService {
     status: SessionStatus;
     completedMinutes: number | null;
     journalWrittenAt: Date | null;
+    journalWrittenBy: { id: string; name: string } | null;
+    journalUpdatedAt: Date | null;
+    journalUpdatedBy: { id: string; name: string } | null;
     createdAt: Date;
     updatedAt: Date;
     classSubject: {
@@ -1203,6 +1234,9 @@ export class ClassSessionsService {
       status: session.status,
       completedMinutes: session.completedMinutes,
       journalWrittenAt: session.journalWrittenAt?.toISOString() ?? null,
+      journalWrittenBy: session.journalWrittenBy,
+      journalUpdatedAt: session.journalUpdatedAt?.toISOString() ?? null,
+      journalUpdatedBy: session.journalUpdatedBy,
       createdAt: session.createdAt.toISOString(),
       updatedAt: session.updatedAt.toISOString(),
       replacementForSessionId: session.replacementForSessionId,

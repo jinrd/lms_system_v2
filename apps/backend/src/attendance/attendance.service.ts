@@ -20,6 +20,7 @@ import {
   UserRole,
   UserStatus,
 } from '../generated/prisma/enums';
+import { SessionMaintenanceService } from '../maintenance/session-maintenance.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitAttendanceCodeDto } from './dto/submit-attendance-code.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
@@ -81,6 +82,7 @@ export class AttendanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly sessionMaintenance: SessionMaintenanceService,
   ) {
     this.attendanceCodeSecret = this.configService.getOrThrow<string>(
       'ATTENDANCE_CODE_SECRET',
@@ -96,7 +98,7 @@ export class AttendanceService {
     }
 
     const now = new Date();
-    await this.synchronizeSessionStates(now);
+    await this.sessionMaintenance.runIfStale();
     const seoulDateString = now.toLocaleDateString('sv-SE', {
       timeZone: 'Asia/Seoul',
     });
@@ -985,36 +987,6 @@ export class AttendanceService {
         '본인이 담당하는 수업의 출석 코드만 관리할 수 있습니다.',
       );
     }
-  }
-
-  private async synchronizeSessionStates(now: Date): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.classSession.updateMany({
-        where: {
-          status: SessionStatus.SCHEDULED,
-          startsAt: { lte: now },
-          endsAt: { gt: now },
-        },
-        data: { status: SessionStatus.IN_PROGRESS, actualStartedAt: now },
-      });
-      await tx.classSession.updateMany({
-        where: {
-          status: SessionStatus.IN_PROGRESS,
-          endsAt: { lte: now },
-        },
-        data: { status: SessionStatus.COMPLETED, actualEndedAt: now },
-      });
-      await tx.attendanceRecord.updateMany({
-        where: {
-          status: AttendanceStatus.UNPROCESSED,
-          classSession: { endsAt: { lte: now } },
-        },
-        data: {
-          status: AttendanceStatus.ABSENT,
-          method: AttendanceMethod.SYSTEM_AUTO,
-        },
-      });
-    });
   }
 
   private assertAttendanceManager(

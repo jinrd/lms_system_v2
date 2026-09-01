@@ -19,6 +19,7 @@ import { CoursesModule } from './courses/courses.module';
 import { ClassesModule } from './classes/classes.module';
 import { EnrollmentsModule } from './enrollments/enrollments.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { MaintenanceModule } from './maintenance/maintenance.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { AttendanceModule } from './attendance/attendance.module';
       },
     }),
     PrismaModule,
+    MaintenanceModule,
     AuthModule,
     TermsModule,
     UsersModule,

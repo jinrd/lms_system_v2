@@ -164,6 +164,9 @@ export type ClassSession = {
   completedMinutes: number | null;
   /** 수업 일지를 최초 작성한 시각. 없으면 아직 작성하지 않았다. */
   journalWrittenAt: string | null;
+  journalWrittenBy: { id: string; name: string } | null;
+  journalUpdatedAt: string | null;
+  journalUpdatedBy: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
   replacementForSessionId: string | null;
@@ -245,6 +248,23 @@ export function changeClassSessionStatus(
       ...(completedMinutes !== undefined ? { completedMinutes } : {}),
     },
   });
+}
+
+export type SessionJournalHistory = {
+  id: string;
+  previousTitle: string | null;
+  previousLessonContent: string | null;
+  newTitle: string;
+  newLessonContent: string;
+  changedBy: { id: string; name: string } | null;
+  changedAt: string;
+};
+
+export function getSessionJournalHistories(
+  classId: string,
+  sessionId: string,
+): Promise<SessionJournalHistory[]> {
+  return apiRequest(`/classes/${classId}/sessions/${sessionId}/journal/histories`);
 }
 
 export function updateSessionJournal(

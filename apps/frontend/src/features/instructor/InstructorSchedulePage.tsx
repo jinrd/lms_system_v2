@@ -19,6 +19,7 @@ import {
   changeClassSessionStatus,
   getClassSessions,
   getInstructorClasses,
+  getSessionJournalHistories,
   updateSessionJournal,
   type ClassSession,
   type SessionStatus,
@@ -165,6 +166,14 @@ export function InstructorSchedulePage() {
     });
   };
 
+  const journalSession = editor?.type === "journal" ? editor.session : null;
+  const journalHistoryQuery = useQuery({
+    queryKey: ["instructor", "sessions", journalSession?.id, "journal-history"],
+    queryFn: () =>
+      getSessionJournalHistories(selectedClass!.id, journalSession!.id),
+    enabled: Boolean(selectedClass && journalSession?.journalWrittenAt),
+  });
+
   const journalMutation = useMutation({
     mutationFn: ({
       session,
@@ -187,6 +196,9 @@ export function InstructorSchedulePage() {
     onSuccess: async () => {
       setEditor(null);
       await refreshSessions();
+      await queryClient.invalidateQueries({
+        queryKey: ["instructor", "sessions"],
+      });
     },
   });
 
@@ -488,7 +500,14 @@ export function InstructorSchedulePage() {
                 <p>
                   {editor.session.instructor.name}
                   {editor.session.journalWrittenAt
-                    ? ` · ${formatDateTime(editor.session.journalWrittenAt)} 최초 작성`
+                    ? ` · ${formatDateTime(editor.session.journalWrittenAt)} ${
+                        editor.session.journalWrittenBy?.name ?? "알 수 없음"
+                      } 작성`
+                    : ""}
+                  {editor.session.journalUpdatedAt
+                    ? ` · ${formatDateTime(editor.session.journalUpdatedAt)} ${
+                        editor.session.journalUpdatedBy?.name ?? "알 수 없음"
+                      } 수정`
                     : ""}
                 </p>
               </div>
@@ -518,6 +537,30 @@ export function InstructorSchedulePage() {
                 defaultValue={editor.session.lessonContent ?? ""}
               />
             </label>
+
+            {editor.session.journalWrittenAt &&
+              (journalHistoryQuery.data?.length ?? 0) > 0 && (
+                <details className="journal-history">
+                  <summary>
+                    변경 이력 {journalHistoryQuery.data?.length}건
+                  </summary>
+                  <ol>
+                    {journalHistoryQuery.data?.map((history) => (
+                      <li key={history.id}>
+                        <strong>
+                          {formatDateTime(history.changedAt)} ·{" "}
+                          {history.changedBy?.name ?? "알 수 없음"} ·{" "}
+                          {history.previousTitle === null ? "작성" : "수정"}
+                        </strong>
+                        <p>{history.newTitle}</p>
+                        <p className="journal-history__content">
+                          {history.newLessonContent}
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              )}
 
             {journalMutation.isError && (
               <div className="form-alert" role="alert">
