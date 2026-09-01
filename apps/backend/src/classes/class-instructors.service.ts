@@ -11,6 +11,7 @@ import {
   UserRole,
   UserStatus,
 } from '../generated/prisma/enums';
+import { toSeoulDateString } from '../common/seoul-date';
 import { PrismaService } from '../prisma/prisma.service';
 import { AssignClassInstructorDto } from './dto/assign-class-instructor.dto';
 
@@ -294,7 +295,7 @@ export class ClassInstructorsService {
   }
 
   private toDateString(date: Date): string {
-    return date.toISOString().slice(0, 10);
+    return toSeoulDateString(date);
   }
 
   private toResponse(assignment: {

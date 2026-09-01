@@ -23,6 +23,7 @@ import {
   type ClassSession,
   type SessionStatus,
 } from "../classes/classes.api";
+import { AttendanceCodeAction } from "../attendance/AttendanceCodeAction";
 
 type SessionEditor =
   | {
@@ -403,6 +404,14 @@ export function InstructorSchedulePage() {
                       </div>
 
                       <div className="instructor-session-card__actions">
+                        <AttendanceCodeAction
+                          courseOfferingId={selectedClass.courseOfferingId}
+                          classId={selectedClass.id}
+                          sessionId={session.id}
+                          sessionTitle={session.title || session.subjectName}
+                          sessionStatus={session.status}
+                        />
+
                         {(session.status === "SCHEDULED" ||
                           session.status === "IN_PROGRESS") && (
                           <button

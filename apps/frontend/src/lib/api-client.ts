@@ -96,5 +96,11 @@ async function executeRequest<T>(
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  const responseText = await response.text();
+
+  if (responseText.length === 0) {
+    return null as T;
+  }
+
+  return JSON.parse(responseText) as T;
 }

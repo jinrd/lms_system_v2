@@ -12,12 +12,13 @@ import {
   UserRole,
   UserStatus,
 } from '../generated/prisma/enums';
+import { todaySeoulDateString } from '../common/seoul-date';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRegularEnrollmentDto } from './dto/create-regular-enrollment.dto';
 import { EnrollmentQueryDto } from './dto/enrollment-query.dto';
 import { TransferEnrollmentDto } from './dto/transfer-enrollment.dto';
-import { ChangeEnrollmentStatusDto } from './dto/change-enrollment-status.dto';
 import { CreateSubjectEnrollmentDto } from './dto/create-subject-enrollment.dto';
+import { WithdrawEnrollmentDto } from './dto/withdraw-enrollment.dto';
 
 export type EnrollmentResponse = {
   id: string;
@@ -131,6 +132,7 @@ export class EnrollmentsService {
     query: EnrollmentQueryDto,
   ): Promise<EnrollmentPageResponse> {
     await this.assertClassExists(courseOfferingId, classId);
+    await this.synchronizeEnrollmentStatuses(classId);
 
     const keyword = query.keyword?.trim();
     const where = {
@@ -166,16 +168,17 @@ export class EnrollmentsService {
 
     const skip = (query.page - 1) * query.limit;
 
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.enrollment.findMany({
+    const [items, total] = await this.prisma.$transaction(async (tx) => {
+      const items = await tx.enrollment.findMany({
         where,
         include: ENROLLMENT_INCLUDE,
         orderBy: [{ startsOn: 'desc' }, { createdAt: 'desc' }],
         skip,
         take: query.limit,
-      }),
-      this.prisma.enrollment.count({ where }),
-    ]);
+      });
+      const total = await tx.enrollment.count({ where });
+      return [items, total] as const;
+    });
 
     return {
       items: items.map((item) => this.toResponse(item)),
@@ -238,8 +241,8 @@ export class EnrollmentsService {
       },
     };
 
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.enrollment.findMany({
+    const [items, total] = await this.prisma.$transaction(async (tx) => {
+      const items = await tx.enrollment.findMany({
         where,
         include: ENROLLMENT_INCLUDE,
         orderBy: [
@@ -254,9 +257,10 @@ export class EnrollmentsService {
         ],
         skip,
         take: query.limit,
-      }),
-      this.prisma.enrollment.count({ where }),
-    ]);
+      });
+      const total = await tx.enrollment.count({ where });
+      return [items, total] as const;
+    });
 
     return {
       items: items.map((item) => this.toResponse(item)),
@@ -302,6 +306,7 @@ export class EnrollmentsService {
         include: {
           classSubjects: {
             select: {
+              courseOfferingId: true,
               courseOfferingSubjectId: true,
             },
           },
@@ -412,7 +417,7 @@ export class EnrollmentsService {
       await tx.enrollmentSubject.createMany({
         data: classItem.classSubjects.map((subject) => ({
           enrollmentId: enrollment.id,
-          courseOfferingId,
+          courseOfferingId: subject.courseOfferingId,
           courseOfferingSubjectId: subject.courseOfferingSubjectId,
           startsOn,
           endsOn,
@@ -723,18 +728,21 @@ export class EnrollmentsService {
     return this.findOne(courseOfferingId, classId, enrollmentId);
   }
 
-  async changeStatus(
+  async withdraw(
     courseOfferingId: string,
     classId: string,
     enrollmentId: string,
-    dto: ChangeEnrollmentStatusDto,
+    dto: WithdrawEnrollmentDto,
     actor: AuthenticatedUser,
     ipAddress?: string,
   ): Promise<EnrollmentResponse> {
     const reason = dto.reason.trim();
-    const effectiveOn = dto.effectiveOn
-      ? this.toDate(dto.effectiveOn)
-      : this.getToday();
+    const effectiveOn = this.toDate(dto.effectiveOn);
+    const today = this.getToday();
+
+    if (effectiveOn > today) {
+      throw new BadRequestException('중도 퇴원일은 오늘 이후일 수 없습니다.');
+    }
 
     await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`
@@ -756,100 +764,41 @@ export class EnrollmentsService {
         throw new NotFoundException('수강 등록을 찾을 수 없습니다.');
       }
 
-      this.assertStatusTransition(enrollment.status, dto.status);
+      const currentStatus = this.getDisplayStatus(enrollment);
 
-      let endsOn = enrollment.endsOn;
-
-      if (dto.status === EnrollmentStatus.ACTIVE) {
-        const duplicate = await tx.enrollment.findFirst({
-          where: {
-            id: {
-              not: enrollment.id,
-            },
-            studentId: enrollment.studentId,
-            courseOfferingId,
-            type: EnrollmentType.REGULAR,
-            status: {
-              in: [EnrollmentStatus.SCHEDULED, EnrollmentStatus.ACTIVE],
-            },
-          },
-          select: {
-            id: true,
-          },
-        });
-
-        if (duplicate) {
-          throw new ConflictException(
-            '이 학생은 해당 개설 강의에 이미 활성 기본 수강 등록되어 있습니다.',
-          );
-        }
-
-        const classItem = await tx.class.findFirst({
-          where: {
-            id: classId,
-            courseOfferingId,
-          },
-          select: {
-            capacity: true,
-            status: true,
-          },
-        });
-
-        if (!classItem) {
-          throw new NotFoundException('반을 찾을 수 없습니다.');
-        }
-
-        if (
-          classItem.status === ClassStatus.COMPLETED ||
-          classItem.status === ClassStatus.CANCELED
-        ) {
-          throw new ConflictException(
-            '완료되거나 취소된 반의 수강을 시작할 수 없습니다.',
-          );
-        }
-
-        const activeCount = await tx.enrollment.count({
-          where: {
-            id: {
-              not: enrollment.id,
-            },
-            classId,
-            type: EnrollmentType.REGULAR,
-            status: {
-              in: [EnrollmentStatus.SCHEDULED, EnrollmentStatus.ACTIVE],
-            },
-          },
-        });
-
-        if (activeCount >= classItem.capacity) {
-          throw new ConflictException('반 정원을 초과할 수 없습니다.');
-        }
+      if (currentStatus === EnrollmentStatus.CANCELED) {
+        throw new ConflictException('이미 중도 퇴원 처리된 수강생입니다.');
       }
 
-      if (
-        dto.status === EnrollmentStatus.COMPLETED ||
-        dto.status === EnrollmentStatus.CANCELED
-      ) {
-        endsOn =
-          effectiveOn < enrollment.startsOn ? enrollment.startsOn : effectiveOn;
-
-        await tx.enrollmentSubject.updateMany({
-          where: {
-            enrollmentId: enrollment.id,
-          },
-          data: {
-            endsOn,
-          },
-        });
+      if (currentStatus === EnrollmentStatus.COMPLETED) {
+        throw new ConflictException(
+          '이미 수강이 종료된 학생은 중도 퇴원 처리할 수 없습니다.',
+        );
       }
+
+      if (effectiveOn < enrollment.startsOn) {
+        throw new BadRequestException(
+          '중도 퇴원일은 수강 시작일보다 빠를 수 없습니다.',
+        );
+      }
+
+      await tx.enrollmentSubject.updateMany({
+        where: {
+          enrollmentId: enrollment.id,
+        },
+        data: {
+          endsOn: effectiveOn,
+        },
+      });
 
       await tx.enrollment.update({
         where: {
           id: enrollment.id,
         },
         data: {
-          status: dto.status,
-          endsOn,
+          status: EnrollmentStatus.CANCELED,
+          endsOn: effectiveOn,
+          reason,
         },
       });
 
@@ -857,7 +806,7 @@ export class EnrollmentsService {
         data: {
           actorId: actor.id,
           actorRole: actor.role,
-          action: 'ENROLLMENT_STATUS_CHANGED',
+          action: 'ENROLLMENT_WITHDRAWN',
           resourceType: 'ENROLLMENT',
           resourceId: enrollment.id,
           beforeData: {
@@ -865,8 +814,8 @@ export class EnrollmentsService {
             endsOn: enrollment.endsOn?.toISOString().slice(0, 10) ?? null,
           },
           afterData: {
-            status: dto.status,
-            endsOn: endsOn?.toISOString().slice(0, 10) ?? null,
+            status: EnrollmentStatus.CANCELED,
+            endsOn: effectiveOn.toISOString().slice(0, 10),
             effectiveOn: effectiveOn.toISOString().slice(0, 10),
             reason,
           },
@@ -1177,30 +1126,35 @@ export class EnrollmentsService {
     }
   }
 
-  private assertStatusTransition(
-    currentStatus: EnrollmentStatus,
-    nextStatus: EnrollmentStatus,
-  ): void {
-    const transitions: Record<EnrollmentStatus, EnrollmentStatus[]> = {
-      SCHEDULED: [EnrollmentStatus.ACTIVE, EnrollmentStatus.CANCELED],
-      ACTIVE: [EnrollmentStatus.COMPLETED, EnrollmentStatus.CANCELED],
-      COMPLETED: [],
-      CANCELED: [],
-    };
+  private async synchronizeEnrollmentStatuses(classId: string): Promise<void> {
+    const today = this.getToday();
 
-    if (!transitions[currentStatus].includes(nextStatus)) {
-      throw new ConflictException(
-        `${currentStatus} 상태에서 ${nextStatus} 상태로 변경할 수 없습니다.`,
-      );
-    }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.enrollment.updateMany({
+        where: {
+          classId,
+          status: EnrollmentStatus.SCHEDULED,
+          startsOn: { lte: today },
+          OR: [{ endsOn: null }, { endsOn: { gte: today } }],
+        },
+        data: { status: EnrollmentStatus.ACTIVE },
+      });
+
+      await tx.enrollment.updateMany({
+        where: {
+          classId,
+          status: {
+            in: [EnrollmentStatus.SCHEDULED, EnrollmentStatus.ACTIVE],
+          },
+          endsOn: { lt: today },
+        },
+        data: { status: EnrollmentStatus.COMPLETED },
+      });
+    });
   }
 
   private getToday(): Date {
-    return this.toDate(
-      new Date().toLocaleDateString('sv-SE', {
-        timeZone: 'Asia/Seoul',
-      }),
-    );
+    return this.toDate(todaySeoulDateString());
   }
 
   private getInitialStatus(
@@ -1243,7 +1197,7 @@ export class EnrollmentsService {
       courseOfferingId: item.courseOfferingId,
       classId: item.classId,
       type: item.type,
-      status: item.status,
+      status: this.getDisplayStatus(item),
       startsOn: item.startsOn.toISOString().slice(0, 10),
       endsOn: item.endsOn?.toISOString().slice(0, 10) ?? null,
       reason: item.reason,
@@ -1266,5 +1220,25 @@ export class EnrollmentsService {
       createdAt: item.createdAt.toISOString(),
       updatedAt: item.updatedAt.toISOString(),
     };
+  }
+
+  private getDisplayStatus(item: {
+    status: EnrollmentStatus;
+    startsOn: Date;
+    endsOn: Date | null;
+  }): EnrollmentStatus {
+    if (item.status === EnrollmentStatus.CANCELED) {
+      return EnrollmentStatus.CANCELED;
+    }
+
+    const today = this.getToday();
+
+    if (item.endsOn && item.endsOn < today) {
+      return EnrollmentStatus.COMPLETED;
+    }
+
+    return item.startsOn > today
+      ? EnrollmentStatus.SCHEDULED
+      : EnrollmentStatus.ACTIVE;
   }
 }

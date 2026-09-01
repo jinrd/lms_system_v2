@@ -7,18 +7,22 @@ import {
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import {
+  AttendanceMethod,
+  AttendanceStatus,
   AttendanceCodeStatus,
   ClassStatus,
   SessionKind,
   SessionStatus,
   UserRole,
 } from '../generated/prisma/enums';
+import { toSeoulDateString } from '../common/seoul-date';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangeClassSessionStatusDto } from './dto/change-class-session-status.dto';
 import { ClassSessionRangeDto } from './dto/class-session-range.dto';
 import { UpdateClassSessionDto } from './dto/update-class-session.dto';
 import { CreateMakeupSessionDto } from './dto/create-makeup-session.dto';
 import { CancelClassSessionDto } from './dto/cancel-class-session.dto';
+import { UpdateSessionJournalDto } from './dto/update-session-journal.dto';
 
 export type ClassSessionResponse = {
   id: string;
@@ -97,6 +101,7 @@ export class ClassSessionsService {
     await this.assertClassAccess(courseOfferingId, classId, actor);
 
     const { rangeStart, rangeEndExclusive } = this.validateRange(range);
+    await this.synchronizeSessionStates(classId);
 
     const sessions = await this.prisma.classSession.findMany({
       where: {
@@ -124,6 +129,9 @@ export class ClassSessionsService {
   ): Promise<ClassSessionGenerationResponse> {
     const { startDate, endDate, rangeStart, rangeEndExclusive } =
       this.validateRange(range);
+
+    // 강사는 담당 교육과정이 포함된 반의 수업만 생성할 수 있다.
+    await this.assertClassAccess(courseOfferingId, classId, actor);
 
     const result = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`
@@ -177,6 +185,15 @@ export class ClassSessionsService {
               },
             },
           },
+          classProgram: {
+            include: {
+              courseOffering: {
+                include: {
+                  instructor: true,
+                },
+              },
+            },
+          },
         },
         orderBy: [
           {
@@ -190,32 +207,6 @@ export class ClassSessionsService {
 
       if (patterns.length === 0) {
         throw new ConflictException('활성화된 반복 시간표가 없습니다.');
-      }
-
-      const assignments = await tx.classInstructorAssignment.findMany({
-        where: {
-          classId,
-          assignedFrom: {
-            lte: endDate,
-          },
-          OR: [
-            {
-              assignedTo: null,
-            },
-            {
-              assignedTo: {
-                gte: startDate,
-              },
-            },
-          ],
-        },
-        orderBy: {
-          assignedFrom: 'asc',
-        },
-      });
-
-      if (assignments.length === 0) {
-        throw new ConflictException('생성 기간에 배정된 담당 강사가 없습니다.');
       }
 
       const existingSessions = await tx.classSession.findMany({
@@ -244,6 +235,7 @@ export class ClassSessionsService {
 
       const desiredSessions: Array<{
         classId: string;
+        classProgramId: string;
         classSubjectId: string;
         courseOfferingSubjectId: string;
         schedulePatternId: string;
@@ -273,20 +265,12 @@ export class ClassSessionsService {
           continue;
         }
 
-        const assignment = assignments.find(
-          (item) =>
-            this.toDateString(item.assignedFrom) <= dateString &&
-            (item.assignedTo === null ||
-              this.toDateString(item.assignedTo) >= dateString),
-        );
-
-        if (!assignment) {
-          throw new ConflictException(
-            `${dateString}에 배정된 담당 강사가 없습니다.`,
-          );
-        }
-
         for (const pattern of dayPatterns) {
+          if (!pattern.classProgram) {
+            throw new ConflictException(
+              '시간표에 연결된 교육과정을 찾을 수 없습니다.',
+            );
+          }
           const startTime = this.toTimeString(pattern.startTime);
           const endTime = this.toTimeString(pattern.endTime);
 
@@ -295,13 +279,14 @@ export class ClassSessionsService {
 
           desiredSessions.push({
             classId,
+            classProgramId: pattern.classProgram.id,
             classSubjectId: pattern.classSubjectId,
             courseOfferingSubjectId:
               pattern.classSubject.courseOfferingSubjectId,
             schedulePatternId: pattern.id,
-            instructorId: assignment.instructorId,
+            instructorId: pattern.classProgram.courseOffering.instructor.id,
             kind: SessionKind.REGULAR,
-            title: `${pattern.classSubject.courseOfferingSubject.subject.name} 수업`,
+            title: pattern.classProgram.courseOffering.name,
             startsAt,
             endsAt,
             room: pattern.room ?? classItem.room,
@@ -323,14 +308,12 @@ export class ClassSessionsService {
       const staleSessionIds = staleSessions.map((session) => session.id);
 
       if (staleSessionIds.length > 0) {
-        const [participantCount, attendanceCount] = await Promise.all([
-          tx.sessionParticipant.count({
-            where: { classSessionId: { in: staleSessionIds } },
-          }),
-          tx.attendanceRecord.count({
-            where: { classSessionId: { in: staleSessionIds } },
-          }),
-        ]);
+        const participantCount = await tx.sessionParticipant.count({
+          where: { classSessionId: { in: staleSessionIds } },
+        });
+        const attendanceCount = await tx.attendanceRecord.count({
+          where: { classSessionId: { in: staleSessionIds } },
+        });
 
         if (participantCount > 0 || attendanceCount > 0) {
           throw new ConflictException(
@@ -585,6 +568,29 @@ export class ClassSessionsService {
         );
       }
 
+      const now = new Date();
+      if (dto.status === SessionStatus.IN_PROGRESS) {
+        if (now >= current.endsAt) {
+          throw new ConflictException(
+            '종료 시각이 지난 수업은 시작할 수 없습니다.',
+          );
+        }
+
+        if (actor.role === UserRole.INSTRUCTOR) {
+          const earliestStart = new Date(
+            current.startsAt.getTime() - 5 * 60 * 1000,
+          );
+          const latestStart = new Date(
+            current.startsAt.getTime() + 30 * 60 * 1000,
+          );
+          if (now < earliestStart || now > latestStart) {
+            throw new ConflictException(
+              '수업은 예정 시작 5분 전부터 30분 후까지 시작할 수 있습니다.',
+            );
+          }
+        }
+      }
+
       const completedMinutes =
         dto.status === SessionStatus.COMPLETED
           ? (dto.completedMinutes ?? null)
@@ -595,6 +601,12 @@ export class ClassSessionsService {
         data: {
           status: dto.status,
           completedMinutes,
+          ...(dto.status === SessionStatus.IN_PROGRESS
+            ? { actualStartedAt: now }
+            : {}),
+          ...(dto.status === SessionStatus.COMPLETED
+            ? { actualEndedAt: now }
+            : {}),
         },
       });
 
@@ -613,6 +625,67 @@ export class ClassSessionsService {
             status: dto.status,
             completedMinutes,
           },
+          ipAddress,
+          result: 'SUCCESS',
+        },
+      });
+    });
+
+    return this.findOne(courseOfferingId, classId, sessionId);
+  }
+
+  async updateJournal(
+    courseOfferingId: string,
+    classId: string,
+    sessionId: string,
+    dto: UpdateSessionJournalDto,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<ClassSessionResponse> {
+    const current = await this.prisma.classSession.findFirst({
+      where: { id: sessionId, classId, class: { courseOfferingId } },
+    });
+
+    if (!current) {
+      throw new NotFoundException('수업을 찾을 수 없습니다.');
+    }
+    this.assertSessionActor(current.instructorId, actor);
+    if (
+      current.status !== SessionStatus.IN_PROGRESS &&
+      current.status !== SessionStatus.COMPLETED
+    ) {
+      throw new ConflictException(
+        '진행 중이거나 완료된 수업에만 수업 일지를 작성할 수 있습니다.',
+      );
+    }
+
+    const title = dto.title.trim();
+    const lessonContent = dto.lessonContent.trim();
+    const now = new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.classSession.update({
+        where: { id: current.id },
+        data: {
+          title,
+          lessonContent,
+          journalWrittenAt: current.journalWrittenAt ?? now,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorRole: actor.role,
+          action: current.journalWrittenAt
+            ? 'CLASS_SESSION_JOURNAL_UPDATED'
+            : 'CLASS_SESSION_JOURNAL_CREATED',
+          resourceType: 'CLASS_SESSION',
+          resourceId: current.id,
+          beforeData: {
+            title: current.title,
+            lessonContent: current.lessonContent,
+          },
+          afterData: { title, lessonContent },
           ipAddress,
           result: 'SUCCESS',
         },
@@ -758,6 +831,11 @@ export class ClassSessionsService {
         },
         include: {
           class: true,
+          classProgram: {
+            include: {
+              courseOffering: { select: { instructorId: true } },
+            },
+          },
           classSubject: {
             include: {
               courseOfferingSubject: {
@@ -812,34 +890,12 @@ export class ClassSessionsService {
         );
       }
 
-      const assignmentDate = new Date(`${sessionDate}T00:00:00.000Z`);
-
-      const assignment = await tx.classInstructorAssignment.findFirst({
-        where: {
-          classId,
-          assignedFrom: {
-            lte: assignmentDate,
-          },
-          OR: [
-            {
-              assignedTo: null,
-            },
-            {
-              assignedTo: {
-                gte: assignmentDate,
-              },
-            },
-          ],
-        },
-        orderBy: {
-          assignedFrom: 'desc',
-        },
-      });
-
-      if (!assignment) {
-        throw new ConflictException('보강 일자에 배정된 담당 강사가 없습니다.');
+      if (!original.classProgram) {
+        throw new ConflictException('수업의 교육과정 정보를 찾을 수 없습니다.');
       }
 
+      // 반 학생은 반에 포함된 모든 교육과정을 수강하므로, 겹침 검사는
+      // 같은 교육과정이 아니라 반 전체의 수업을 대상으로 해야 한다.
       const overlapping = await tx.classSession.findFirst({
         where: {
           classId,
@@ -873,7 +929,7 @@ export class ClassSessionsService {
           classSubjectId: original.classSubjectId,
           courseOfferingSubjectId: original.courseOfferingSubjectId,
           schedulePatternId: null,
-          instructorId: assignment.instructorId,
+          instructorId: original.classProgram.courseOffering.instructorId,
           kind: SessionKind.MAKEUP,
           replacementForSessionId: original.id,
           title: this.optionalText(dto.title) ?? defaultTitle,
@@ -897,7 +953,7 @@ export class ClassSessionsService {
             originalSessionId: original.id,
             classId,
             classSubjectId: original.classSubjectId,
-            instructorId: assignment.instructorId,
+            instructorId: original.classProgram.courseOffering.instructorId,
             startsAt: startsAt.toISOString(),
             endsAt: endsAt.toISOString(),
             room: created.room,
@@ -1001,14 +1057,12 @@ export class ClassSessionsService {
     }
 
     if (actor.role === UserRole.INSTRUCTOR) {
-      const assignmentCount = await this.prisma.classInstructorAssignment.count(
-        {
-          where: {
-            classId,
-            instructorId: actor.id,
-          },
+      const assignmentCount = await this.prisma.classProgram.count({
+        where: {
+          classId,
+          courseOffering: { instructorId: actor.id },
         },
-      );
+      });
 
       if (assignmentCount === 0) {
         throw new ForbiddenException(
@@ -1016,6 +1070,59 @@ export class ClassSessionsService {
         );
       }
     }
+  }
+
+  private async synchronizeSessionStates(classId: string): Promise<void> {
+    const now = new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      // 예정 시작 시각이 지난 수업을 자동으로 진행 상태로 전환한다.
+      await tx.classSession.updateMany({
+        where: {
+          classId,
+          status: SessionStatus.SCHEDULED,
+          startsAt: { lte: now },
+          endsAt: { gt: now },
+        },
+        data: {
+          status: SessionStatus.IN_PROGRESS,
+          actualStartedAt: now,
+        },
+      });
+
+      // 예정 종료 시각이 지난 수업을 자동으로 완료 처리한다.
+      // 아무도 시작하지 않아 예정 상태로 남은 수업도 함께 완료한다.
+      await tx.classSession.updateMany({
+        where: {
+          classId,
+          status: {
+            in: [SessionStatus.SCHEDULED, SessionStatus.IN_PROGRESS],
+          },
+          endsAt: { lte: now },
+        },
+        data: {
+          status: SessionStatus.COMPLETED,
+          actualEndedAt: now,
+        },
+      });
+
+      // 종료된 수업의 미처리 출석을 자동 결석 처리한다.
+      // 휴강(취소) 수업은 출석률 계산에서 제외하므로 자동 결석 대상이 아니다.
+      await tx.attendanceRecord.updateMany({
+        where: {
+          classSession: {
+            classId,
+            endsAt: { lte: now },
+            status: { not: SessionStatus.CANCELED },
+          },
+          status: AttendanceStatus.UNPROCESSED,
+        },
+        data: {
+          status: AttendanceStatus.ABSENT,
+          method: AttendanceMethod.SYSTEM_AUTO,
+        },
+      });
+    });
   }
 
   private assertSessionActor(
@@ -1036,11 +1143,7 @@ export class ClassSessionsService {
   }
 
   private toSeoulDateString(date: Date): string {
-    const seoulOffsetMilliseconds = 9 * 60 * 60 * 1000;
-
-    return new Date(date.getTime() + seoulOffsetMilliseconds)
-      .toISOString()
-      .slice(0, 10);
+    return toSeoulDateString(date);
   }
 
   private toGeneratedSessionKey(session: {
@@ -1075,7 +1178,7 @@ export class ClassSessionsService {
   }
 
   private toDateString(date: Date): string {
-    return date.toISOString().slice(0, 10);
+    return toSeoulDateString(date);
   }
 
   private toTimeString(date: Date): string {

@@ -105,9 +105,8 @@ export function createRegularEnrollment(
   );
 }
 
-export type ChangeEnrollmentStatusInput = {
-  status: EnrollmentStatus;
-  effectiveOn?: string;
+export type WithdrawEnrollmentInput = {
+  effectiveOn: string;
   reason: string;
 };
 
@@ -122,14 +121,14 @@ export type EnrollmentTransferResult = {
   newEnrollment: Enrollment;
 };
 
-export function changeEnrollmentStatus(
+export function withdrawEnrollment(
   courseOfferingId: string,
   classId: string,
   enrollmentId: string,
-  input: ChangeEnrollmentStatusInput,
+  input: WithdrawEnrollmentInput,
 ): Promise<Enrollment> {
   return apiRequest<Enrollment>(
-    `/course-offerings/${courseOfferingId}/classes/${classId}/enrollments/${enrollmentId}/status`,
+    `/course-offerings/${courseOfferingId}/classes/${classId}/enrollments/${enrollmentId}/withdraw`,
     {
       method: "PATCH",
       body: input,

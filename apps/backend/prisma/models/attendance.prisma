@@ -105,6 +105,10 @@ model AttendanceChangeHistory {
   previousStatus     AttendanceStatus @map("previous_status")
   /// 변경 후 상태입니다.
   newStatus          AttendanceStatus @map("new_status")
+  /// 변경 전 실제 도착 시각입니다.
+  previousCheckedAt  DateTime?        @map("previous_checked_at") @db.Timestamptz(6)
+  /// 변경 후 실제 도착 시각입니다.
+  newCheckedAt       DateTime?        @map("new_checked_at") @db.Timestamptz(6)
   /// 변경 사유입니다.
   reason             String           @db.Text
   /// 변경 처리자입니다.

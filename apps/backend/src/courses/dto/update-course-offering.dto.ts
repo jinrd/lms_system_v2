@@ -1,11 +1,4 @@
-import {
-  IsDateString,
-  IsInt,
-  IsOptional,
-  IsString,
-  Length,
-  Min,
-} from 'class-validator';
+import { IsOptional, IsString, IsUUID, Length } from 'class-validator';
 
 export class UpdateCourseOfferingDto {
   @IsOptional()
@@ -14,23 +7,6 @@ export class UpdateCourseOfferingDto {
   name?: string;
 
   @IsOptional()
-  @IsString()
-  description?: string;
-
-  @IsOptional()
-  @IsString()
-  curriculum?: string;
-
-  @IsOptional()
-  @IsDateString()
-  startDate?: string;
-
-  @IsOptional()
-  @IsDateString()
-  endDate?: string;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  capacity?: number;
+  @IsUUID()
+  instructorId?: string;
 }

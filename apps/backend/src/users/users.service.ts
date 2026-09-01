@@ -86,8 +86,8 @@ export class UsersService {
   ): Promise<PendingStudentsPageResponse> {
     const skip = (query.page - 1) * query.limit;
 
-    const [users, total] = await this.prisma.$transaction([
-      this.prisma.user.findMany({
+    const [users, total] = await this.prisma.$transaction(async (tx) => {
+      const users = await tx.user.findMany({
         where: {
           role: UserRole.STUDENT,
           status: UserStatus.PENDING_APPROVAL,
@@ -100,14 +100,15 @@ export class UsersService {
         },
         skip,
         take: query.limit,
-      }),
-      this.prisma.user.count({
+      });
+      const total = await tx.user.count({
         where: {
           role: UserRole.STUDENT,
           status: UserStatus.PENDING_APPROVAL,
         },
-      }),
-    ]);
+      });
+      return [users, total] as const;
+    });
 
     const items = users.map((user) => {
       if (
@@ -605,8 +606,8 @@ export class UsersService {
         : {}),
     };
 
-    const [users, total] = await this.prisma.$transaction([
-      this.prisma.user.findMany({
+    const [users, total] = await this.prisma.$transaction(async (tx) => {
+      const users = await tx.user.findMany({
         where,
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip,
@@ -622,9 +623,10 @@ export class UsersService {
           mustChangePassword: true,
           createdAt: true,
         },
-      }),
-      this.prisma.user.count({ where }),
-    ]);
+      });
+      const total = await tx.user.count({ where });
+      return [users, total] as const;
+    });
 
     return {
       items: users.map((user) => ({

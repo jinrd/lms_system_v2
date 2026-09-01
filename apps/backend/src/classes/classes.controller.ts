@@ -18,12 +18,12 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../generated/prisma/enums';
 import {
+  ClassesService,
   type ClassPageResponse,
   type ClassResponse,
-  ClassesService,
 } from './classes.service';
-import { ChangeClassStatusDto } from './dto/change-class-status.dto';
 import { ClassQueryDto } from './dto/class-query.dto';
+import { ChangeClassSubjectActiveDto } from './dto/change-class-subject-active.dto';
 import { CreateClassDto } from './dto/create-class.dto';
 import { UpdateClassDto } from './dto/update-class.dto';
 
@@ -34,48 +34,53 @@ const MANAGEMENT_ROLES = [
 ] as const;
 
 @Roles(...MANAGEMENT_ROLES)
-@Controller('course-offerings/:courseOfferingId/classes')
+@Controller('classes')
 export class ClassesController {
-  constructor(private readonly classesService: ClassesService) {}
+  constructor(private readonly service: ClassesService) {}
 
   @Get()
-  findAll(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
-    @Query() query: ClassQueryDto,
-  ): Promise<ClassPageResponse> {
-    return this.classesService.findAll(courseOfferingId, query);
+  findAll(@Query() query: ClassQueryDto): Promise<ClassPageResponse> {
+    return this.service.findAll(query);
   }
 
   @Get(':classId')
   findOne(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
     @Param('classId', ParseUUIDPipe) classId: string,
   ): Promise<ClassResponse> {
-    return this.classesService.findOne(courseOfferingId, classId);
+    return this.service.findOne(classId);
   }
 
   @Post()
   create(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
     @Body() dto: CreateClassDto,
     @CurrentUser() actor: AuthenticatedUser,
     @Req() request: Request,
   ): Promise<ClassResponse> {
-    return this.classesService.create(courseOfferingId, dto, actor, request.ip);
+    return this.service.create(dto, actor, request.ip);
   }
 
   @Patch(':classId')
   update(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
     @Param('classId', ParseUUIDPipe) classId: string,
     @Body() dto: UpdateClassDto,
     @CurrentUser() actor: AuthenticatedUser,
     @Req() request: Request,
   ): Promise<ClassResponse> {
-    return this.classesService.update(
-      courseOfferingId,
+    return this.service.update(classId, dto, actor, request.ip);
+  }
+
+  @Patch(':classId/subjects/:classSubjectId')
+  changeSubjectActive(
+    @Param('classId', ParseUUIDPipe) classId: string,
+    @Param('classSubjectId', ParseUUIDPipe) classSubjectId: string,
+    @Body() dto: ChangeClassSubjectActiveDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ClassResponse> {
+    return this.service.changeSubjectActive(
       classId,
-      dto,
+      classSubjectId,
+      dto.active,
       actor,
       request.ip,
     );
@@ -84,33 +89,10 @@ export class ClassesController {
   @Delete(':classId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
     @Param('classId', ParseUUIDPipe) classId: string,
     @CurrentUser() actor: AuthenticatedUser,
     @Req() request: Request,
   ): Promise<void> {
-    await this.classesService.remove(
-      courseOfferingId,
-      classId,
-      actor,
-      request.ip,
-    );
-  }
-
-  @Patch(':classId/status')
-  changeStatus(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
-    @Param('classId', ParseUUIDPipe) classId: string,
-    @Body() dto: ChangeClassStatusDto,
-    @CurrentUser() actor: AuthenticatedUser,
-    @Req() request: Request,
-  ): Promise<ClassResponse> {
-    return this.classesService.changeStatus(
-      courseOfferingId,
-      classId,
-      dto,
-      actor,
-      request.ip,
-    );
+    await this.service.remove(classId, actor, request.ip);
   }
 }

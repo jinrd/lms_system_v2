@@ -85,7 +85,7 @@ const navigationGroups: NavigationGroup[] = [
         roles: MANAGEMENT_ROLES,
       },
       {
-        label: "개설 강의",
+        label: "교육과정",
         path: "/courses",
         icon: GraduationCap,
         roles: MANAGEMENT_ROLES,

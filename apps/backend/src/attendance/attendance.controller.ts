@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Req,
 } from '@nestjs/common';
@@ -16,9 +17,11 @@ import {
   type AttendanceCodeGenerationResponse,
   type AttendanceCodeMetadataResponse,
   type AttendanceSubmissionResponse,
+  type StudentAttendanceSessionResponse,
   AttendanceService,
 } from './attendance.service';
 import { SubmitAttendanceCodeDto } from './dto/submit-attendance-code.dto';
+import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 
 @Roles(UserRole.INSTRUCTOR)
 @Controller(
@@ -76,6 +79,49 @@ export class StudentAttendanceController {
       actor,
       request.ip,
       request.get('user-agent'),
+    );
+  }
+
+  @Get('my-sessions')
+  findMySessions(
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<StudentAttendanceSessionResponse[]> {
+    return this.attendanceService.findMySessions(actor);
+  }
+}
+
+@Roles(
+  UserRole.INSTRUCTOR,
+  UserRole.MANAGER,
+  UserRole.PRINCIPAL,
+  UserRole.ADMIN,
+)
+@Controller('sessions/:sessionId/attendance')
+export class SessionAttendanceController {
+  constructor(private readonly attendanceService: AttendanceService) {}
+
+  @Get()
+  findAll(
+    @Param('sessionId', ParseUUIDPipe) sessionId: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ) {
+    return this.attendanceService.findSessionAttendance(sessionId, actor);
+  }
+
+  @Patch(':attendanceRecordId')
+  update(
+    @Param('sessionId', ParseUUIDPipe) sessionId: string,
+    @Param('attendanceRecordId', ParseUUIDPipe) attendanceRecordId: string,
+    @Body() dto: UpdateAttendanceDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ) {
+    return this.attendanceService.updateAttendance(
+      sessionId,
+      attendanceRecordId,
+      dto,
+      actor,
+      request.ip,
     );
   }
 }

@@ -14,7 +14,6 @@ import type { AuthenticatedUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../generated/prisma/enums';
-import { ChangeEnrollmentStatusDto } from './dto/change-enrollment-status.dto';
 import { CreateRegularEnrollmentDto } from './dto/create-regular-enrollment.dto';
 import { EnrollmentQueryDto } from './dto/enrollment-query.dto';
 import { TransferEnrollmentDto } from './dto/transfer-enrollment.dto';
@@ -25,6 +24,7 @@ import {
   EnrollmentsService,
 } from './enrollments.service';
 import { CreateSubjectEnrollmentDto } from './dto/create-subject-enrollment.dto';
+import { WithdrawEnrollmentDto } from './dto/withdraw-enrollment.dto';
 
 const MANAGEMENT_ROLES = [
   UserRole.MANAGER,
@@ -93,16 +93,16 @@ export class EnrollmentsController {
     );
   }
 
-  @Patch(':enrollmentId/status')
-  changeStatus(
+  @Patch(':enrollmentId/withdraw')
+  withdraw(
     @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
     @Param('classId', ParseUUIDPipe) classId: string,
     @Param('enrollmentId', ParseUUIDPipe) enrollmentId: string,
-    @Body() dto: ChangeEnrollmentStatusDto,
+    @Body() dto: WithdrawEnrollmentDto,
     @CurrentUser() actor: AuthenticatedUser,
     @Req() request: Request,
   ): Promise<EnrollmentResponse> {
-    return this.enrollmentsService.changeStatus(
+    return this.enrollmentsService.withdraw(
       courseOfferingId,
       classId,
       enrollmentId,

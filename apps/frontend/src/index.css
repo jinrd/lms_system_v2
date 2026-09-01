@@ -2434,6 +2434,150 @@ button {
   font-weight: 700;
 }
 
+/* Reusable management-page primitives */
+.page-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.page-stack > .page-header {
+  margin-bottom: 0;
+}
+
+.card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.form-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field > span,
+.field > legend {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.field input:not([type="checkbox"]),
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: var(--control-height-lg);
+  padding: 0 14px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  outline: 0;
+  background: #fff;
+}
+
+.field textarea {
+  min-height: 120px;
+  padding-block: 12px;
+  resize: vertical;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+
+.checkbox-label {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fff;
+  cursor: pointer;
+}
+
+.muted {
+  color: var(--text-secondary);
+}
+
+.master-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.65fr) minmax(0, 1.55fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.selection-card,
+.list-row {
+  display: flex;
+  width: 100%;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  background: var(--surface);
+}
+
+.selection-card {
+  cursor: pointer;
+}
+
+.selection-card:hover,
+.selection-card--active {
+  background: var(--surface-muted);
+}
+
+.selection-card--active {
+  box-shadow: inset 3px 0 var(--primary);
+}
+
+.selection-card:last-child,
+.list-row:last-child {
+  border-bottom: 0;
+}
+
+.selection-card strong,
+.selection-card small,
+.list-row strong,
+.list-row p {
+  display: block;
+}
+
+.selection-card small,
+.list-row p {
+  margin: 5px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .master-detail-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .list-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 @media (max-width: 600px) {
   .section-toolbar {
     align-items: stretch;

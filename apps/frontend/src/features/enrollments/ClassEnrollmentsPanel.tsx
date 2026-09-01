@@ -29,10 +29,10 @@ type ClassEnrollmentsPanelProps = {
 };
 
 const STATUS_LABELS: Record<EnrollmentStatus, string> = {
-  SCHEDULED: "예정",
+  SCHEDULED: "수강 예정",
   ACTIVE: "수강 중",
-  COMPLETED: "종료",
-  CANCELED: "중도 취소",
+  COMPLETED: "수강 종료",
+  CANCELED: "중도 퇴원",
 };
 
 const STATUS_CLASSES: Record<EnrollmentStatus, string> = {
@@ -82,7 +82,6 @@ export function ClassEnrollmentsPanel({
   onChanged,
 }: ClassEnrollmentsPanelProps) {
   const queryClient = useQueryClient();
-  const [status, setStatus] = useState<EnrollmentStatus | "">("");
   const [page, setPage] = useState(1);
   const [editorOpen, setEditorOpen] = useState(false);
   const [studentKeywordDraft, setStudentKeywordDraft] = useState("");
@@ -94,7 +93,6 @@ export function ClassEnrollmentsPanel({
     "classes",
     classItem.id,
     "enrollments",
-    status,
     page,
   ];
 
@@ -102,7 +100,6 @@ export function ClassEnrollmentsPanel({
     queryKey: enrollmentQueryKey,
     queryFn: () =>
       getClassEnrollments(courseOfferingId, classItem.id, {
-        status: status || undefined,
         page,
         limit: 20,
       }),
@@ -191,7 +188,10 @@ export function ClassEnrollmentsPanel({
       <header className="nested-section__header">
         <div>
           <h3>수강생 관리</h3>
-          <p>기본 수강생을 등록하고 현재 수강 상태를 확인합니다.</p>
+          <p>
+            수강 상태는 기간에 따라 자동 표시되며 중도 퇴원만 직접
+            처리합니다.
+          </p>
         </div>
 
         <button
@@ -207,24 +207,6 @@ export function ClassEnrollmentsPanel({
 
       <div className="nested-section__body">
         <div className="section-toolbar">
-          <label className="form-field form-field--flush">
-            <span>수강 상태</span>
-            <select
-              value={status}
-              onChange={(event) => {
-                setStatus(event.target.value as EnrollmentStatus | "");
-                setPage(1);
-              }}
-            >
-              <option value="">전체 상태</option>
-              {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-
           <div className="section-toolbar__summary">
             총 {enrollmentsQuery.data?.pagination.total ?? 0}명
           </div>

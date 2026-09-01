@@ -1,11 +1,24 @@
-import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
-import { ClassStatus } from '../../generated/prisma/enums';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class ClassQueryDto {
   @IsOptional()
-  @IsEnum(ClassStatus)
-  status?: ClassStatus;
+  @IsString()
+  @MaxLength(200)
+  keyword?: string;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => value === 'true')
+  @IsBoolean()
+  archived?: boolean;
 
   @Type(() => Number)
   @IsInt()

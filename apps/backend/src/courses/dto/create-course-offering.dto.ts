@@ -1,10 +1,10 @@
 import {
-  IsDateString,
-  IsInt,
-  IsOptional,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
   IsString,
+  IsUUID,
   Length,
-  Min,
 } from 'class-validator';
 
 export class CreateCourseOfferingDto {
@@ -12,21 +12,15 @@ export class CreateCourseOfferingDto {
   @Length(1, 200)
   name!: string;
 
-  @IsOptional()
-  @IsString()
-  description?: string;
+  @IsUUID()
+  primaryEducationFieldId!: string;
 
-  @IsOptional()
-  @IsString()
-  curriculum?: string;
+  @IsUUID()
+  instructorId!: string;
 
-  @IsDateString()
-  startDate!: string;
-
-  @IsDateString()
-  endDate!: string;
-
-  @IsInt()
-  @Min(1)
-  capacity!: number;
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayUnique()
+  @IsUUID('4', { each: true })
+  subjectIds!: string[];
 }

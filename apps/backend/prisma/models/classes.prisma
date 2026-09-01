@@ -24,8 +24,11 @@ model Class {
   createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   /// updatedAt 컬럼입니다.
   updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  /// 보관 시각입니다. 운영 전 삭제는 물리 삭제하고 운영 이후 삭제는 보관합니다.
+  archivedAt       DateTime?   @map("archived_at") @db.Timestamptz(6)
 
   courseOffering        CourseOffering              @relation(fields: [courseOfferingId], references: [id], onDelete: Restrict)
+  programs              ClassProgram[]
   createdBy             User?                       @relation("ClassCreator", fields: [createdById], references: [id], onDelete: SetNull)
   classSubjects         ClassSubject[]
   instructorAssignments ClassInstructorAssignment[]
@@ -44,7 +47,26 @@ model Class {
   @@unique([courseOfferingId, name], map: "uq_classes_offering_name")
   @@unique([id, courseOfferingId], map: "uq_classes_id_offering")
   @@index([courseOfferingId, status], map: "idx_classes_offering_status")
+  @@index([archivedAt, startDate, endDate], map: "idx_classes_archived_dates")
   @@map("classes")
+}
+
+/// 반에 포함된 교육과정을 고정합니다.
+model ClassProgram {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  classId          String   @map("class_id") @db.Uuid
+  courseOfferingId String   @map("course_offering_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  class            Class                  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  courseOffering   CourseOffering         @relation(fields: [courseOfferingId], references: [id], onDelete: Restrict)
+  classSubjects    ClassSubject[]
+  schedulePatterns ClassSchedulePattern[]
+  sessions         ClassSession[]
+
+  @@unique([classId, courseOfferingId], map: "uq_class_programs_class_course")
+  @@index([courseOfferingId, classId], map: "idx_class_programs_course_class")
+  @@map("class_programs")
 }
 
 /// ClassSubject 테이블입니다.
@@ -57,11 +79,16 @@ model ClassSubject {
   courseOfferingId        String   @map("course_offering_id") @db.Uuid
   /// courseOfferingSubjectId 컬럼입니다.
   courseOfferingSubjectId String   @map("course_offering_subject_id") @db.Uuid
+  /// 소속 교육과정입니다.
+  classProgramId          String?  @map("class_program_id") @db.Uuid
+  /// 반 운영 시작 전 변경 가능한 운영 여부입니다.
+  active                  Boolean  @default(true)
   /// createdAt 컬럼입니다.
   createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   class                 Class                  @relation(fields: [classId], references: [id], onDelete: Cascade)
   courseOfferingSubject CourseOfferingSubject  @relation(fields: [courseOfferingSubjectId], references: [id], onDelete: Restrict)
+  classProgram          ClassProgram?          @relation(fields: [classProgramId], references: [id], onDelete: Cascade)
   schedulePatterns      ClassSchedulePattern[]
   sessions              ClassSession[]
   progress              ClassSubjectProgress?
@@ -72,6 +99,7 @@ model ClassSubject {
   @@unique([id, classId], map: "uq_class_subjects_id_class")
   @@unique([id, courseOfferingSubjectId], map: "uq_class_subjects_id_offering_subject")
   @@index([courseOfferingId], map: "idx_class_subjects_course_offering")
+  @@index([classProgramId, active], map: "idx_class_subjects_program_active")
   @@map("class_subjects")
 }
 
@@ -111,6 +139,8 @@ model ClassSchedulePattern {
   classId        String   @map("class_id") @db.Uuid
   /// classSubjectId 컬럼입니다.
   classSubjectId String   @map("class_subject_id") @db.Uuid
+  /// 시간표에서 선택한 교육과정입니다.
+  classProgramId String?  @map("class_program_id") @db.Uuid
   /// dayOfWeek 컬럼입니다.
   dayOfWeek      Int      @map("day_of_week") @db.SmallInt
   /// startTime 컬럼입니다.
@@ -128,10 +158,12 @@ model ClassSchedulePattern {
 
   class        Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
   classSubject ClassSubject   @relation(fields: [classSubjectId], references: [id], onDelete: Restrict)
+  classProgram ClassProgram?  @relation(fields: [classProgramId], references: [id], onDelete: Cascade)
   sessions     ClassSession[]
 
   @@unique([id, classId, classSubjectId], map: "uq_class_schedule_patterns_identity")
   @@index([classId, active, dayOfWeek], map: "idx_class_schedule_patterns_class_day")
+  @@index([classProgramId, active, dayOfWeek], map: "idx_class_schedule_patterns_program_day")
   @@map("class_schedule_patterns")
 }
 
@@ -145,6 +177,8 @@ model ClassSession {
   classSubjectId          String        @map("class_subject_id") @db.Uuid
   /// courseOfferingSubjectId 컬럼입니다.
   courseOfferingSubjectId String        @map("course_offering_subject_id") @db.Uuid
+  /// 수업이 속한 반 교육과정입니다.
+  classProgramId          String?       @map("class_program_id") @db.Uuid
   /// schedulePatternId 컬럼입니다.
   schedulePatternId       String?       @map("schedule_pattern_id") @db.Uuid
   /// instructorId 컬럼입니다.
@@ -179,10 +213,17 @@ model ClassSession {
   createdAt               DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   /// updatedAt 컬럼입니다.
   updatedAt               DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  /// 실제 또는 자동 시작 시각입니다.
+  actualStartedAt         DateTime?     @map("actual_started_at") @db.Timestamptz(6)
+  /// 실제 또는 자동 종료 시각입니다.
+  actualEndedAt           DateTime?     @map("actual_ended_at") @db.Timestamptz(6)
+  /// 수업 일지를 최초 작성한 시각입니다.
+  journalWrittenAt        DateTime?     @map("journal_written_at") @db.Timestamptz(6)
 
   class                 Class                  @relation(fields: [classId], references: [id], onDelete: Restrict)
   classSubject          ClassSubject           @relation(fields: [classSubjectId], references: [id], onDelete: Restrict)
   courseOfferingSubject CourseOfferingSubject  @relation(fields: [courseOfferingSubjectId], references: [id], onDelete: Restrict)
+  classProgram          ClassProgram?          @relation(fields: [classProgramId], references: [id], onDelete: Restrict)
   schedulePattern       ClassSchedulePattern?  @relation(fields: [schedulePatternId], references: [id], onDelete: SetNull)
   instructor            User                   @relation("SessionInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
   canceledBy            User?                  @relation("SessionCanceler", fields: [canceledById], references: [id], onDelete: SetNull)

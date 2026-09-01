@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ClassStatus } from '../generated/prisma/enums';
+import { toSeoulDateString } from '../common/seoul-date';
 import { PrismaService } from '../prisma/prisma.service';
 
 export type InstructorClassResponse = {
@@ -28,73 +29,44 @@ export class InstructorClassesService {
   ): Promise<InstructorClassResponse[]> {
     const classes = await this.prisma.class.findMany({
       where: {
-        instructorAssignments: {
-          some: {
-            instructorId,
-          },
+        archivedAt: null,
+        programs: {
+          some: { courseOffering: { instructorId } },
         },
       },
       include: {
-        courseOffering: {
-          select: {
-            name: true,
-          },
-        },
-        instructorAssignments: {
-          where: {
-            instructorId,
-          },
-          orderBy: {
-            assignedFrom: 'desc',
-          },
-        },
-        _count: {
-          select: {
-            classSubjects: true,
+        programs: {
+          where: { courseOffering: { instructorId } },
+          include: {
+            courseOffering: true,
+            classSubjects: { where: { active: true }, select: { id: true } },
           },
         },
       },
-      orderBy: [
-        {
-          startDate: 'desc',
-        },
-        {
-          name: 'asc',
-        },
-      ],
+      orderBy: [{ startDate: 'desc' }, { name: 'asc' }],
     });
 
-    return classes.flatMap((classItem) => {
-      const assignment = classItem.instructorAssignments[0];
-
-      if (!assignment) {
-        return [];
-      }
-
-      return [
-        {
-          id: classItem.id,
-          courseOfferingId: classItem.courseOfferingId,
-          courseOfferingName: classItem.courseOffering.name,
-          name: classItem.name,
-          room: classItem.room,
-          startDate: this.toDateString(classItem.startDate),
-          endDate: this.toDateString(classItem.endDate),
-          status: classItem.status,
-          subjectCount: classItem._count.classSubjects,
-          assignment: {
-            assignedFrom: this.toDateString(assignment.assignedFrom),
-            assignedTo: assignment.assignedTo
-              ? this.toDateString(assignment.assignedTo)
-              : null,
-            current: assignment.assignedTo === null,
-          },
+    return classes.flatMap((classItem) =>
+      classItem.programs.map((program) => ({
+        id: classItem.id,
+        courseOfferingId: program.courseOfferingId,
+        courseOfferingName: program.courseOffering.name,
+        name: classItem.name,
+        room: classItem.room,
+        startDate: this.toDateString(classItem.startDate),
+        endDate: this.toDateString(classItem.endDate),
+        status: classItem.status,
+        subjectCount: program.classSubjects.length,
+        assignment: {
+          assignedFrom: this.toDateString(classItem.startDate),
+          assignedTo: this.toDateString(classItem.endDate),
+          current: true,
         },
-      ];
-    });
+      })),
+    );
   }
 
   private toDateString(date: Date): string {
-    return date.toISOString().slice(0, 10);
+    return toSeoulDateString(date);
   }
 }

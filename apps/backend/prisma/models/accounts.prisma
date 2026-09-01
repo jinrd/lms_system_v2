@@ -65,6 +65,7 @@ model User {
   authSessions                  AuthSession[]
   termsConsents                 TermsConsent[]
   courseOfferingsCreated        CourseOffering[]            @relation("CourseOfferingCreator")
+  courseOfferingsInstructed     CourseOffering[]            @relation("CourseOfferingInstructor")
   classesCreated                Class[]                     @relation("ClassCreator")
   instructorAssignments         ClassInstructorAssignment[] @relation("AssignedInstructor")
   instructorAssignmentsCreated  ClassInstructorAssignment[] @relation("InstructorAssignmentCreator")

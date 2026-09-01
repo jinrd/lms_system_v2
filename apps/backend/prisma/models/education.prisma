@@ -15,7 +15,8 @@ model EducationField {
   /// updatedAt 컬럼입니다.
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  subjects Subject[]
+  subjects               Subject[]
+  primaryCourseOfferings CourseOffering[]
 
   @@unique([name], map: "uq_education_fields_name")
   @@map("education_fields")
@@ -59,38 +60,49 @@ model Subject {
 /// CourseOffering 테이블입니다.
 model CourseOffering {
   /// id 컬럼입니다.
-  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                      String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// name 컬럼입니다.
-  name        String       @db.VarChar(200)
+  name                    String       @db.VarChar(200)
   /// description 컬럼입니다.
-  description String?      @db.Text
+  description             String?      @db.Text
   /// curriculum 컬럼입니다.
-  curriculum  String?      @db.Text
+  curriculum              String?      @db.Text
   /// startDate 컬럼입니다.
-  startDate   DateTime     @map("start_date") @db.Date
+  startDate               DateTime     @map("start_date") @db.Date
   /// endDate 컬럼입니다.
-  endDate     DateTime     @map("end_date") @db.Date
+  endDate                 DateTime     @map("end_date") @db.Date
   /// capacity 컬럼입니다.
-  capacity    Int
+  capacity                Int
   /// status 컬럼입니다.
-  status      CourseStatus
+  status                  CourseStatus
   /// createdById 컬럼입니다.
-  createdById String?      @map("created_by") @db.Uuid
+  createdById             String?      @map("created_by") @db.Uuid
   /// createdAt 컬럼입니다.
-  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt               DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   /// updatedAt 컬럼입니다.
-  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt               DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  /// 기본 교육 분야입니다.
+  primaryEducationFieldId String       @map("primary_education_field_id") @db.Uuid
+  /// 교육과정 담당 강사입니다.
+  instructorId            String       @map("instructor_id") @db.Uuid
+  /// 보관 시각입니다.
+  archivedAt              DateTime?    @map("archived_at") @db.Timestamptz(6)
 
-  createdBy        User?                   @relation("CourseOfferingCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  subjects         CourseOfferingSubject[]
-  classes          Class[]
-  enrollments      Enrollment[]
-  exams            Exam[]
-  examSubjects     ExamSubject[]
-  examClassTargets ExamClassTarget[]
-  examAttempts     ExamAttempt[]
+  primaryEducationField EducationField          @relation(fields: [primaryEducationFieldId], references: [id], onDelete: Restrict)
+  instructor            User                    @relation("CourseOfferingInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
+  createdBy             User?                   @relation("CourseOfferingCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  subjects              CourseOfferingSubject[]
+  classes               Class[]
+  classPrograms         ClassProgram[]
+  enrollments           Enrollment[]
+  exams                 Exam[]
+  examSubjects          ExamSubject[]
+  examClassTargets      ExamClassTarget[]
+  examAttempts          ExamAttempt[]
 
   @@index([status, startDate, endDate], map: "idx_course_offerings_status_dates")
+  @@index([archivedAt, name], map: "idx_course_offerings_archived_name")
+  @@index([instructorId], map: "idx_course_offerings_instructor")
   @@map("course_offerings")
 }
 
@@ -103,7 +115,7 @@ model CourseOfferingSubject {
   /// subjectId 컬럼입니다.
   subjectId        String    @map("subject_id") @db.Uuid
   /// sequence 컬럼입니다.
-  sequence         Int
+  sequence         Int       @default(1)
   /// plannedStartDate 컬럼입니다.
   plannedStartDate DateTime? @map("planned_start_date") @db.Date
   /// plannedEndDate 컬럼입니다.

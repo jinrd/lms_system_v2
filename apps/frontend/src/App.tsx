@@ -15,6 +15,7 @@ import { ClassesPage } from "./features/classes/ClassesPage";
 import { UsersPage } from "./features/users/UsersPage";
 import { TermsPage } from "./features/terms/TermsPage";
 import { InstructorSchedulePage } from "./features/instructor/InstructorSchedulePage";
+import { AttendancePage } from "./features/attendance/AttendancePage";
 
 type PlaceholderRoute = {
   path: string;
@@ -32,11 +33,6 @@ const placeholderRoutes: PlaceholderRoute[] = [
     path: "inquiries",
     title: "문의사항",
     description: "학생 문의와 담당자 답변을 관리합니다.",
-  },
-  {
-    path: "attendance",
-    title: "출석",
-    description: "수업별 출석 현황과 변경 이력을 관리합니다.",
   },
   {
     path: "learning",
@@ -124,6 +120,10 @@ const router = createBrowserRouter([
             <InstructorSchedulePage />
           </RequireRole>
         ),
+      },
+      {
+        path: "attendance",
+        element: <AttendancePage />,
       },
       {
         path: "users",

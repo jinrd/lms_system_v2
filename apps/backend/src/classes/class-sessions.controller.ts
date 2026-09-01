@@ -24,6 +24,7 @@ import { ClassSessionRangeDto } from './dto/class-session-range.dto';
 import { UpdateClassSessionDto } from './dto/update-class-session.dto';
 import { CreateMakeupSessionDto } from './dto/create-makeup-session.dto';
 import { CancelClassSessionDto } from './dto/cancel-class-session.dto';
+import { UpdateSessionJournalDto } from './dto/update-session-journal.dto';
 
 const MANAGEMENT_ROLES = [
   UserRole.MANAGER,
@@ -36,7 +37,11 @@ const SESSION_MANAGEMENT_ROLES = [
   ...MANAGEMENT_ROLES,
 ] as const;
 
-const CANCELLATION_ROLES = [UserRole.MANAGER, UserRole.PRINCIPAL] as const;
+const CANCELLATION_ROLES = [
+  UserRole.MANAGER,
+  UserRole.PRINCIPAL,
+  UserRole.ADMIN,
+] as const;
 
 @Roles(...MANAGEMENT_ROLES)
 @Controller('course-offerings/:courseOfferingId/classes/:classId/sessions')
@@ -117,6 +122,27 @@ export class ClassSessionsController {
     @Req() request: Request,
   ): Promise<ClassSessionResponse> {
     return this.classSessionsService.changeStatus(
+      courseOfferingId,
+      classId,
+      sessionId,
+      dto,
+      actor,
+      request.ip,
+    );
+  }
+
+  @Roles(...SESSION_MANAGEMENT_ROLES)
+  @Patch(':sessionId/journal')
+  updateJournal(
+    @Param('courseOfferingId', ParseUUIDPipe)
+    courseOfferingId: string,
+    @Param('classId', ParseUUIDPipe) classId: string,
+    @Param('sessionId', ParseUUIDPipe) sessionId: string,
+    @Body() dto: UpdateSessionJournalDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ClassSessionResponse> {
+    return this.classSessionsService.updateJournal(
       courseOfferingId,
       classId,
       sessionId,

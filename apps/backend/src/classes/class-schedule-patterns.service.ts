@@ -5,7 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types';
-import { ClassStatus } from '../generated/prisma/enums';
+import type { Prisma } from '../generated/prisma/client';
+import {
+  toSeoulDateString,
+  todaySeoulDateString,
+} from '../common/seoul-date';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateClassSchedulePatternDto } from './dto/create-class-schedule-pattern.dto';
 import { UpdateClassSchedulePatternDto } from './dto/update-class-schedule-pattern.dto';
@@ -13,58 +17,56 @@ import { UpdateClassSchedulePatternDto } from './dto/update-class-schedule-patte
 export type ClassSchedulePatternResponse = {
   id: string;
   classId: string;
+  classProgramId: string;
+  programName: string;
   classSubjectId: string;
-  courseOfferingSubjectId: string;
-  subjectId: string;
   subjectName: string;
+  instructor: { id: string; name: string; loginId: string | null };
   dayOfWeek: number;
   startTime: string;
   endTime: string;
   room: string | null;
   active: boolean;
-  createdAt: string;
-  updatedAt: string;
 };
 
 const PATTERN_INCLUDE = {
   classSubject: {
     include: {
       courseOfferingSubject: {
+        include: { subject: { select: { id: true, name: true } } },
+      },
+    },
+  },
+  classProgram: {
+    include: {
+      courseOffering: {
         include: {
-          subject: true,
+          instructor: { select: { id: true, name: true, loginId: true } },
         },
       },
     },
   },
 } as const;
 
+type PatternWithRelations = Prisma.ClassSchedulePatternGetPayload<{
+  include: typeof PATTERN_INCLUDE;
+}>;
+
 @Injectable()
 export class ClassSchedulePatternsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(
-    courseOfferingId: string,
-    classId: string,
-  ): Promise<ClassSchedulePatternResponse[]> {
-    await this.assertClassExists(courseOfferingId, classId);
-
-    const patterns = await this.prisma.classSchedulePattern.findMany({
-      where: {
-        classId,
-      },
+  async findAll(classId: string): Promise<ClassSchedulePatternResponse[]> {
+    await this.assertClassExists(classId);
+    const items = await this.prisma.classSchedulePattern.findMany({
+      where: { classId },
       include: PATTERN_INCLUDE,
-      orderBy: [
-        { dayOfWeek: 'asc' },
-        { startTime: 'asc' },
-        { createdAt: 'asc' },
-      ],
+      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
     });
-
-    return patterns.map((pattern) => this.toResponse(pattern));
+    return items.map((item) => this.toResponse(item));
   }
 
   async create(
-    courseOfferingId: string,
     classId: string,
     dto: CreateClassSchedulePatternDto,
     actor: AuthenticatedUser,
@@ -72,85 +74,50 @@ export class ClassSchedulePatternsService {
   ): Promise<ClassSchedulePatternResponse> {
     const startTime = this.toTime(dto.startTime);
     const endTime = this.toTime(dto.endTime);
-
     this.assertTimeOrder(startTime, endTime);
 
     const patternId = await this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`
-        SELECT id
-        FROM classes
-        WHERE id = ${classId}::uuid
-        FOR UPDATE
-      `;
-
-      const classItem = await tx.class.findFirst({
-        where: {
-          id: classId,
-          courseOfferingId,
-        },
-      });
-
-      if (!classItem) {
-        throw new NotFoundException('반을 찾을 수 없습니다.');
-      }
-
-      this.assertClassEditable(classItem.status);
+      const classItem = await tx.class.findUnique({ where: { id: classId } });
+      if (!classItem) throw new NotFoundException('반을 찾을 수 없습니다.');
+      this.assertUpcoming(classItem.startDate);
 
       const classSubject = await tx.classSubject.findFirst({
-        where: {
-          id: dto.classSubjectId,
-          classId,
-          courseOfferingId,
+        where: { id: dto.classSubjectId, classId, active: true },
+        include: {
+          classProgram: {
+            include: {
+              courseOffering: { select: { name: true, instructorId: true } },
+            },
+          },
+          courseOfferingSubject: { include: { subject: true } },
         },
       });
-
-      if (!classSubject) {
-        throw new NotFoundException(
-          '해당 반에 연결된 과목을 찾을 수 없습니다.',
-        );
-      }
-
-      await tx.$executeRaw`
-        SELECT pg_advisory_xact_lock(
-          hashtext(${`${classId}:${dto.dayOfWeek}`})
-        )
-      `;
-
-      const overlapping = await tx.classSchedulePattern.findFirst({
-        where: {
-          classId,
-          dayOfWeek: dto.dayOfWeek,
-          active: true,
-          startTime: {
-            lt: endTime,
-          },
-          endTime: {
-            gt: startTime,
-          },
-        },
-        select: {
-          id: true,
-        },
-      });
-
-      if (overlapping) {
+      if (!classSubject?.classProgram) {
         throw new ConflictException(
-          '같은 요일에 시간이 겹치는 시간표가 존재합니다.',
+          '사용 중인 반 운영 과목만 시간표에 추가할 수 있습니다.',
         );
       }
+
+      await this.assertNoOverlap(
+        tx,
+        classId,
+        dto.dayOfWeek,
+        startTime,
+        endTime,
+      );
 
       const created = await tx.classSchedulePattern.create({
         data: {
           classId,
-          classSubjectId: dto.classSubjectId,
+          classProgramId: classSubject.classProgram.id,
+          classSubjectId: classSubject.id,
           dayOfWeek: dto.dayOfWeek,
           startTime,
           endTime,
-          room: this.optionalText(dto.room),
+          room: dto.room?.trim() || null,
           active: true,
         },
       });
-
       await tx.auditLog.create({
         data: {
           actorId: actor.id,
@@ -160,26 +127,24 @@ export class ClassSchedulePatternsService {
           resourceId: created.id,
           afterData: {
             classId,
-            classSubjectId: dto.classSubjectId,
+            classProgramId: classSubject.classProgram.id,
+            classSubjectId: classSubject.id,
+            subjectName: classSubject.courseOfferingSubject.subject.name,
             dayOfWeek: dto.dayOfWeek,
             startTime: dto.startTime,
             endTime: dto.endTime,
-            room: this.optionalText(dto.room),
-            active: true,
           },
           ipAddress,
           result: 'SUCCESS',
         },
       });
-
       return created.id;
     });
 
-    return this.findOne(courseOfferingId, classId, patternId);
+    return this.findOne(classId, patternId);
   }
 
   async update(
-    courseOfferingId: string,
     classId: string,
     patternId: string,
     dto: UpdateClassSchedulePatternDto,
@@ -187,190 +152,125 @@ export class ClassSchedulePatternsService {
     ipAddress?: string,
   ): Promise<ClassSchedulePatternResponse> {
     await this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`
-        SELECT id
-        FROM classes
-        WHERE id = ${classId}::uuid
-        FOR UPDATE
-      `;
-
-      const classItem = await tx.class.findFirst({
-        where: {
-          id: classId,
-          courseOfferingId,
-        },
-      });
-
-      if (!classItem) {
-        throw new NotFoundException('반을 찾을 수 없습니다.');
-      }
-
-      this.assertClassEditable(classItem.status);
-
+      const classItem = await tx.class.findUnique({ where: { id: classId } });
+      if (!classItem) throw new NotFoundException('반을 찾을 수 없습니다.');
+      this.assertUpcoming(classItem.startDate);
       const current = await tx.classSchedulePattern.findFirst({
-        where: {
-          id: patternId,
-          classId,
-        },
+        where: { id: patternId, classId },
       });
-
-      if (!current) {
-        throw new NotFoundException('반복 시간표를 찾을 수 없습니다.');
-      }
+      if (!current) throw new NotFoundException('시간표를 찾을 수 없습니다.');
 
       const classSubjectId = dto.classSubjectId ?? current.classSubjectId;
+      const classSubject = await tx.classSubject.findFirst({
+        where: { id: classSubjectId, classId, active: true },
+        include: {
+          classProgram: true,
+          courseOfferingSubject: { include: { subject: true } },
+        },
+      });
+      if (!classSubject?.classProgram) {
+        throw new ConflictException(
+          '사용 중인 반 운영 과목만 시간표에 사용할 수 있습니다.',
+        );
+      }
+      const classProgramId = classSubject.classProgram.id;
+
       const dayOfWeek = dto.dayOfWeek ?? current.dayOfWeek;
       const startTime = dto.startTime
         ? this.toTime(dto.startTime)
         : current.startTime;
       const endTime = dto.endTime ? this.toTime(dto.endTime) : current.endTime;
-      const active = dto.active ?? current.active;
-
       this.assertTimeOrder(startTime, endTime);
+      await this.assertNoOverlap(
+        tx,
+        classId,
+        dayOfWeek,
+        startTime,
+        endTime,
+        patternId,
+      );
 
-      const classSubject = await tx.classSubject.findFirst({
-        where: {
-          id: classSubjectId,
-          classId,
-          courseOfferingId,
-        },
-      });
-
-      if (!classSubject) {
-        throw new NotFoundException(
-          '해당 반에 연결된 과목을 찾을 수 없습니다.',
-        );
-      }
-
-      await tx.$executeRaw`
-        SELECT pg_advisory_xact_lock(
-          hashtext(${`${classId}:${dayOfWeek}`})
-        )
-      `;
-
-      if (active) {
-        const overlapping = await tx.classSchedulePattern.findFirst({
-          where: {
-            id: {
-              not: patternId,
-            },
-            classId,
-            dayOfWeek,
-            active: true,
-            startTime: {
-              lt: endTime,
-            },
-            endTime: {
-              gt: startTime,
-            },
-          },
-          select: {
-            id: true,
-          },
-        });
-
-        if (overlapping) {
-          throw new ConflictException(
-            '같은 요일에 시간이 겹치는 시간표가 존재합니다.',
-          );
-        }
-      }
-
-      const room =
-        dto.room === undefined ? current.room : this.optionalText(dto.room);
-
-      await tx.classSchedulePattern.update({
-        where: {
-          id: patternId,
-        },
+      const updated = await tx.classSchedulePattern.update({
+        where: { id: patternId },
         data: {
-          classSubjectId,
+          classProgramId,
+          classSubjectId: classSubject.id,
           dayOfWeek,
           startTime,
           endTime,
-          room,
-          active,
+          ...(dto.room !== undefined ? { room: dto.room.trim() || null } : {}),
+          ...(dto.active !== undefined ? { active: dto.active } : {}),
         },
       });
-
       await tx.auditLog.create({
         data: {
           actorId: actor.id,
           actorRole: actor.role,
           action: 'CLASS_SCHEDULE_PATTERN_UPDATED',
           resourceType: 'CLASS_SCHEDULE_PATTERN',
-          resourceId: patternId,
-          beforeData: {
-            classSubjectId: current.classSubjectId,
-            dayOfWeek: current.dayOfWeek,
-            startTime: this.toTimeString(current.startTime),
-            endTime: this.toTimeString(current.endTime),
-            room: current.room,
-            active: current.active,
-          },
+          resourceId: updated.id,
           afterData: {
-            classSubjectId,
+            classProgramId,
+            classSubjectId: classSubject.id,
+            subjectName: classSubject.courseOfferingSubject.subject.name,
             dayOfWeek,
             startTime: this.toTimeString(startTime),
             endTime: this.toTimeString(endTime),
-            room,
-            active,
           },
           ipAddress,
           result: 'SUCCESS',
         },
       });
     });
-
-    return this.findOne(courseOfferingId, classId, patternId);
+    return this.findOne(classId, patternId);
   }
 
   private async findOne(
-    courseOfferingId: string,
     classId: string,
     patternId: string,
   ): Promise<ClassSchedulePatternResponse> {
-    const pattern = await this.prisma.classSchedulePattern.findFirst({
-      where: {
-        id: patternId,
-        classId,
-        class: {
-          courseOfferingId,
-        },
-      },
+    const item = await this.prisma.classSchedulePattern.findFirst({
+      where: { id: patternId, classId },
       include: PATTERN_INCLUDE,
     });
-
-    if (!pattern) {
-      throw new NotFoundException('반복 시간표를 찾을 수 없습니다.');
-    }
-
-    return this.toResponse(pattern);
+    if (!item) throw new NotFoundException('시간표를 찾을 수 없습니다.');
+    return this.toResponse(item);
   }
 
-  private async assertClassExists(
-    courseOfferingId: string,
+  private async assertClassExists(classId: string): Promise<void> {
+    const count = await this.prisma.class.count({ where: { id: classId } });
+    if (count === 0) throw new NotFoundException('반을 찾을 수 없습니다.');
+  }
+
+  private assertUpcoming(startDate: Date): void {
+    if (todaySeoulDateString() >= this.toDateString(startDate)) {
+      throw new ConflictException(
+        '시간표는 반 운영 시작 전까지만 수정할 수 있습니다.',
+      );
+    }
+  }
+
+  private async assertNoOverlap(
+    tx: Prisma.TransactionClient,
     classId: string,
+    dayOfWeek: number,
+    startTime: Date,
+    endTime: Date,
+    excludedId?: string,
   ): Promise<void> {
-    const classItem = await this.prisma.class.findFirst({
+    const overlapping = await tx.classSchedulePattern.findFirst({
       where: {
-        id: classId,
-        courseOfferingId,
-      },
-      select: {
-        id: true,
+        classId,
+        dayOfWeek,
+        active: true,
+        ...(excludedId ? { id: { not: excludedId } } : {}),
+        startTime: { lt: endTime },
+        endTime: { gt: startTime },
       },
     });
-
-    if (!classItem) {
-      throw new NotFoundException('반을 찾을 수 없습니다.');
-    }
-  }
-
-  private assertClassEditable(status: ClassStatus): void {
-    if (status === ClassStatus.COMPLETED || status === ClassStatus.CANCELED) {
+    if (overlapping) {
       throw new ConflictException(
-        '완료되거나 취소된 반의 시간표는 변경할 수 없습니다.',
+        '같은 요일에 시간이 겹치는 시간표가 있습니다.',
       );
     }
   }
@@ -389,47 +289,27 @@ export class ClassSchedulePatternsService {
     return value.toISOString().slice(11, 16);
   }
 
-  private optionalText(value?: string): string | null {
-    const normalized = value?.trim();
-
-    return normalized ? normalized : null;
+  private toDateString(value: Date): string {
+    return toSeoulDateString(value);
   }
 
-  private toResponse(pattern: {
-    id: string;
-    classId: string;
-    classSubjectId: string;
-    dayOfWeek: number;
-    startTime: Date;
-    endTime: Date;
-    room: string | null;
-    active: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-    classSubject: {
-      courseOfferingSubjectId: string;
-      courseOfferingSubject: {
-        subject: {
-          id: string;
-          name: string;
-        };
-      };
-    };
-  }): ClassSchedulePatternResponse {
+  private toResponse(item: PatternWithRelations): ClassSchedulePatternResponse {
+    if (!item.classProgram) {
+      throw new ConflictException('시간표의 교육과정 연결이 없습니다.');
+    }
     return {
-      id: pattern.id,
-      classId: pattern.classId,
-      classSubjectId: pattern.classSubjectId,
-      courseOfferingSubjectId: pattern.classSubject.courseOfferingSubjectId,
-      subjectId: pattern.classSubject.courseOfferingSubject.subject.id,
-      subjectName: pattern.classSubject.courseOfferingSubject.subject.name,
-      dayOfWeek: pattern.dayOfWeek,
-      startTime: this.toTimeString(pattern.startTime),
-      endTime: this.toTimeString(pattern.endTime),
-      room: pattern.room,
-      active: pattern.active,
-      createdAt: pattern.createdAt.toISOString(),
-      updatedAt: pattern.updatedAt.toISOString(),
+      id: item.id,
+      classId: item.classId,
+      classProgramId: item.classProgram.id,
+      programName: item.classProgram.courseOffering.name,
+      classSubjectId: item.classSubject.id,
+      subjectName: item.classSubject.courseOfferingSubject.subject.name,
+      instructor: item.classProgram.courseOffering.instructor,
+      dayOfWeek: item.dayOfWeek,
+      startTime: this.toTimeString(item.startTime),
+      endTime: this.toTimeString(item.endTime),
+      room: item.room,
+      active: item.active,
     };
   }
 }

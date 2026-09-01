@@ -22,6 +22,7 @@ import {
 } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitAttendanceCodeDto } from './dto/submit-attendance-code.dto';
+import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 
 export type AttendanceCodeMetadataResponse = {
   id: string;
@@ -51,6 +52,26 @@ type IpRateState = {
   windowStartedAt: number;
   count: number;
 };
+export type StudentAttendanceSessionResponse = {
+  id: string;
+  classId: string;
+  className: string;
+  courseOfferingId: string;
+  courseOfferingName: string;
+  subjectName: string;
+  title: string | null;
+  startsAt: string;
+  endsAt: string;
+  room: string | null;
+  status: SessionStatus;
+  codeAvailable: boolean;
+  attendance: {
+    id: string;
+    status: AttendanceStatus;
+    method: AttendanceMethod | null;
+    checkedAt: string | null;
+  } | null;
+};
 
 @Injectable()
 export class AttendanceService {
@@ -65,7 +86,388 @@ export class AttendanceService {
       'ATTENDANCE_CODE_SECRET',
     );
   }
+  async findMySessions(
+    actor: AuthenticatedUser,
+  ): Promise<StudentAttendanceSessionResponse[]> {
+    if (actor.role !== UserRole.STUDENT) {
+      throw new ForbiddenException(
+        '학생 계정만 본인의 출석 대상 수업을 조회할 수 있습니다.',
+      );
+    }
 
+    const now = new Date();
+    await this.synchronizeSessionStates(now);
+    const seoulDateString = now.toLocaleDateString('sv-SE', {
+      timeZone: 'Asia/Seoul',
+    });
+
+    const today = new Date(`${seoulDateString}T00:00:00.000Z`);
+    const rangeStart = new Date(`${seoulDateString}T00:00:00+09:00`);
+    const rangeEnd = new Date(rangeStart.getTime() + 24 * 60 * 60 * 1000);
+
+    const [sessions, enrollmentSubjects, participants] =
+      await this.prisma.$transaction(async (tx) => {
+        const sessions = await tx.classSession.findMany({
+          where: {
+            OR: [
+              {
+                startsAt: { gte: rangeStart, lt: rangeEnd },
+                status: {
+                  in: [SessionStatus.SCHEDULED, SessionStatus.IN_PROGRESS],
+                },
+              },
+              { status: SessionStatus.IN_PROGRESS, endsAt: { gt: now } },
+            ],
+          },
+          include: {
+            class: {
+              select: {
+                id: true,
+                name: true,
+                courseOfferingId: true,
+                courseOffering: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+            courseOfferingSubject: {
+              include: {
+                subject: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+            attendanceCodes: {
+              where: {
+                status: AttendanceCodeStatus.ACTIVE,
+                expiresAt: {
+                  gt: now,
+                },
+              },
+              select: {
+                id: true,
+              },
+              take: 1,
+            },
+            attendanceRecords: {
+              where: {
+                studentId: actor.id,
+              },
+              select: {
+                id: true,
+                status: true,
+                method: true,
+                checkedAt: true,
+              },
+              take: 1,
+            },
+          },
+          orderBy: {
+            startsAt: 'asc',
+          },
+        });
+        const enrollmentSubjects = await tx.enrollmentSubject.findMany({
+          where: {
+            attendanceManaged: true,
+            startsOn: {
+              lte: today,
+            },
+            OR: [
+              {
+                endsOn: null,
+              },
+              {
+                endsOn: {
+                  gte: today,
+                },
+              },
+            ],
+            enrollment: {
+              studentId: actor.id,
+              attendanceManaged: true,
+              status: {
+                in: [EnrollmentStatus.SCHEDULED, EnrollmentStatus.ACTIVE],
+              },
+              startsOn: {
+                lte: today,
+              },
+              OR: [
+                {
+                  endsOn: null,
+                },
+                {
+                  endsOn: {
+                    gte: today,
+                  },
+                },
+              ],
+            },
+          },
+          select: {
+            courseOfferingSubjectId: true,
+            enrollment: {
+              select: {
+                classId: true,
+              },
+            },
+          },
+        });
+        const participants = await tx.sessionParticipant.findMany({
+          where: {
+            studentId: actor.id,
+            classSession: {
+              startsAt: {
+                gte: rangeStart,
+                lt: rangeEnd,
+              },
+            },
+          },
+          select: {
+            classSessionId: true,
+          },
+        });
+        return [sessions, enrollmentSubjects, participants] as const;
+      });
+
+    const normalParticipationKeys = new Set(
+      enrollmentSubjects.map(
+        (subject) =>
+          `${subject.enrollment.classId}:${subject.courseOfferingSubjectId}`,
+      ),
+    );
+
+    const individualSessionIds = new Set(
+      participants.map((participant) => participant.classSessionId),
+    );
+
+    return sessions
+      .filter(
+        (session) =>
+          normalParticipationKeys.has(
+            `${session.classId}:${session.courseOfferingSubjectId}`,
+          ) || individualSessionIds.has(session.id),
+      )
+      .map((session) => {
+        const attendance = session.attendanceRecords[0] ?? null;
+
+        return {
+          id: session.id,
+          classId: session.classId,
+          className: session.class.name,
+          courseOfferingId: session.class.courseOfferingId,
+          courseOfferingName: session.class.courseOffering.name,
+          subjectName: session.courseOfferingSubject.subject.name,
+          title: session.title,
+          startsAt: session.startsAt.toISOString(),
+          endsAt: session.endsAt.toISOString(),
+          room: session.room,
+          status: session.status,
+          codeAvailable: session.attendanceCodes.length > 0,
+          attendance: attendance
+            ? {
+                id: attendance.id,
+                status: attendance.status,
+                method: attendance.method,
+                checkedAt: attendance.checkedAt?.toISOString() ?? null,
+              }
+            : null,
+        };
+      });
+  }
+
+  async findSessionAttendance(sessionId: string, actor: AuthenticatedUser) {
+    const session = await this.prisma.classSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        id: true,
+        instructorId: true,
+        classId: true,
+        courseOfferingSubjectId: true,
+        status: true,
+        startsAt: true,
+        endsAt: true,
+      },
+    });
+    if (!session) {
+      throw new NotFoundException('수업을 찾을 수 없습니다.');
+    }
+    this.assertAttendanceManager(session.instructorId, actor);
+
+    const enrollmentSubjects = await this.prisma.enrollmentSubject.findMany({
+      where: {
+        courseOfferingSubjectId: session.courseOfferingSubjectId,
+        enrollment: {
+          classId: session.classId,
+          status: {
+            in: [EnrollmentStatus.SCHEDULED, EnrollmentStatus.ACTIVE],
+          },
+        },
+      },
+      select: {
+        id: true,
+        enrollmentId: true,
+        enrollment: { select: { studentId: true } },
+      },
+    });
+
+    const now = new Date();
+    const ended = session.endsAt <= now;
+    if (ended && session.status === SessionStatus.IN_PROGRESS) {
+      await this.prisma.classSession.update({
+        where: { id: session.id },
+        data: { status: SessionStatus.COMPLETED, actualEndedAt: now },
+      });
+    } else if (
+      session.status === SessionStatus.SCHEDULED &&
+      session.startsAt <= now &&
+      session.endsAt > now
+    ) {
+      await this.prisma.classSession.update({
+        where: { id: session.id },
+        data: { status: SessionStatus.IN_PROGRESS, actualStartedAt: now },
+      });
+    }
+
+    await this.prisma.attendanceRecord.createMany({
+      data: enrollmentSubjects.map((item) => ({
+        classSessionId: session.id,
+        courseOfferingSubjectId: session.courseOfferingSubjectId,
+        enrollmentId: item.enrollmentId,
+        enrollmentSubjectId: item.id,
+        studentId: item.enrollment.studentId,
+        status: ended ? AttendanceStatus.ABSENT : AttendanceStatus.UNPROCESSED,
+        method: ended ? AttendanceMethod.SYSTEM_AUTO : null,
+      })),
+      skipDuplicates: true,
+    });
+
+    const records = await this.prisma.attendanceRecord.findMany({
+      where: { classSessionId: session.id },
+      include: {
+        student: { select: { id: true, loginId: true, name: true } },
+        changeHistories: {
+          include: {
+            changedBy: { select: { id: true, name: true } },
+          },
+          orderBy: { changedAt: 'desc' },
+        },
+      },
+      orderBy: { student: { name: 'asc' } },
+    });
+
+    return records.map((record) => ({
+      id: record.id,
+      student: record.student,
+      status: record.status,
+      method: record.method,
+      checkedAt: record.checkedAt?.toISOString() ?? null,
+      updatedAt: record.updatedAt.toISOString(),
+      histories: record.changeHistories.map((history) => ({
+        id: history.id,
+        previousStatus: history.previousStatus,
+        newStatus: history.newStatus,
+        previousCheckedAt: history.previousCheckedAt?.toISOString() ?? null,
+        newCheckedAt: history.newCheckedAt?.toISOString() ?? null,
+        reason: history.reason,
+        changedBy: history.changedBy,
+        changedAt: history.changedAt.toISOString(),
+      })),
+    }));
+  }
+
+  async updateAttendance(
+    sessionId: string,
+    attendanceRecordId: string,
+    dto: UpdateAttendanceDto,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ) {
+    const record = await this.prisma.attendanceRecord.findFirst({
+      where: { id: attendanceRecordId, classSessionId: sessionId },
+      include: {
+        classSession: { select: { instructorId: true } },
+        student: { select: { id: true, loginId: true, name: true } },
+      },
+    });
+    if (!record) {
+      throw new NotFoundException('출석 기록을 찾을 수 없습니다.');
+    }
+    this.assertAttendanceManager(record.classSession.instructorId, actor);
+
+    const arrivalRequired =
+      dto.status === AttendanceStatus.PRESENT ||
+      dto.status === AttendanceStatus.LATE ||
+      dto.status === AttendanceStatus.EARLY_LEAVE;
+    if (arrivalRequired && !dto.checkedAt) {
+      throw new BadRequestException(
+        '출석·지각·조퇴 처리에는 학생이 실제로 도착한 시각이 필요합니다.',
+      );
+    }
+
+    const checkedAt = arrivalRequired ? (dto.checkedAt ?? null) : null;
+    const method = this.manualMethod(actor.role);
+    const reason = dto.reason.trim();
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const next = await tx.attendanceRecord.update({
+        where: { id: record.id },
+        data: {
+          status: dto.status,
+          checkedAt,
+          method,
+          processedById: actor.id,
+        },
+        include: {
+          student: { select: { id: true, loginId: true, name: true } },
+        },
+      });
+      await tx.attendanceChangeHistory.create({
+        data: {
+          attendanceRecordId: record.id,
+          previousStatus: record.status,
+          newStatus: dto.status,
+          previousCheckedAt: record.checkedAt,
+          newCheckedAt: checkedAt,
+          reason,
+          changedById: actor.id,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorRole: actor.role,
+          action: 'ATTENDANCE_MANUALLY_CHANGED',
+          resourceType: 'ATTENDANCE_RECORD',
+          resourceId: record.id,
+          beforeData: {
+            status: record.status,
+            checkedAt: record.checkedAt?.toISOString() ?? null,
+          },
+          afterData: {
+            status: dto.status,
+            checkedAt: checkedAt?.toISOString() ?? null,
+          },
+          reason,
+          ipAddress,
+          result: 'SUCCESS',
+        },
+      });
+      return next;
+    });
+
+    return {
+      id: updated.id,
+      student: updated.student,
+      status: updated.status,
+      method: updated.method,
+      checkedAt: updated.checkedAt?.toISOString() ?? null,
+      updatedAt: updated.updatedAt.toISOString(),
+    };
+  }
   async findCurrentCode(
     courseOfferingId: string,
     classId: string,
@@ -186,14 +588,18 @@ export class AttendanceService {
         );
       }
 
-      if (now < session.startsAt || now >= session.endsAt) {
+      if (session.status !== SessionStatus.IN_PROGRESS) {
         throw new ConflictException(
-          '출석 코드는 수업 시작 이후부터 종료 전까지만 생성할 수 있습니다.',
+          '진행 중인 수업에서만 출석 코드를 생성할 수 있습니다.',
         );
       }
 
+      if (now >= session.endsAt) {
+        throw new ConflictException('종료 시각이 지난 수업입니다.');
+      }
+
       const expiresAt = new Date(
-        Math.min(now.getTime() + 10 * 60 * 1000, session.endsAt.getTime()),
+        Math.min(now.getTime() + 5 * 60 * 1000, session.endsAt.getTime()),
       );
 
       await tx.attendanceCode.updateMany({
@@ -467,10 +873,7 @@ export class AttendanceService {
         );
       }
 
-      const attendanceStatus =
-        now.getTime() <= session.startsAt.getTime() + 5 * 60 * 1000
-          ? AttendanceStatus.PRESENT
-          : AttendanceStatus.LATE;
+      const attendanceStatus = AttendanceStatus.PRESENT;
 
       const existingRecord = await tx.attendanceRecord.findUnique({
         where: {
@@ -591,6 +994,64 @@ export class AttendanceService {
         '본인이 담당하는 수업의 출석 코드만 관리할 수 있습니다.',
       );
     }
+  }
+
+  private async synchronizeSessionStates(now: Date): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.classSession.updateMany({
+        where: {
+          status: SessionStatus.SCHEDULED,
+          startsAt: { lte: now },
+          endsAt: { gt: now },
+        },
+        data: { status: SessionStatus.IN_PROGRESS, actualStartedAt: now },
+      });
+      await tx.classSession.updateMany({
+        where: {
+          status: SessionStatus.IN_PROGRESS,
+          endsAt: { lte: now },
+        },
+        data: { status: SessionStatus.COMPLETED, actualEndedAt: now },
+      });
+      await tx.attendanceRecord.updateMany({
+        where: {
+          status: AttendanceStatus.UNPROCESSED,
+          classSession: { endsAt: { lte: now } },
+        },
+        data: {
+          status: AttendanceStatus.ABSENT,
+          method: AttendanceMethod.SYSTEM_AUTO,
+        },
+      });
+    });
+  }
+
+  private assertAttendanceManager(
+    instructorId: string,
+    actor: AuthenticatedUser,
+  ): void {
+    if (actor.role === UserRole.STUDENT) {
+      throw new ForbiddenException('출석을 수정할 권한이 없습니다.');
+    }
+    if (actor.role === UserRole.INSTRUCTOR && instructorId !== actor.id) {
+      throw new ForbiddenException(
+        '본인이 담당한 수업의 출석만 수정할 수 있습니다.',
+      );
+    }
+  }
+
+  private manualMethod(role: UserRole): AttendanceMethod {
+    const methods: Partial<Record<UserRole, AttendanceMethod>> = {
+      [UserRole.INSTRUCTOR]: AttendanceMethod.INSTRUCTOR_MANUAL,
+      [UserRole.MANAGER]: AttendanceMethod.MANAGER_MANUAL,
+      [UserRole.PRINCIPAL]: AttendanceMethod.PRINCIPAL_MANUAL,
+      [UserRole.ADMIN]: AttendanceMethod.ADMIN_MANUAL,
+    };
+    const method = methods[role];
+    if (!method) {
+      throw new ForbiddenException('출석을 수정할 권한이 없습니다.');
+    }
+    return method;
   }
 
   private hashCode(classSessionId: string, code: string): string {

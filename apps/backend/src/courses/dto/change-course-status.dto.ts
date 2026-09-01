@@ -1,11 +1,6 @@
-import { IsEnum, IsString, Length } from 'class-validator';
-import { CourseStatus } from '../../generated/prisma/enums';
+import { IsBoolean } from 'class-validator';
 
-export class ChangeCourseStatusDto {
-  @IsEnum(CourseStatus)
-  status!: CourseStatus;
-
-  @IsString()
-  @Length(1, 500)
-  reason!: string;
+export class ChangeCourseArchiveDto {
+  @IsBoolean()
+  archived!: boolean;
 }
