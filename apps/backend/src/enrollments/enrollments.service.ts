@@ -16,7 +16,6 @@ import { todaySeoulDateString } from '../common/seoul-date';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRegularEnrollmentDto } from './dto/create-regular-enrollment.dto';
 import { EnrollmentQueryDto } from './dto/enrollment-query.dto';
-import { TransferEnrollmentDto } from './dto/transfer-enrollment.dto';
 import { CreateSubjectEnrollmentDto } from './dto/create-subject-enrollment.dto';
 import { WithdrawEnrollmentDto } from './dto/withdraw-enrollment.dto';
 
@@ -65,11 +64,6 @@ export type EnrollmentPageResponse = {
   };
 };
 
-export type EnrollmentTransferResponse = {
-  previousEnrollments: EnrollmentResponse[];
-  newEnrollments: EnrollmentResponse[];
-};
-
 const ENROLLMENT_INCLUDE = {
   student: {
     select: { id: true, loginId: true, name: true, phone: true },
@@ -90,10 +84,11 @@ type EnrollmentWithRelations = Prisma.EnrollmentGetPayload<{
   include: typeof ENROLLMENT_INCLUDE;
 }>;
 
-const ACTIVE_STATUSES = [
-  EnrollmentStatus.SCHEDULED,
-  EnrollmentStatus.ACTIVE,
-] as EnrollmentStatus[];
+/**
+ * 저장하는 수강 상태는 수강 중과 수강 철회 둘뿐이다.
+ * 반 운영이 끝났는지는 반 기간으로 계산해 화면에서 표시한다.
+ */
+const ACTIVE_STATUSES = [EnrollmentStatus.ACTIVE] as EnrollmentStatus[];
 
 @Injectable()
 export class EnrollmentsService {
@@ -104,7 +99,6 @@ export class EnrollmentsService {
     query: EnrollmentQueryDto,
   ): Promise<EnrollmentPageResponse> {
     await this.assertClassExists(classId);
-    await this.synchronizeEnrollmentStatuses(classId);
 
     const where: Prisma.EnrollmentWhereInput = {
       classId,
@@ -172,23 +166,16 @@ export class EnrollmentsService {
     return this.toPage(items, total, query);
   }
 
-  /** 반 배정: 반에 포함된 모든 교육과정에 대해 기본 수강 등록을 생성한다. */
+  /**
+   * 반 배정: 반에 포함된 모든 교육과정에 대해 수강 등록을 생성한다.
+   * 수강 기간은 반 운영 기간을 그대로 따르고, 상태는 항상 수강 중으로 시작한다.
+   */
   async createRegular(
     classId: string,
     dto: CreateRegularEnrollmentDto,
     actor: AuthenticatedUser,
     ipAddress?: string,
   ): Promise<EnrollmentResponse[]> {
-    const startsOn = this.toDate(dto.startsOn);
-    const endsOn = dto.endsOn ? this.toDate(dto.endsOn) : null;
-    const reason = this.optionalText(dto.reason);
-
-    if (endsOn && startsOn > endsOn) {
-      throw new BadRequestException(
-        '수강 종료일은 시작일보다 빠를 수 없습니다.',
-      );
-    }
-
     const enrollmentIds = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`
         SELECT id
@@ -233,15 +220,6 @@ export class EnrollmentsService {
         );
       }
 
-      if (
-        startsOn > classItem.endDate ||
-        (endsOn && endsOn < classItem.startDate)
-      ) {
-        throw new BadRequestException(
-          '수강 기간은 반 운영 기간과 겹쳐야 합니다.',
-        );
-      }
-
       const student = await tx.user.findUnique({
         where: { id: dto.studentId },
         select: { id: true, role: true, status: true },
@@ -256,7 +234,7 @@ export class EnrollmentsService {
         );
       }
 
-      // 같은 교육과정에서 활성 기본 반은 1개만 가질 수 있다.
+      // 같은 교육과정을 동시에 두 반에서 수강할 수 없다.
       const duplicates = await tx.enrollment.findMany({
         where: {
           studentId: student.id,
@@ -271,15 +249,18 @@ export class EnrollmentsService {
 
       if (duplicates.length > 0) {
         throw new ConflictException(
-          `이 학생은 다음 교육과정에 이미 기본 수강 등록되어 있습니다: ${duplicates
+          `이 학생은 다음 교육과정을 이미 수강 중입니다: ${duplicates
             .map((item) => item.courseOffering.name)
             .join(', ')}`,
         );
       }
 
-      await this.assertCapacity(tx, classItem.id, classItem.capacity);
+      await this.assertCapacity(tx, classItem.id, classItem.capacity, [
+        student.id,
+      ]);
 
-      const status = this.getInitialStatus(startsOn, endsOn);
+      const startsOn = classItem.startDate;
+      const endsOn = classItem.endDate;
       const createdIds: string[] = [];
 
       for (const program of classItem.programs) {
@@ -289,10 +270,9 @@ export class EnrollmentsService {
             courseOfferingId: program.courseOfferingId,
             classId,
             type: EnrollmentType.REGULAR,
-            status,
+            status: EnrollmentStatus.ACTIVE,
             startsOn,
             endsOn,
-            reason,
             attendanceManaged: true,
             gradeManaged: true,
             assignedById: actor.id,
@@ -308,7 +288,6 @@ export class EnrollmentsService {
             endsOn,
             attendanceManaged: true,
             gradeManaged: true,
-            reason,
           })),
         });
 
@@ -329,10 +308,8 @@ export class EnrollmentsService {
             courseOfferingIds: classItem.programs.map(
               (program) => program.courseOfferingId,
             ),
-            type: EnrollmentType.REGULAR,
-            status,
-            startsOn: dto.startsOn,
-            endsOn: dto.endsOn ?? null,
+            startsOn: startsOn.toISOString().slice(0, 10),
+            endsOn: endsOn.toISOString().slice(0, 10),
           },
           ipAddress,
           result: 'SUCCESS',
@@ -489,7 +466,7 @@ export class EnrollmentsService {
             courseOfferingId: sourceEnrollment.courseOfferingId,
             classId,
             type: dto.type,
-            status: this.getInitialStatus(startsOn, endsOn),
+            status: this.assertNotEnded(endsOn),
             startsOn,
             endsOn,
             reason,
@@ -514,7 +491,7 @@ export class EnrollmentsService {
           data: {
             startsOn: mergedStartsOn,
             endsOn: mergedEndsOn,
-            status: this.getInitialStatus(mergedStartsOn, mergedEndsOn),
+            status: this.assertNotEnded(mergedEndsOn),
             attendanceManaged:
               targetEnrollment.attendanceManaged || attendanceManaged,
             gradeManaged: targetEnrollment.gradeManaged || gradeManaged,
@@ -656,246 +633,6 @@ export class EnrollmentsService {
     return this.findMany(affectedIds);
   }
 
-  /** 반 이동: 기존 반의 기본 수강을 종료하고 대상 반의 교육과정별로 새로 등록한다. */
-  async transfer(
-    classId: string,
-    enrollmentId: string,
-    dto: TransferEnrollmentDto,
-    actor: AuthenticatedUser,
-    ipAddress?: string,
-  ): Promise<EnrollmentTransferResponse> {
-    if (dto.targetClassId === classId) {
-      throw new BadRequestException('현재 반과 다른 반을 선택해야 합니다.');
-    }
-
-    const transferOn = this.toDate(dto.transferOn);
-    const reason = dto.reason.trim();
-
-    const result = await this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`
-        SELECT id
-        FROM classes
-        WHERE id IN (${classId}::uuid, ${dto.targetClassId}::uuid)
-        FOR UPDATE
-      `;
-
-      const enrollment = await tx.enrollment.findFirst({
-        where: { id: enrollmentId, classId },
-      });
-
-      if (!enrollment) {
-        throw new NotFoundException('수강 등록을 찾을 수 없습니다.');
-      }
-      if (enrollment.type !== EnrollmentType.REGULAR) {
-        throw new ConflictException(
-          '기본 수강 등록만 다른 반으로 이동할 수 있습니다.',
-        );
-      }
-
-      const sourceEnrollments = await tx.enrollment.findMany({
-        where: {
-          classId,
-          studentId: enrollment.studentId,
-          type: EnrollmentType.REGULAR,
-          status: { in: ACTIVE_STATUSES },
-        },
-      });
-
-      if (sourceEnrollments.length === 0) {
-        throw new ConflictException(
-          '예정 또는 수강 중 상태만 반 이동할 수 있습니다.',
-        );
-      }
-
-      const invalidStart = sourceEnrollments.find(
-        (item) => transferOn < item.startsOn,
-      );
-      if (invalidStart) {
-        throw new BadRequestException(
-          '반 이동일은 기존 수강 시작일보다 빠를 수 없습니다.',
-        );
-      }
-      const invalidEnd = sourceEnrollments.find(
-        (item) => item.endsOn && transferOn > item.endsOn,
-      );
-      if (invalidEnd) {
-        throw new BadRequestException(
-          '반 이동일은 기존 수강 종료일보다 늦을 수 없습니다.',
-        );
-      }
-
-      const targetClass = await tx.class.findUnique({
-        where: { id: dto.targetClassId },
-        include: {
-          programs: {
-            include: {
-              courseOffering: { select: { id: true, name: true } },
-              classSubjects: {
-                where: { active: true },
-                select: { courseOfferingSubjectId: true },
-              },
-            },
-          },
-        },
-      });
-
-      if (!targetClass) {
-        throw new NotFoundException('이동할 대상 반을 찾을 수 없습니다.');
-      }
-      if (targetClass.archivedAt) {
-        throw new ConflictException('보관된 반으로 이동할 수 없습니다.');
-      }
-      if (targetClass.programs.length === 0) {
-        throw new ConflictException(
-          '교육과정이 없는 반으로 이동할 수 없습니다.',
-        );
-      }
-      if (
-        transferOn < targetClass.startDate ||
-        transferOn > targetClass.endDate
-      ) {
-        throw new BadRequestException(
-          '반 이동일은 대상 반 운영 기간 안에 있어야 합니다.',
-        );
-      }
-
-      const emptyProgram = targetClass.programs.find(
-        (program) => program.classSubjects.length === 0,
-      );
-      if (emptyProgram) {
-        throw new ConflictException(
-          `운영 과목이 없는 교육과정이 있습니다: ${emptyProgram.courseOffering.name}`,
-        );
-      }
-
-      const sourceIds = sourceEnrollments.map((item) => item.id);
-
-      // 이동 후에도 같은 교육과정의 활성 기본 반이 둘이 되지 않아야 한다.
-      const conflicting = await tx.enrollment.findMany({
-        where: {
-          id: { notIn: sourceIds },
-          studentId: enrollment.studentId,
-          courseOfferingId: {
-            in: targetClass.programs.map((program) => program.courseOfferingId),
-          },
-          type: EnrollmentType.REGULAR,
-          status: { in: ACTIVE_STATUSES },
-        },
-        include: { courseOffering: { select: { name: true } } },
-      });
-
-      if (conflicting.length > 0) {
-        throw new ConflictException(
-          `이 학생에게 다른 활성 기본 수강 등록이 있습니다: ${conflicting
-            .map((item) => item.courseOffering.name)
-            .join(', ')}`,
-        );
-      }
-
-      await this.assertCapacity(tx, targetClass.id, targetClass.capacity, [
-        enrollment.studentId,
-      ]);
-
-      // 이동일 하루 전까지를 기존 수강 기간으로 마감해 기간이 겹치지 않게 한다.
-      const previousEndsOn = this.addDays(transferOn, -1);
-
-      for (const source of sourceEnrollments) {
-        const previousStatus =
-          source.status === EnrollmentStatus.SCHEDULED
-            ? EnrollmentStatus.CANCELED
-            : EnrollmentStatus.COMPLETED;
-        const closedEndsOn =
-          previousEndsOn < source.startsOn ? source.startsOn : previousEndsOn;
-
-        await tx.enrollment.update({
-          where: { id: source.id },
-          data: { status: previousStatus, endsOn: closedEndsOn },
-        });
-        await tx.enrollmentSubject.updateMany({
-          where: { enrollmentId: source.id },
-          data: { endsOn: closedEndsOn },
-        });
-      }
-
-      const referenceEndsOn =
-        sourceEnrollments[0].endsOn ?? targetClass.endDate;
-      const newEndsOn =
-        referenceEndsOn > targetClass.endDate
-          ? targetClass.endDate
-          : referenceEndsOn;
-
-      if (newEndsOn < transferOn) {
-        throw new BadRequestException(
-          '대상 반에서 유효한 수강 기간을 만들 수 없습니다.',
-        );
-      }
-
-      const newStatus = this.getInitialStatus(transferOn, newEndsOn);
-      const newIds: string[] = [];
-
-      for (const program of targetClass.programs) {
-        const created = await tx.enrollment.create({
-          data: {
-            studentId: enrollment.studentId,
-            courseOfferingId: program.courseOfferingId,
-            classId: targetClass.id,
-            type: EnrollmentType.REGULAR,
-            status: newStatus,
-            startsOn: transferOn,
-            endsOn: newEndsOn,
-            reason,
-            attendanceManaged: enrollment.attendanceManaged,
-            gradeManaged: enrollment.gradeManaged,
-            assignedById: actor.id,
-          },
-        });
-
-        await tx.enrollmentSubject.createMany({
-          data: program.classSubjects.map((subject) => ({
-            enrollmentId: created.id,
-            courseOfferingId: program.courseOfferingId,
-            courseOfferingSubjectId: subject.courseOfferingSubjectId,
-            startsOn: transferOn,
-            endsOn: newEndsOn,
-            attendanceManaged: enrollment.attendanceManaged,
-            gradeManaged: enrollment.gradeManaged,
-            reason,
-          })),
-        });
-
-        newIds.push(created.id);
-      }
-
-      await tx.auditLog.create({
-        data: {
-          actorId: actor.id,
-          actorRole: actor.role,
-          action: 'ENROLLMENT_CLASS_TRANSFERRED',
-          resourceType: 'ENROLLMENT',
-          resourceId: enrollment.id,
-          beforeData: { classId, enrollmentIds: sourceIds },
-          afterData: {
-            targetClassId: targetClass.id,
-            enrollmentIds: newIds,
-            transferOn: dto.transferOn,
-            reason,
-          },
-          ipAddress,
-          result: 'SUCCESS',
-        },
-      });
-
-      return { sourceIds, newIds };
-    });
-
-    const [previousEnrollments, newEnrollments] = await Promise.all([
-      this.findMany(result.sourceIds),
-      this.findMany(result.newIds),
-    ]);
-
-    return { previousEnrollments, newEnrollments };
-  }
-
   /** 반 정원은 기본 수강 학생 수(중복 제외) 기준으로 확인한다. */
   private async assertCapacity(
     tx: Prisma.TransactionClient,
@@ -989,31 +726,6 @@ export class EnrollmentsService {
     }
   }
 
-  private async synchronizeEnrollmentStatuses(classId: string): Promise<void> {
-    const today = this.getToday();
-
-    await this.prisma.$transaction(async (tx) => {
-      await tx.enrollment.updateMany({
-        where: {
-          classId,
-          status: EnrollmentStatus.SCHEDULED,
-          startsOn: { lte: today },
-          OR: [{ endsOn: null }, { endsOn: { gte: today } }],
-        },
-        data: { status: EnrollmentStatus.ACTIVE },
-      });
-
-      await tx.enrollment.updateMany({
-        where: {
-          classId,
-          status: { in: ACTIVE_STATUSES },
-          endsOn: { lt: today },
-        },
-        data: { status: EnrollmentStatus.COMPLETED },
-      });
-    });
-  }
-
   private getToday(): Date {
     return this.toDate(todaySeoulDateString());
   }
@@ -1025,21 +737,15 @@ export class EnrollmentsService {
     return result;
   }
 
-  private getInitialStatus(
-    startsOn: Date,
-    endsOn: Date | null,
-  ): EnrollmentStatus {
-    const today = this.getToday();
-
-    if (endsOn && endsOn < today) {
+  /** 신규 등록은 언제나 수강 중으로 시작한다. */
+  private assertNotEnded(endsOn: Date | null): EnrollmentStatus {
+    if (endsOn && endsOn < this.getToday()) {
       throw new BadRequestException(
         '이미 종료된 기간으로 신규 수강 등록할 수 없습니다.',
       );
     }
 
-    return startsOn > today
-      ? EnrollmentStatus.SCHEDULED
-      : EnrollmentStatus.ACTIVE;
+    return EnrollmentStatus.ACTIVE;
   }
 
   private toDate(value: string): Date {

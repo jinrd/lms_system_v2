@@ -27,19 +27,24 @@ type ClassEnrollmentsPanelProps = {
   onChanged: () => Promise<void>;
 };
 
-const STATUS_LABELS: Record<EnrollmentStatus, string> = {
-  SCHEDULED: "수강 예정",
-  ACTIVE: "수강 중",
-  COMPLETED: "수강 종료",
-  CANCELED: "중도 퇴원",
-};
+/**
+ * 저장되는 수강 상태는 수강 중과 수강 철회 둘뿐이다.
+ * 반 운영이 끝났는지는 반 기간으로 계산해 표시만 한다.
+ */
+function displayStatus(
+  status: EnrollmentStatus,
+  classItem: ManagedClass,
+): { label: string; className: string } {
+  if (status === "CANCELED") {
+    return { label: "수강 철회", className: "status-badge--danger" };
+  }
 
-const STATUS_CLASSES: Record<EnrollmentStatus, string> = {
-  SCHEDULED: "status-badge--neutral",
-  ACTIVE: "status-badge--success",
-  COMPLETED: "status-badge--primary",
-  CANCELED: "status-badge--danger",
-};
+  if (classItem.derivedStatus === "ENDED") {
+    return { label: "수강 종료", className: "status-badge--primary" };
+  }
+
+  return { label: "수강 중", className: "status-badge--success" };
+}
 
 const TYPE_LABELS = {
   REGULAR: "기본 수강",
@@ -57,22 +62,6 @@ function formatDate(value: string): string {
   return new Intl.DateTimeFormat("ko-KR").format(
     new Date(`${value}T00:00:00+09:00`),
   );
-}
-
-function getInitialStartDate(classItem: ManagedClass): string {
-  const today = new Date().toLocaleDateString("sv-SE", {
-    timeZone: "Asia/Seoul",
-  });
-
-  if (today < classItem.startDate) {
-    return classItem.startDate;
-  }
-
-  if (today > classItem.endDate) {
-    return classItem.startDate;
-  }
-
-  return today;
 }
 
 export function ClassEnrollmentsPanel({
@@ -118,23 +107,8 @@ export function ClassEnrollmentsPanel({
   };
 
   const createMutation = useMutation({
-    mutationFn: ({
-      studentId,
-      startsOn,
-      endsOn,
-      reason,
-    }: {
-      studentId: string;
-      startsOn: string;
-      endsOn?: string;
-      reason?: string;
-    }) =>
-      createRegularEnrollment(classItem.id, {
-        studentId,
-        startsOn,
-        endsOn,
-        reason,
-      }),
+    mutationFn: ({ studentId }: { studentId: string }) =>
+      createRegularEnrollment(classItem.id, { studentId }),
     onSuccess: async () => {
       setEditorOpen(false);
       setStudentKeyword("");
@@ -147,14 +121,9 @@ export function ClassEnrollmentsPanel({
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
-    const endsOn = String(formData.get("endsOn") ?? "").trim();
-    const reason = String(formData.get("reason") ?? "").trim();
 
     createMutation.mutate({
       studentId: String(formData.get("studentId") ?? ""),
-      startsOn: String(formData.get("startsOn") ?? ""),
-      endsOn: endsOn || undefined,
-      reason: reason || undefined,
     });
   };
 
@@ -173,7 +142,8 @@ export function ClassEnrollmentsPanel({
         <div>
           <h3>수강생 관리</h3>
           <p>
-            수강 상태는 기간에 따라 자동 표시되며 중도 퇴원만 직접 처리합니다.
+            수강 기간은 반 운영 기간을 따르며, 환불로 인한 수강 철회만 직접
+            처리합니다.
           </p>
         </div>
 
@@ -222,10 +192,10 @@ export function ClassEnrollmentsPanel({
 
                       <span
                         className={`status-badge ${
-                          STATUS_CLASSES[enrollment.status]
+                          displayStatus(enrollment.status, classItem).className
                         }`}
                       >
-                        {STATUS_LABELS[enrollment.status]}
+                        {displayStatus(enrollment.status, classItem).label}
                       </span>
 
                       <span className="status-badge status-badge--neutral">
@@ -348,48 +318,15 @@ export function ClassEnrollmentsPanel({
                 </select>
               </label>
 
-              <div className="form-grid">
-                <label className="form-field form-field--flush">
-                  <span>수강 시작일</span>
-                  <input
-                    name="startsOn"
-                    type="date"
-                    min={classItem.startDate}
-                    max={classItem.endDate}
-                    defaultValue={getInitialStartDate(classItem)}
-                    required
-                  />
-                </label>
-
-                <label className="form-field form-field--flush">
-                  <span>수강 종료일</span>
-                  <input
-                    name="endsOn"
-                    type="date"
-                    min={classItem.startDate}
-                    max={classItem.endDate}
-                    defaultValue={classItem.endDate}
-                  />
-                </label>
-              </div>
-
-              <label className="form-field">
-                <span>배정 사유</span>
-                <textarea
-                  name="reason"
-                  rows={4}
-                  maxLength={1000}
-                  placeholder="신규 등록, 기존 학생 재등록 등"
-                />
-              </label>
-
               <div className="info-banner">
                 <UsersRound size={19} />
                 <div>
-                  <strong>기본 수강 등록</strong>
+                  <strong>수강 등록</strong>
                   <p>
-                    이 반의 모든 운영 과목이 학생의 수강 과목으로 자동
-                    연결됩니다.
+                    이 반의 모든 교육과정과 운영 과목이 학생의 수강 과목으로
+                    자동 연결됩니다. 수강 기간은 반 운영 기간(
+                    {classItem.startDate}~{classItem.endDate})을 따르며, 반
+                    기간을 수정하면 수강 중인 학생에게 함께 반영됩니다.
                   </p>
                 </div>
               </div>

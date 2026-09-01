@@ -16,11 +16,9 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../generated/prisma/enums';
 import { CreateRegularEnrollmentDto } from './dto/create-regular-enrollment.dto';
 import { EnrollmentQueryDto } from './dto/enrollment-query.dto';
-import { TransferEnrollmentDto } from './dto/transfer-enrollment.dto';
 import {
   type EnrollmentPageResponse,
   type EnrollmentResponse,
-  type EnrollmentTransferResponse,
   EnrollmentsService,
 } from './enrollments.service';
 import { CreateSubjectEnrollmentDto } from './dto/create-subject-enrollment.dto';
@@ -92,23 +90,6 @@ export class EnrollmentsController {
     @Req() request: Request,
   ): Promise<EnrollmentResponse[]> {
     return this.enrollmentsService.withdraw(
-      classId,
-      enrollmentId,
-      dto,
-      actor,
-      request.ip,
-    );
-  }
-
-  @Post(':enrollmentId/transfer')
-  transfer(
-    @Param('classId', ParseUUIDPipe) classId: string,
-    @Param('enrollmentId', ParseUUIDPipe) enrollmentId: string,
-    @Body() dto: TransferEnrollmentDto,
-    @CurrentUser() actor: AuthenticatedUser,
-    @Req() request: Request,
-  ): Promise<EnrollmentTransferResponse> {
-    return this.enrollmentsService.transfer(
       classId,
       enrollmentId,
       dto,

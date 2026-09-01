@@ -55,11 +55,9 @@ export type EnrollmentQuery = {
   limit?: number;
 };
 
+/** 수강 기간은 반 운영 기간을 따르므로 학생만 지정한다. */
 export type CreateRegularEnrollmentInput = {
   studentId: string;
-  startsOn: string;
-  endsOn?: string;
-  reason?: string;
 };
 
 export function getClassEnrollments(
@@ -99,17 +97,6 @@ export type WithdrawEnrollmentInput = {
   reason: string;
 };
 
-export type TransferEnrollmentInput = {
-  targetClassId: string;
-  transferOn: string;
-  reason: string;
-};
-
-export type EnrollmentTransferResult = {
-  previousEnrollments: Enrollment[];
-  newEnrollments: Enrollment[];
-};
-
 export function withdrawEnrollment(
   classId: string,
   enrollmentId: string,
@@ -119,20 +106,6 @@ export function withdrawEnrollment(
     `/classes/${classId}/enrollments/${enrollmentId}/withdraw`,
     {
       method: "PATCH",
-      body: input,
-    },
-  );
-}
-
-export function transferEnrollment(
-  classId: string,
-  enrollmentId: string,
-  input: TransferEnrollmentInput,
-): Promise<EnrollmentTransferResult> {
-  return apiRequest<EnrollmentTransferResult>(
-    `/classes/${classId}/enrollments/${enrollmentId}/transfer`,
-    {
-      method: "POST",
       body: input,
     },
   );

@@ -257,6 +257,35 @@ export class ClassesService {
         },
       });
 
+      // 수강 기간은 반 운영 기간을 그대로 따른다.
+      // 반 기간이 바뀌면 수강 중인 학생 전원에게 반영한다.
+      // 철회한 학생은 철회일을 유지해야 하므로 건드리지 않는다.
+      const periodChanged =
+        startDate.getTime() !== existing.startDate.getTime() ||
+        endDate.getTime() !== existing.endDate.getTime();
+
+      if (periodChanged) {
+        await tx.enrollment.updateMany({
+          where: {
+            classId,
+            type: EnrollmentType.REGULAR,
+            status: EnrollmentStatus.ACTIVE,
+          },
+          data: { startsOn: startDate, endsOn: endDate },
+        });
+
+        await tx.enrollmentSubject.updateMany({
+          where: {
+            enrollment: {
+              classId,
+              type: EnrollmentType.REGULAR,
+              status: EnrollmentStatus.ACTIVE,
+            },
+          },
+          data: { startsOn: startDate, endsOn: endDate },
+        });
+      }
+
       await tx.auditLog.create({
         data: {
           actorId: actor.id,
