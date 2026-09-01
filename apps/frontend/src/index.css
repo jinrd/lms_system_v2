@@ -118,6 +118,34 @@
   background: #fffbeb;
 }
 
+/* 폼 하단 인라인 메시지 */
+.form-error,
+.form-success {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+
+.form-error {
+  border-color: #fecaca;
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+.form-success {
+  border-color: #bbf7d0;
+  color: var(--success);
+  background: #f0fdf4;
+}
+
+.field-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
 @media (max-width: 600px) {
   .credential-row {
     grid-template-columns: 1fr;
