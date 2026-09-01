@@ -55,11 +55,21 @@ export function ClassesPage() {
         startDate: String(form.get("startDate") ?? ""),
         endDate: String(form.get("endDate") ?? ""),
         capacity: Number(form.get("capacity")),
-        programIds: form.getAll("programIds").map(String),
       };
-      if (!item) return createManagedClass(fullInput);
-      if (item.derivedStatus === "OPERATING")
+
+      if (!item) {
+        return createManagedClass({
+          ...fullInput,
+          programIds: form.getAll("programIds").map(String),
+        });
+      }
+
+      // 반 생성 후에는 포함 교육과정을 변경하지 않는다.
+      // 운영 중에는 이름만 바꿀 수 있다.
+      if (item.derivedStatus === "OPERATING") {
         return updateManagedClass(item.id, { name: fullInput.name });
+      }
+
       return updateManagedClass(item.id, fullInput);
     },
     onSuccess: async (saved) => {
@@ -281,7 +291,9 @@ export function ClassesPage() {
           description={
             editor.item?.derivedStatus === "OPERATING"
               ? "운영 중에는 반 이름만 변경할 수 있습니다."
-              : "운영 시작 전에는 모든 정보를 변경할 수 있습니다."
+              : editor.item
+                ? "운영 시작 전에는 교육과정을 제외한 모든 정보를 변경할 수 있습니다."
+                : "반에 포함할 교육과정은 생성할 때만 정할 수 있습니다."
           }
           onClose={() => setEditor(null)}
         >
@@ -341,22 +353,37 @@ export function ClassesPage() {
                     <input name="room" defaultValue={editor.item?.room ?? ""} />
                   </label>
                 </div>
-                <fieldset className="field">
-                  <legend>교육과정</legend>
-                  {programs.map((program) => (
-                    <label className="checkbox-label" key={program.id}>
-                      <input
-                        type="checkbox"
-                        name="programIds"
-                        value={program.id}
-                        defaultChecked={editor.item?.programs.some(
-                          (item) => item.courseOfferingId === program.id,
-                        )}
-                      />{" "}
-                      {program.name} · {program.instructor.name}
-                    </label>
-                  ))}
-                </fieldset>
+                {editor.item ? (
+                  <div className="field">
+                    <span>교육과정</span>
+                    <p className="field-hint">
+                      {editor.item.programs
+                        .map(
+                          (program) =>
+                            `${program.name} · ${program.instructor.name}`,
+                        )
+                        .join(" / ")}
+                    </p>
+                    <p className="field-hint">
+                      반 생성 후에는 교육과정을 변경할 수 없습니다. 구성이
+                      잘못되었다면 이 반을 삭제하고 새로 만들어 주세요.
+                    </p>
+                  </div>
+                ) : (
+                  <fieldset className="field">
+                    <legend>교육과정</legend>
+                    {programs.map((program) => (
+                      <label className="checkbox-label" key={program.id}>
+                        <input
+                          type="checkbox"
+                          name="programIds"
+                          value={program.id}
+                        />{" "}
+                        {program.name} · {program.instructor.name}
+                      </label>
+                    ))}
+                  </fieldset>
+                )}
               </>
             )}
             {saveMutation.isError && (
