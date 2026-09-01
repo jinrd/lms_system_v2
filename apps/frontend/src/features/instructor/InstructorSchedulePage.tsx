@@ -4,7 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
-  Pencil,
+  NotebookPen,
   Play,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +19,7 @@ import {
   changeClassSessionStatus,
   getClassSessions,
   getInstructorClasses,
-  updateClassSession,
+  updateSessionJournal,
   type ClassSession,
   type SessionStatus,
 } from "../classes/class-management.api";
@@ -27,7 +27,7 @@ import { AttendanceCodeAction } from "../attendance/AttendanceCodeAction";
 
 type SessionEditor =
   | {
-      type: "edit";
+      type: "journal";
       session: ClassSession;
     }
   | {
@@ -71,15 +71,13 @@ function addDays(dateString: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-function toLocalDateTime(value: string): string {
-  const date = new Date(value);
-  const seoulOffset = 9 * 60 * 60 * 1000;
-
-  return new Date(date.getTime() + seoulOffset).toISOString().slice(0, 16);
-}
-
-function toIsoDateTime(value: string): string {
-  return new Date(`${value}:00+09:00`).toISOString();
+/** 일지 안내에 쓰는 날짜와 시각 */
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
 function formatDate(value: string): string {
@@ -167,25 +165,24 @@ export function InstructorSchedulePage() {
     });
   };
 
-  const updateMutation = useMutation({
+  const journalMutation = useMutation({
     mutationFn: ({
       session,
-      input,
+      title,
+      lessonContent,
     }: {
       session: ClassSession;
-      input: {
-        title?: string;
-        lessonContent?: string;
-        startsAt?: string;
-        endsAt?: string;
-        room?: string;
-      };
+      title: string;
+      lessonContent: string;
     }) => {
       if (!selectedClass) {
         throw new Error("담당 반을 선택해 주세요.");
       }
 
-      return updateClassSession(selectedClass.id, session.id, input);
+      return updateSessionJournal(selectedClass.id, session.id, {
+        title,
+        lessonContent,
+      });
     },
     onSuccess: async () => {
       setEditor(null);
@@ -220,30 +217,18 @@ export function InstructorSchedulePage() {
     },
   });
 
-  const handleUpdate = (
+  const handleJournalSubmit = (
     event: FormEvent<HTMLFormElement>,
     session: ClassSession,
   ): void => {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
-    const title = String(formData.get("title") ?? "").trim();
-    const lessonContent = String(formData.get("lessonContent") ?? "").trim();
-    const room = String(formData.get("room") ?? "").trim();
 
-    updateMutation.mutate({
+    journalMutation.mutate({
       session,
-      input: {
-        title,
-        lessonContent,
-        room,
-        ...(session.status === "SCHEDULED"
-          ? {
-              startsAt: toIsoDateTime(String(formData.get("startsAt") ?? "")),
-              endsAt: toIsoDateTime(String(formData.get("endsAt") ?? "")),
-            }
-          : {}),
-      },
+      title: String(formData.get("title") ?? "").trim(),
+      lessonContent: String(formData.get("lessonContent") ?? "").trim(),
     });
   };
 
@@ -396,7 +381,8 @@ export function InstructorSchedulePage() {
 
                         {session.lessonContent && (
                           <div className="session-content-preview">
-                            {session.lessonContent}
+                            <strong>수업 일지</strong>
+                            <p>{session.lessonContent}</p>
                           </div>
                         )}
                       </div>
@@ -409,20 +395,22 @@ export function InstructorSchedulePage() {
                           sessionStatus={session.status}
                         />
 
-                        {(session.status === "SCHEDULED" ||
-                          session.status === "IN_PROGRESS") && (
+                        {(session.status === "IN_PROGRESS" ||
+                          session.status === "COMPLETED") && (
                           <button
                             type="button"
                             className="button button--secondary button--compact"
                             onClick={() =>
                               setEditor({
-                                type: "edit",
+                                type: "journal",
                                 session,
                               })
                             }
                           >
-                            <Pencil size={14} />
-                            수정
+                            <NotebookPen size={14} />
+                            {session.journalWrittenAt
+                              ? "수업 일지 수정"
+                              : "수업 일지"}
                           </button>
                         )}
 
@@ -476,55 +464,46 @@ export function InstructorSchedulePage() {
         />
       )}
 
-      {editor?.type === "edit" && (
+      {editor?.type === "journal" && (
         <Modal
-          title="수업 정보 수정"
-          description="수업 내용과 실제 운영 정보를 기록합니다."
+          title={
+            editor.session.journalWrittenAt
+              ? "수업 일지 수정"
+              : "수업 일지 작성"
+          }
+          description="오늘 어떤 수업을 했는지 기록합니다. 기간 제한 없이 언제든 다시 쓸 수 있습니다."
           onClose={() => setEditor(null)}
         >
           <form
             className="stack"
-            onSubmit={(event) => handleUpdate(event, editor.session)}
+            onSubmit={(event) => handleJournalSubmit(event, editor.session)}
           >
+            <div className="info-banner">
+              <NotebookPen size={19} />
+              <div>
+                <strong>
+                  {formatDateTime(editor.session.startsAt)} ·{" "}
+                  {editor.session.subjectName}
+                </strong>
+                <p>
+                  {editor.session.instructor.name}
+                  {editor.session.journalWrittenAt
+                    ? ` · ${formatDateTime(editor.session.journalWrittenAt)} 최초 작성`
+                    : ""}
+                </p>
+              </div>
+            </div>
+
             <label className="form-field form-field--flush">
-              <span>수업명</span>
+              <span>수업 제목</span>
               <input
                 name="title"
                 maxLength={200}
-                defaultValue={editor.session.title ?? ""}
-              />
-            </label>
-
-            {editor.session.status === "SCHEDULED" && (
-              <div className="form-grid">
-                <label className="form-field form-field--flush">
-                  <span>시작 시각</span>
-                  <input
-                    name="startsAt"
-                    type="datetime-local"
-                    defaultValue={toLocalDateTime(editor.session.startsAt)}
-                    required
-                  />
-                </label>
-
-                <label className="form-field form-field--flush">
-                  <span>종료 시각</span>
-                  <input
-                    name="endsAt"
-                    type="datetime-local"
-                    defaultValue={toLocalDateTime(editor.session.endsAt)}
-                    required
-                  />
-                </label>
-              </div>
-            )}
-
-            <label className="form-field">
-              <span>강의실</span>
-              <input
-                name="room"
-                maxLength={100}
-                defaultValue={editor.session.room ?? ""}
+                required
+                placeholder="예: 각질 제거 실습 2차"
+                defaultValue={
+                  editor.session.title ?? editor.session.subjectName
+                }
               />
             </label>
 
@@ -532,15 +511,17 @@ export function InstructorSchedulePage() {
               <span>수업 내용</span>
               <textarea
                 name="lessonContent"
-                rows={7}
+                rows={10}
                 maxLength={10_000}
+                required
+                placeholder="진행한 내용, 학생 반응, 다음 수업에 이어서 할 것 등을 자유롭게 적어 주세요."
                 defaultValue={editor.session.lessonContent ?? ""}
               />
             </label>
 
-            {updateMutation.isError && (
+            {journalMutation.isError && (
               <div className="form-alert" role="alert">
-                {getErrorMessage(updateMutation.error)}
+                {getErrorMessage(journalMutation.error)}
               </div>
             )}
 
@@ -556,9 +537,9 @@ export function InstructorSchedulePage() {
               <button
                 type="submit"
                 className="button button--primary"
-                disabled={updateMutation.isPending}
+                disabled={journalMutation.isPending}
               >
-                {updateMutation.isPending ? "저장 중..." : "수정사항 저장"}
+                {journalMutation.isPending ? "저장 중..." : "일지 저장"}
               </button>
             </div>
           </form>

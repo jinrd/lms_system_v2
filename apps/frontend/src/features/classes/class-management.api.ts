@@ -162,6 +162,8 @@ export type ClassSession = {
   room: string | null;
   status: SessionStatus;
   completedMinutes: number | null;
+  /** 수업 일지를 최초 작성한 시각. 없으면 아직 작성하지 않았다. */
+  journalWrittenAt: string | null;
   createdAt: string;
   updatedAt: string;
   replacementForSessionId: string | null;

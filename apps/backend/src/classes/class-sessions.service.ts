@@ -44,6 +44,7 @@ export type ClassSessionResponse = {
   room: string | null;
   status: SessionStatus;
   completedMinutes: number | null;
+  journalWrittenAt: string | null;
   createdAt: string;
   updatedAt: string;
   replacementForSessionId: string | null;
@@ -1160,6 +1161,7 @@ export class ClassSessionsService {
     room: string | null;
     status: SessionStatus;
     completedMinutes: number | null;
+    journalWrittenAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
     classSubject: {
@@ -1200,6 +1202,7 @@ export class ClassSessionsService {
       room: session.room,
       status: session.status,
       completedMinutes: session.completedMinutes,
+      journalWrittenAt: session.journalWrittenAt?.toISOString() ?? null,
       createdAt: session.createdAt.toISOString(),
       updatedAt: session.updatedAt.toISOString(),
       replacementForSessionId: session.replacementForSessionId,

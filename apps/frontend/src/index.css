@@ -2403,6 +2403,19 @@ button {
   align-items: center;
 }
 
+.session-content-preview > strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.session-content-preview > p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
 .session-content-preview {
   margin-top: 12px;
   padding: 10px 12px;
