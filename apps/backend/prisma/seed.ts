@@ -2,7 +2,6 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import * as argon2 from 'argon2';
 import { PrismaClient } from '../src/generated/prisma/client';
 import {
-  CourseStatus,
   SubjectMode,
   UserRole,
   UserStatus,
@@ -16,8 +15,18 @@ const prisma = new PrismaClient({
 });
 
 const credentials = [
-  { loginId: 'admin', password: 'admin1234', name: '관리자', role: UserRole.ADMIN },
-  { loginId: 'manager01', password: 'manager1234', name: '실장', role: UserRole.MANAGER },
+  {
+    loginId: 'admin',
+    password: 'admin1234',
+    name: '관리자',
+    role: UserRole.ADMIN,
+  },
+  {
+    loginId: 'manager01',
+    password: 'manager1234',
+    name: '실장',
+    role: UserRole.MANAGER,
+  },
   ...Array.from({ length: 3 }, (_, index) => ({
     loginId: `instructor${String(index + 1).padStart(2, '0')}`,
     password: 'instructor1234',
@@ -124,9 +133,24 @@ async function seed(): Promise<void> {
   }
 
   const programs = [
-    { name: '피부 기초 교육과정', field: '피부', instructor: 'instructor01', subjects: ['피부 이론', '각질 제거'] },
-    { name: '피부 전문가 교육과정', field: '피부', instructor: 'instructor02', subjects: ['피부 관리', '문신'] },
-    { name: '헤어 전문가 교육과정', field: '헤어', instructor: 'instructor03', subjects: ['헤어 이론', '커트', '펌', '컬러'] },
+    {
+      name: '피부 기초 교육과정',
+      field: '피부',
+      instructor: 'instructor01',
+      subjects: ['피부 이론', '각질 제거'],
+    },
+    {
+      name: '피부 전문가 교육과정',
+      field: '피부',
+      instructor: 'instructor02',
+      subjects: ['피부 관리', '문신'],
+    },
+    {
+      name: '헤어 전문가 교육과정',
+      field: '헤어',
+      instructor: 'instructor03',
+      subjects: ['헤어 이론', '커트', '펌', '컬러'],
+    },
   ];
 
   for (const program of programs) {
@@ -145,10 +169,6 @@ async function seed(): Promise<void> {
       : await prisma.courseOffering.create({
           data: {
             name: program.name,
-            startDate: new Date('2000-01-01T00:00:00.000Z'),
-            endDate: new Date('2099-12-31T00:00:00.000Z'),
-            capacity: 1,
-            status: CourseStatus.PLANNED,
             primaryEducationFieldId: fieldIds.get(program.field)!,
             instructorId: users.get(program.instructor)!.id,
             createdById: users.get('admin')!.id,
@@ -159,10 +179,9 @@ async function seed(): Promise<void> {
       where: { courseOfferingId: course.id },
     });
     await prisma.courseOfferingSubject.createMany({
-      data: program.subjects.map((name, index) => ({
+      data: program.subjects.map((name) => ({
         courseOfferingId: course.id,
         subjectId: subjectIds.get(`${program.field}:${name}`)!,
-        sequence: index + 1,
       })),
     });
   }

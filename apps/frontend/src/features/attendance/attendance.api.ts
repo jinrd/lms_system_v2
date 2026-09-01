@@ -1,13 +1,8 @@
 import { apiRequest } from "../../lib/api-client";
-import type { SessionStatus } from "../classes/classes.api";
+import type { SessionStatus } from "../classes/class-management.api";
 
 export type AttendanceStatus =
-  | "UNPROCESSED"
-  | "PRESENT"
-  | "LATE"
-  | "ABSENT"
-  | "EARLY_LEAVE"
-  | "EXCUSED";
+  "UNPROCESSED" | "PRESENT" | "LATE" | "ABSENT" | "EARLY_LEAVE" | "EXCUSED";
 
 export type AttendanceMethod =
   | "SYSTEM_AUTO"
@@ -61,34 +56,26 @@ export type AttendanceSubmission = {
   checkedAt: string;
 };
 
-function attendanceCodePath(
-  courseOfferingId: string,
-  classId: string,
-  sessionId: string,
-): string {
-  return `/course-offerings/${courseOfferingId}/classes/${classId}/sessions/${sessionId}/attendance-code`;
+function attendanceCodePath(classId: string, sessionId: string): string {
+  return `/classes/${classId}/sessions/${sessionId}/attendance-code`;
 }
 
 export function getCurrentAttendanceCode(
-  courseOfferingId: string,
   classId: string,
   sessionId: string,
 ): Promise<AttendanceCodeMetadata | null> {
   return apiRequest<AttendanceCodeMetadata | null>(
-    attendanceCodePath(courseOfferingId, classId, sessionId),
+    attendanceCodePath(classId, sessionId),
   );
 }
 
 export function generateAttendanceCode(
-  courseOfferingId: string,
   classId: string,
   sessionId: string,
 ): Promise<AttendanceCodeGeneration> {
   return apiRequest<AttendanceCodeGeneration>(
-    attendanceCodePath(courseOfferingId, classId, sessionId),
-    {
-      method: "POST",
-    },
+    attendanceCodePath(classId, sessionId),
+    { method: "POST" },
   );
 }
 

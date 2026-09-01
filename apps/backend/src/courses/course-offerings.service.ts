@@ -5,12 +5,7 @@ import {
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import type { Prisma } from '../generated/prisma/client';
-import {
-  CourseStatus,
-  SessionStatus,
-  UserRole,
-  UserStatus,
-} from '../generated/prisma/enums';
+import { SessionStatus, UserRole, UserStatus } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { CourseOfferingQueryDto } from './dto/course-offering-query.dto';
 import { CreateCourseOfferingDto } from './dto/create-course-offering.dto';
@@ -151,16 +146,9 @@ export class CourseOfferingsService {
           name: dto.name.trim(),
           primaryEducationFieldId: field.id,
           instructorId: instructor.id,
-          startDate: new Date('2000-01-01'),
-          endDate: new Date('2099-12-31'),
-          capacity: 1,
-          status: CourseStatus.PLANNED,
           createdById: actor.id,
           subjects: {
-            create: dto.subjectIds.map((subjectId, index) => ({
-              subjectId,
-              sequence: index + 1,
-            })),
+            create: dto.subjectIds.map((subjectId) => ({ subjectId })),
           },
         },
       });

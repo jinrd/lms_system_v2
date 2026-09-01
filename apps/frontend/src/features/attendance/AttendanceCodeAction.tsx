@@ -9,7 +9,6 @@ import {
 } from "./attendance.api";
 
 type AttendanceCodeActionProps = {
-  courseOfferingId: string;
   classId: string;
   sessionId: string;
   sessionTitle: string;
@@ -30,7 +29,6 @@ function formatTime(value: string): string {
 }
 
 export function AttendanceCodeAction({
-  courseOfferingId,
   classId,
   sessionId,
   sessionTitle,
@@ -41,18 +39,16 @@ export function AttendanceCodeAction({
   const [modalOpen, setModalOpen] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
 
-  const queryKey = ["attendance-code", courseOfferingId, classId, sessionId];
+  const queryKey = ["attendance-code", classId, sessionId];
 
   const currentCodeQuery = useQuery({
     queryKey,
-    queryFn: () =>
-      getCurrentAttendanceCode(courseOfferingId, classId, sessionId),
+    queryFn: () => getCurrentAttendanceCode(classId, sessionId),
     enabled: modalOpen,
   });
 
   const generateMutation = useMutation({
-    mutationFn: () =>
-      generateAttendanceCode(courseOfferingId, classId, sessionId),
+    mutationFn: () => generateAttendanceCode(classId, sessionId),
     onSuccess: async (result) => {
       setGeneratedCode(result.code);
       await queryClient.invalidateQueries({ queryKey });

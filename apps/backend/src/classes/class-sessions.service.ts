@@ -10,7 +10,6 @@ import {
   AttendanceMethod,
   AttendanceStatus,
   AttendanceCodeStatus,
-  ClassStatus,
   SessionKind,
   SessionStatus,
   UserRole,
@@ -93,12 +92,11 @@ export class ClassSessionsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(
-    courseOfferingId: string,
     classId: string,
     range: ClassSessionRangeDto,
     actor: AuthenticatedUser,
   ): Promise<ClassSessionResponse[]> {
-    await this.assertClassAccess(courseOfferingId, classId, actor);
+    await this.assertClassAccess(classId, actor);
 
     const { rangeStart, rangeEndExclusive } = this.validateRange(range);
     await this.synchronizeSessionStates(classId);
@@ -121,7 +119,6 @@ export class ClassSessionsService {
   }
 
   async generate(
-    courseOfferingId: string,
     classId: string,
     range: ClassSessionRangeDto,
     actor: AuthenticatedUser,
@@ -131,7 +128,7 @@ export class ClassSessionsService {
       this.validateRange(range);
 
     // 강사는 담당 교육과정이 포함된 반의 수업만 생성할 수 있다.
-    await this.assertClassAccess(courseOfferingId, classId, actor);
+    await this.assertClassAccess(classId, actor);
 
     const result = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`
@@ -144,7 +141,6 @@ export class ClassSessionsService {
       const classItem = await tx.class.findFirst({
         where: {
           id: classId,
-          courseOfferingId,
         },
       });
 
@@ -152,13 +148,8 @@ export class ClassSessionsService {
         throw new NotFoundException('반을 찾을 수 없습니다.');
       }
 
-      if (
-        classItem.status === ClassStatus.COMPLETED ||
-        classItem.status === ClassStatus.CANCELED
-      ) {
-        throw new ConflictException(
-          '완료되거나 취소된 반에는 수업을 생성할 수 없습니다.',
-        );
+      if (classItem.archivedAt) {
+        throw new ConflictException('보관된 반에는 수업을 생성할 수 없습니다.');
       }
 
       const classStartDate = this.toDateString(classItem.startDate);
@@ -266,11 +257,6 @@ export class ClassSessionsService {
         }
 
         for (const pattern of dayPatterns) {
-          if (!pattern.classProgram) {
-            throw new ConflictException(
-              '시간표에 연결된 교육과정을 찾을 수 없습니다.',
-            );
-          }
           const startTime = this.toTimeString(pattern.startTime);
           const endTime = this.toTimeString(pattern.endTime);
 
@@ -369,12 +355,7 @@ export class ClassSessionsService {
       };
     });
 
-    const sessions = await this.findAll(
-      courseOfferingId,
-      classId,
-      range,
-      actor,
-    );
+    const sessions = await this.findAll(classId, range, actor);
 
     return {
       ...result,
@@ -383,7 +364,6 @@ export class ClassSessionsService {
   }
 
   async update(
-    courseOfferingId: string,
     classId: string,
     sessionId: string,
     dto: UpdateClassSessionDto,
@@ -402,7 +382,6 @@ export class ClassSessionsService {
         where: {
           id: sessionId,
           classId,
-          class: { courseOfferingId },
         },
         include: { class: true },
       });
@@ -522,11 +501,10 @@ export class ClassSessionsService {
       });
     });
 
-    return this.findOne(courseOfferingId, classId, sessionId);
+    return this.findOne(classId, sessionId);
   }
 
   async changeStatus(
-    courseOfferingId: string,
     classId: string,
     sessionId: string,
     dto: ChangeClassSessionStatusDto,
@@ -545,7 +523,6 @@ export class ClassSessionsService {
         where: {
           id: sessionId,
           classId,
-          class: { courseOfferingId },
         },
       });
 
@@ -631,11 +608,10 @@ export class ClassSessionsService {
       });
     });
 
-    return this.findOne(courseOfferingId, classId, sessionId);
+    return this.findOne(classId, sessionId);
   }
 
   async updateJournal(
-    courseOfferingId: string,
     classId: string,
     sessionId: string,
     dto: UpdateSessionJournalDto,
@@ -643,7 +619,7 @@ export class ClassSessionsService {
     ipAddress?: string,
   ): Promise<ClassSessionResponse> {
     const current = await this.prisma.classSession.findFirst({
-      where: { id: sessionId, classId, class: { courseOfferingId } },
+      where: { id: sessionId, classId },
     });
 
     if (!current) {
@@ -692,11 +668,10 @@ export class ClassSessionsService {
       });
     });
 
-    return this.findOne(courseOfferingId, classId, sessionId);
+    return this.findOne(classId, sessionId);
   }
 
   async cancel(
-    courseOfferingId: string,
     classId: string,
     sessionId: string,
     dto: CancelClassSessionDto,
@@ -717,9 +692,6 @@ export class ClassSessionsService {
         where: {
           id: sessionId,
           classId,
-          class: {
-            courseOfferingId,
-          },
         },
       });
 
@@ -788,11 +760,10 @@ export class ClassSessionsService {
       });
     });
 
-    return this.findOne(courseOfferingId, classId, sessionId);
+    return this.findOne(classId, sessionId);
   }
 
   async createMakeup(
-    courseOfferingId: string,
     classId: string,
     originalSessionId: string,
     dto: CreateMakeupSessionDto,
@@ -825,9 +796,6 @@ export class ClassSessionsService {
         where: {
           id: originalSessionId,
           classId,
-          class: {
-            courseOfferingId,
-          },
         },
         include: {
           class: true,
@@ -888,10 +856,6 @@ export class ClassSessionsService {
         throw new ConflictException(
           '이미 취소되지 않은 보강 수업이 존재합니다.',
         );
-      }
-
-      if (!original.classProgram) {
-        throw new ConflictException('수업의 교육과정 정보를 찾을 수 없습니다.');
       }
 
       // 반 학생은 반에 포함된 모든 교육과정을 수강하므로, 겹침 검사는
@@ -968,11 +932,10 @@ export class ClassSessionsService {
       return created.id;
     });
 
-    return this.findOne(courseOfferingId, classId, makeupId);
+    return this.findOne(classId, makeupId);
   }
 
   private async findOne(
-    courseOfferingId: string,
     classId: string,
     sessionId: string,
   ): Promise<ClassSessionResponse> {
@@ -980,7 +943,6 @@ export class ClassSessionsService {
       where: {
         id: sessionId,
         classId,
-        class: { courseOfferingId },
       },
       include: SESSION_INCLUDE,
     });
@@ -1038,14 +1000,12 @@ export class ClassSessionsService {
   }
 
   private async assertClassAccess(
-    courseOfferingId: string,
     classId: string,
     actor: AuthenticatedUser,
   ): Promise<void> {
     const classItem = await this.prisma.class.findFirst({
       where: {
         id: classId,
-        courseOfferingId,
       },
       select: {
         id: true,

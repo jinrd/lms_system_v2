@@ -33,42 +33,34 @@ const MANAGEMENT_ROLES = [
 ] as const;
 
 @Roles(...MANAGEMENT_ROLES)
-@Controller('course-offerings/:courseOfferingId/classes/:classId/enrollments')
+@Controller('classes/:classId/enrollments')
 export class EnrollmentsController {
   constructor(private readonly enrollmentsService: EnrollmentsService) {}
 
   @Get('subject-candidates')
   findSubjectCandidates(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
     @Param('classId', ParseUUIDPipe) classId: string,
     @Query() query: EnrollmentQueryDto,
   ): Promise<EnrollmentPageResponse> {
-    return this.enrollmentsService.findSubjectCandidates(
-      courseOfferingId,
-      classId,
-      query,
-    );
+    return this.enrollmentsService.findSubjectCandidates(classId, query);
   }
 
   @Get()
   findAll(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
     @Param('classId', ParseUUIDPipe) classId: string,
     @Query() query: EnrollmentQueryDto,
   ): Promise<EnrollmentPageResponse> {
-    return this.enrollmentsService.findAll(courseOfferingId, classId, query);
+    return this.enrollmentsService.findAll(classId, query);
   }
 
   @Post()
   createRegular(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
     @Param('classId', ParseUUIDPipe) classId: string,
     @Body() dto: CreateRegularEnrollmentDto,
     @CurrentUser() actor: AuthenticatedUser,
     @Req() request: Request,
-  ): Promise<EnrollmentResponse> {
+  ): Promise<EnrollmentResponse[]> {
     return this.enrollmentsService.createRegular(
-      courseOfferingId,
       classId,
       dto,
       actor,
@@ -78,14 +70,12 @@ export class EnrollmentsController {
 
   @Post('subjects')
   createSubjectEnrollment(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
     @Param('classId', ParseUUIDPipe) classId: string,
     @Body() dto: CreateSubjectEnrollmentDto,
     @CurrentUser() actor: AuthenticatedUser,
     @Req() request: Request,
   ): Promise<EnrollmentResponse> {
     return this.enrollmentsService.createSubjectEnrollment(
-      courseOfferingId,
       classId,
       dto,
       actor,
@@ -95,15 +85,13 @@ export class EnrollmentsController {
 
   @Patch(':enrollmentId/withdraw')
   withdraw(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
     @Param('classId', ParseUUIDPipe) classId: string,
     @Param('enrollmentId', ParseUUIDPipe) enrollmentId: string,
     @Body() dto: WithdrawEnrollmentDto,
     @CurrentUser() actor: AuthenticatedUser,
     @Req() request: Request,
-  ): Promise<EnrollmentResponse> {
+  ): Promise<EnrollmentResponse[]> {
     return this.enrollmentsService.withdraw(
-      courseOfferingId,
       classId,
       enrollmentId,
       dto,
@@ -114,7 +102,6 @@ export class EnrollmentsController {
 
   @Post(':enrollmentId/transfer')
   transfer(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
     @Param('classId', ParseUUIDPipe) classId: string,
     @Param('enrollmentId', ParseUUIDPipe) enrollmentId: string,
     @Body() dto: TransferEnrollmentDto,
@@ -122,7 +109,6 @@ export class EnrollmentsController {
     @Req() request: Request,
   ): Promise<EnrollmentTransferResponse> {
     return this.enrollmentsService.transfer(
-      courseOfferingId,
       classId,
       enrollmentId,
       dto,

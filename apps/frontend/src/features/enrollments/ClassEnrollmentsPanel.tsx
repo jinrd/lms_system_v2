@@ -13,7 +13,7 @@ import {
   ErrorState,
   LoadingState,
 } from "../../components/ui/PageStates";
-import type { ClassItem } from "../classes/classes.api";
+import type { ManagedClass } from "../classes/class-management.api";
 import { getUsers } from "../users/users.api";
 import {
   createRegularEnrollment,
@@ -23,8 +23,7 @@ import {
 import { EnrollmentActions } from "./EnrollmentActions";
 
 type ClassEnrollmentsPanelProps = {
-  courseOfferingId: string;
-  classItem: ClassItem;
+  classItem: ManagedClass;
   onChanged: () => Promise<void>;
 };
 
@@ -60,7 +59,7 @@ function formatDate(value: string): string {
   );
 }
 
-function getInitialStartDate(classItem: ClassItem): string {
+function getInitialStartDate(classItem: ManagedClass): string {
   const today = new Date().toLocaleDateString("sv-SE", {
     timeZone: "Asia/Seoul",
   });
@@ -77,7 +76,6 @@ function getInitialStartDate(classItem: ClassItem): string {
 }
 
 export function ClassEnrollmentsPanel({
-  courseOfferingId,
   classItem,
   onChanged,
 }: ClassEnrollmentsPanelProps) {
@@ -87,19 +85,12 @@ export function ClassEnrollmentsPanel({
   const [studentKeywordDraft, setStudentKeywordDraft] = useState("");
   const [studentKeyword, setStudentKeyword] = useState("");
 
-  const enrollmentQueryKey = [
-    "course-offerings",
-    courseOfferingId,
-    "classes",
-    classItem.id,
-    "enrollments",
-    page,
-  ];
+  const enrollmentQueryKey = ["classes", classItem.id, "enrollments", page];
 
   const enrollmentsQuery = useQuery({
     queryKey: enrollmentQueryKey,
     queryFn: () =>
-      getClassEnrollments(courseOfferingId, classItem.id, {
+      getClassEnrollments(classItem.id, {
         page,
         limit: 20,
       }),
@@ -120,13 +111,7 @@ export function ClassEnrollmentsPanel({
 
   const refreshEnrollments = async (): Promise<void> => {
     await queryClient.invalidateQueries({
-      queryKey: [
-        "course-offerings",
-        courseOfferingId,
-        "classes",
-        classItem.id,
-        "enrollments",
-      ],
+      queryKey: ["classes", classItem.id, "enrollments"],
     });
 
     await onChanged();
@@ -144,7 +129,7 @@ export function ClassEnrollmentsPanel({
       endsOn?: string;
       reason?: string;
     }) =>
-      createRegularEnrollment(courseOfferingId, classItem.id, {
+      createRegularEnrollment(classItem.id, {
         studentId,
         startsOn,
         endsOn,
@@ -180,8 +165,7 @@ export function ClassEnrollmentsPanel({
 
   const enrollments = enrollmentsQuery.data?.items ?? [];
   const students = studentsQuery.data?.items ?? [];
-  const editable =
-    classItem.status !== "COMPLETED" && classItem.status !== "CANCELED";
+  const editable = !classItem.archived && classItem.derivedStatus !== "ENDED";
 
   return (
     <section className="nested-section">
@@ -189,8 +173,7 @@ export function ClassEnrollmentsPanel({
         <div>
           <h3>수강생 관리</h3>
           <p>
-            수강 상태는 기간에 따라 자동 표시되며 중도 퇴원만 직접
-            처리합니다.
+            수강 상태는 기간에 따라 자동 표시되며 중도 퇴원만 직접 처리합니다.
           </p>
         </div>
 
@@ -264,7 +247,6 @@ export function ClassEnrollmentsPanel({
                     </small>
                   </div>
                   <EnrollmentActions
-                    courseOfferingId={courseOfferingId}
                     classItem={classItem}
                     enrollment={enrollment}
                     onChanged={refreshEnrollments}

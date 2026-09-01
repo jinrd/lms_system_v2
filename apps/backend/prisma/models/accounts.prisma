@@ -72,7 +72,6 @@ model User {
   sessionsInstructed            ClassSession[]              @relation("SessionInstructor")
   sessionsCanceled              ClassSession[]              @relation("SessionCanceler")
   sessionsCreated               ClassSession[]              @relation("SessionCreator")
-  progressUpdates               ClassSubjectProgress[]      @relation("ProgressUpdater")
   enrollments                   Enrollment[]                @relation("EnrollmentStudent")
   enrollmentsAssigned           Enrollment[]                @relation("EnrollmentAssigner")
   sessionParticipations         SessionParticipant[]        @relation("SessionParticipantStudent")

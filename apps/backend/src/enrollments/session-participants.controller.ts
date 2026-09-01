@@ -25,9 +25,7 @@ const MANAGEMENT_ROLES = [
 ] as const;
 
 @Roles(...MANAGEMENT_ROLES)
-@Controller(
-  'course-offerings/:courseOfferingId/classes/:classId/sessions/:sessionId/participants',
-)
+@Controller('classes/:classId/sessions/:sessionId/participants')
 export class SessionParticipantsController {
   constructor(
     private readonly sessionParticipantsService: SessionParticipantsService,
@@ -35,20 +33,14 @@ export class SessionParticipantsController {
 
   @Get()
   findAll(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
     @Param('classId', ParseUUIDPipe) classId: string,
     @Param('sessionId', ParseUUIDPipe) sessionId: string,
   ): Promise<SessionParticipantResponse[]> {
-    return this.sessionParticipantsService.findAll(
-      courseOfferingId,
-      classId,
-      sessionId,
-    );
+    return this.sessionParticipantsService.findAll(classId, sessionId);
   }
 
   @Post()
   assign(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
     @Param('classId', ParseUUIDPipe) classId: string,
     @Param('sessionId', ParseUUIDPipe) sessionId: string,
     @Body() dto: AssignSessionParticipantDto,
@@ -56,7 +48,6 @@ export class SessionParticipantsController {
     @Req() request: Request,
   ): Promise<SessionParticipantResponse> {
     return this.sessionParticipantsService.assign(
-      courseOfferingId,
       classId,
       sessionId,
       dto,

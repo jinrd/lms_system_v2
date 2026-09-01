@@ -2,7 +2,7 @@ import { BookPlus, Search } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Modal } from "../../components/ui/Modal";
-import type { ClassItem } from "../classes/classes.api";
+import type { ManagedClass } from "../classes/class-management.api";
 import {
   createSubjectEnrollment,
   getSubjectEnrollmentCandidates,
@@ -10,8 +10,7 @@ import {
 } from "./enrollments.api";
 
 type SubjectEnrollmentPanelProps = {
-  courseOfferingId: string;
-  classItem: ClassItem;
+  classItem: ManagedClass;
   onChanged: () => Promise<void>;
 };
 
@@ -19,7 +18,7 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "요청을 처리하지 못했습니다.";
 }
 
-function getInitialDate(classItem: ClassItem): string {
+function getInitialDate(classItem: ManagedClass): string {
   const today = new Date().toLocaleDateString("sv-SE", {
     timeZone: "Asia/Seoul",
   });
@@ -36,7 +35,6 @@ function getInitialDate(classItem: ClassItem): string {
 }
 
 export function SubjectEnrollmentPanel({
-  courseOfferingId,
   classItem,
   onChanged,
 }: SubjectEnrollmentPanelProps) {
@@ -48,19 +46,13 @@ export function SubjectEnrollmentPanel({
 
   const candidatesQuery = useQuery({
     queryKey: [
-      "course-offerings",
-      courseOfferingId,
       "classes",
       classItem.id,
       "subject-enrollment-candidates",
       keyword,
     ],
     queryFn: () =>
-      getSubjectEnrollmentCandidates(
-        courseOfferingId,
-        classItem.id,
-        keyword || undefined,
-      ),
+      getSubjectEnrollmentCandidates(classItem.id, keyword || undefined),
     enabled: editorOpen,
   });
 
@@ -84,7 +76,7 @@ export function SubjectEnrollmentPanel({
       gradeManaged: boolean;
       reason: string;
     }) =>
-      createSubjectEnrollment(courseOfferingId, classItem.id, {
+      createSubjectEnrollment(classItem.id, {
         sourceEnrollmentId,
         courseOfferingSubjectId,
         type,
@@ -101,13 +93,7 @@ export function SubjectEnrollmentPanel({
       setSourceEnrollmentId("");
 
       await queryClient.invalidateQueries({
-        queryKey: [
-          "course-offerings",
-          courseOfferingId,
-          "classes",
-          classItem.id,
-          "enrollments",
-        ],
+        queryKey: ["classes", classItem.id, "enrollments"],
       });
 
       await onChanged();
@@ -145,16 +131,25 @@ export function SubjectEnrollmentPanel({
   const selectedCandidate =
     candidates.find((candidate) => candidate.id === sourceEnrollmentId) ?? null;
 
-  const availableSubjects = classItem.subjects.filter((targetSubject) =>
-    selectedCandidate?.subjects.some(
-      (sourceSubject) =>
-        sourceSubject.courseOfferingSubjectId ===
-        targetSubject.courseOfferingSubjectId,
-    ),
-  );
+  // 이 반이 운영하는 과목 중, 선택한 학생이 기본 수강 중인 과목만 대상이 된다.
+  const availableSubjects = classItem.programs
+    .flatMap((program) =>
+      program.subjects
+        .filter((subject) => subject.active)
+        .map((subject) => ({
+          courseOfferingSubjectId: subject.courseOfferingSubjectId,
+          subjectName: subject.name,
+        })),
+    )
+    .filter((targetSubject) =>
+      selectedCandidate?.subjects.some(
+        (sourceSubject) =>
+          sourceSubject.courseOfferingSubjectId ===
+          targetSubject.courseOfferingSubjectId,
+      ),
+    );
 
-  const editable =
-    classItem.status !== "COMPLETED" && classItem.status !== "CANCELED";
+  const editable = !classItem.archived && classItem.derivedStatus !== "ENDED";
 
   return (
     <section className="nested-section">

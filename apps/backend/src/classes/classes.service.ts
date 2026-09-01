@@ -6,15 +6,8 @@ import {
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import type { Prisma } from '../generated/prisma/client';
-import {
-  ClassStatus,
-  EnrollmentStatus,
-  EnrollmentType,
-} from '../generated/prisma/enums';
-import {
-  toSeoulDateString,
-  todaySeoulDateString,
-} from '../common/seoul-date';
+import { EnrollmentStatus, EnrollmentType } from '../generated/prisma/enums';
+import { toSeoulDateString, todaySeoulDateString } from '../common/seoul-date';
 import { PrismaService } from '../prisma/prisma.service';
 import { ClassQueryDto } from './dto/class-query.dto';
 import { CreateClassDto } from './dto/create-class.dto';
@@ -31,7 +24,6 @@ export type ClassResponse = {
   capacity: number;
   derivedStatus: DerivedClassStatus;
   archived: boolean;
-  primaryCourseOfferingId: string;
   programs: Array<{
     id: string;
     courseOfferingId: string;
@@ -164,7 +156,6 @@ export class ClassesService {
         );
       }
 
-      const primaryProgramId = dto.programIds[0];
       const created = await tx.class.create({
         data: {
           name: dto.name.trim(),
@@ -172,8 +163,6 @@ export class ClassesService {
           startDate,
           endDate,
           capacity: dto.capacity,
-          courseOfferingId: primaryProgramId,
-          status: ClassStatus.PLANNED,
           createdById: actor.id,
         },
       });
@@ -241,8 +230,7 @@ export class ClassesService {
         dto.room !== undefined ||
         dto.startDate !== undefined ||
         dto.endDate !== undefined ||
-        dto.capacity !== undefined ||
-        dto.programIds !== undefined;
+        dto.capacity !== undefined;
       if (phase === 'ENDED') {
         throw new ConflictException('운영이 종료된 반은 수정할 수 없습니다.');
       }
@@ -258,44 +246,6 @@ export class ClassesService {
       const endDate = dto.endDate ? this.toDate(dto.endDate) : existing.endDate;
       this.assertDateOrder(startDate, endDate);
 
-      if (dto.programIds) {
-        const operationalCount = await tx.classSession.count({
-          where: { classId },
-        });
-        if (operationalCount > 0) {
-          throw new ConflictException(
-            '수업 기록이 있는 반의 교육과정은 변경할 수 없습니다.',
-          );
-        }
-        const programs = await tx.courseOffering.findMany({
-          where: { id: { in: dto.programIds }, archivedAt: null },
-          include: { subjects: true },
-        });
-        if (programs.length !== dto.programIds.length) {
-          throw new NotFoundException(
-            '선택한 교육과정 중 사용할 수 없는 교육과정이 있습니다.',
-          );
-        }
-        await tx.classSubject.deleteMany({ where: { classId } });
-        await tx.classProgram.deleteMany({ where: { classId } });
-        for (const programId of dto.programIds) {
-          const program = programs.find((item) => item.id === programId);
-          if (!program) continue;
-          const classProgram = await tx.classProgram.create({
-            data: { classId, courseOfferingId: program.id },
-          });
-          await tx.classSubject.createMany({
-            data: program.subjects.map((subject) => ({
-              classId,
-              courseOfferingId: program.id,
-              courseOfferingSubjectId: subject.id,
-              classProgramId: classProgram.id,
-              active: true,
-            })),
-          });
-        }
-      }
-
       const updated = await tx.class.update({
         where: { id: classId },
         data: {
@@ -304,7 +254,6 @@ export class ClassesService {
           startDate,
           endDate,
           ...(dto.capacity !== undefined ? { capacity: dto.capacity } : {}),
-          ...(dto.programIds ? { courseOfferingId: dto.programIds[0] } : {}),
         },
       });
 
@@ -319,9 +268,9 @@ export class ClassesService {
             name: updated.name,
             startDate: this.toDateString(updated.startDate),
             endDate: this.toDateString(updated.endDate),
-            programIds:
-              dto.programIds ??
-              existing.programs.map((program) => program.courseOfferingId),
+            programIds: existing.programs.map(
+              (program) => program.courseOfferingId,
+            ),
           },
           ipAddress,
           result: 'SUCCESS',
@@ -465,7 +414,6 @@ export class ClassesService {
       capacity: item.capacity,
       derivedStatus: this.deriveStatus(item.startDate, item.endDate),
       archived: item.archivedAt !== null,
-      primaryCourseOfferingId: item.courseOfferingId,
       programs: item.programs.map((program) => ({
         id: program.id,
         courseOfferingId: program.courseOfferingId,

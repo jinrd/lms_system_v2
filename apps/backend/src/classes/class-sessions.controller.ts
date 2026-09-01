@@ -44,52 +44,35 @@ const CANCELLATION_ROLES = [
 ] as const;
 
 @Roles(...MANAGEMENT_ROLES)
-@Controller('course-offerings/:courseOfferingId/classes/:classId/sessions')
+@Controller('classes/:classId/sessions')
 export class ClassSessionsController {
   constructor(private readonly classSessionsService: ClassSessionsService) {}
 
   @Roles(...SESSION_MANAGEMENT_ROLES)
   @Get()
   findAll(
-    @Param('courseOfferingId', ParseUUIDPipe)
-    courseOfferingId: string,
     @Param('classId', ParseUUIDPipe)
     classId: string,
     @Query() query: ClassSessionRangeDto,
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ClassSessionResponse[]> {
-    return this.classSessionsService.findAll(
-      courseOfferingId,
-      classId,
-      query,
-      actor,
-    );
+    return this.classSessionsService.findAll(classId, query, actor);
   }
 
   @Post('generate')
   generate(
-    @Param('courseOfferingId', ParseUUIDPipe)
-    courseOfferingId: string,
     @Param('classId', ParseUUIDPipe)
     classId: string,
     @Body() dto: ClassSessionRangeDto,
     @CurrentUser() actor: AuthenticatedUser,
     @Req() request: Request,
   ): Promise<ClassSessionGenerationResponse> {
-    return this.classSessionsService.generate(
-      courseOfferingId,
-      classId,
-      dto,
-      actor,
-      request.ip,
-    );
+    return this.classSessionsService.generate(classId, dto, actor, request.ip);
   }
 
   @Roles(...SESSION_MANAGEMENT_ROLES)
   @Patch(':sessionId')
   update(
-    @Param('courseOfferingId', ParseUUIDPipe)
-    courseOfferingId: string,
     @Param('classId', ParseUUIDPipe)
     classId: string,
     @Param('sessionId', ParseUUIDPipe)
@@ -99,7 +82,6 @@ export class ClassSessionsController {
     @Req() request: Request,
   ): Promise<ClassSessionResponse> {
     return this.classSessionsService.update(
-      courseOfferingId,
       classId,
       sessionId,
       dto,
@@ -111,8 +93,6 @@ export class ClassSessionsController {
   @Roles(...SESSION_MANAGEMENT_ROLES)
   @Patch(':sessionId/status')
   changeStatus(
-    @Param('courseOfferingId', ParseUUIDPipe)
-    courseOfferingId: string,
     @Param('classId', ParseUUIDPipe)
     classId: string,
     @Param('sessionId', ParseUUIDPipe)
@@ -122,7 +102,6 @@ export class ClassSessionsController {
     @Req() request: Request,
   ): Promise<ClassSessionResponse> {
     return this.classSessionsService.changeStatus(
-      courseOfferingId,
       classId,
       sessionId,
       dto,
@@ -134,8 +113,6 @@ export class ClassSessionsController {
   @Roles(...SESSION_MANAGEMENT_ROLES)
   @Patch(':sessionId/journal')
   updateJournal(
-    @Param('courseOfferingId', ParseUUIDPipe)
-    courseOfferingId: string,
     @Param('classId', ParseUUIDPipe) classId: string,
     @Param('sessionId', ParseUUIDPipe) sessionId: string,
     @Body() dto: UpdateSessionJournalDto,
@@ -143,7 +120,6 @@ export class ClassSessionsController {
     @Req() request: Request,
   ): Promise<ClassSessionResponse> {
     return this.classSessionsService.updateJournal(
-      courseOfferingId,
       classId,
       sessionId,
       dto,
@@ -155,8 +131,6 @@ export class ClassSessionsController {
   @Roles(...CANCELLATION_ROLES)
   @Post(':sessionId/cancel')
   cancel(
-    @Param('courseOfferingId', ParseUUIDPipe)
-    courseOfferingId: string,
     @Param('classId', ParseUUIDPipe)
     classId: string,
     @Param('sessionId', ParseUUIDPipe)
@@ -166,7 +140,6 @@ export class ClassSessionsController {
     @Req() request: Request,
   ): Promise<ClassSessionResponse> {
     return this.classSessionsService.cancel(
-      courseOfferingId,
       classId,
       sessionId,
       dto,
@@ -178,8 +151,6 @@ export class ClassSessionsController {
   @Roles(...CANCELLATION_ROLES)
   @Post(':sessionId/makeup')
   createMakeup(
-    @Param('courseOfferingId', ParseUUIDPipe)
-    courseOfferingId: string,
     @Param('classId', ParseUUIDPipe)
     classId: string,
     @Param('sessionId', ParseUUIDPipe)
@@ -189,7 +160,6 @@ export class ClassSessionsController {
     @Req() request: Request,
   ): Promise<ClassSessionResponse> {
     return this.classSessionsService.createMakeup(
-      courseOfferingId,
       classId,
       sessionId,
       dto,

@@ -1,17 +1,10 @@
 import { apiRequest } from "../../lib/api-client";
 
 export type EnrollmentType =
-  | "REGULAR"
-  | "SUPPLEMENT"
-  | "MAKEUP"
-  | "RETAKE"
-  | "AUDIT";
+  "REGULAR" | "SUPPLEMENT" | "MAKEUP" | "RETAKE" | "AUDIT";
 
 export type EnrollmentStatus =
-  | "SCHEDULED"
-  | "ACTIVE"
-  | "COMPLETED"
-  | "CANCELED";
+  "SCHEDULED" | "ACTIVE" | "COMPLETED" | "CANCELED";
 
 export type EnrollmentSubject = {
   id: string;
@@ -31,6 +24,7 @@ export type Enrollment = {
     phone: string | null;
   };
   courseOfferingId: string;
+  courseOfferingName: string;
   classId: string;
   type: EnrollmentType;
   status: EnrollmentStatus;
@@ -69,7 +63,6 @@ export type CreateRegularEnrollmentInput = {
 };
 
 export function getClassEnrollments(
-  courseOfferingId: string,
   classId: string,
   query: EnrollmentQuery = {},
 ): Promise<EnrollmentPage> {
@@ -87,22 +80,18 @@ export function getClassEnrollments(
   }
 
   return apiRequest<EnrollmentPage>(
-    `/course-offerings/${courseOfferingId}/classes/${classId}/enrollments?${searchParams.toString()}`,
+    `/classes/${classId}/enrollments?${searchParams.toString()}`,
   );
 }
 
 export function createRegularEnrollment(
-  courseOfferingId: string,
   classId: string,
   input: CreateRegularEnrollmentInput,
-): Promise<Enrollment> {
-  return apiRequest<Enrollment>(
-    `/course-offerings/${courseOfferingId}/classes/${classId}/enrollments`,
-    {
-      method: "POST",
-      body: input,
-    },
-  );
+): Promise<Enrollment[]> {
+  return apiRequest<Enrollment[]>(`/classes/${classId}/enrollments`, {
+    method: "POST",
+    body: input,
+  });
 }
 
 export type WithdrawEnrollmentInput = {
@@ -117,18 +106,17 @@ export type TransferEnrollmentInput = {
 };
 
 export type EnrollmentTransferResult = {
-  previousEnrollment: Enrollment;
-  newEnrollment: Enrollment;
+  previousEnrollments: Enrollment[];
+  newEnrollments: Enrollment[];
 };
 
 export function withdrawEnrollment(
-  courseOfferingId: string,
   classId: string,
   enrollmentId: string,
   input: WithdrawEnrollmentInput,
-): Promise<Enrollment> {
-  return apiRequest<Enrollment>(
-    `/course-offerings/${courseOfferingId}/classes/${classId}/enrollments/${enrollmentId}/withdraw`,
+): Promise<Enrollment[]> {
+  return apiRequest<Enrollment[]>(
+    `/classes/${classId}/enrollments/${enrollmentId}/withdraw`,
     {
       method: "PATCH",
       body: input,
@@ -137,13 +125,12 @@ export function withdrawEnrollment(
 }
 
 export function transferEnrollment(
-  courseOfferingId: string,
   classId: string,
   enrollmentId: string,
   input: TransferEnrollmentInput,
 ): Promise<EnrollmentTransferResult> {
   return apiRequest<EnrollmentTransferResult>(
-    `/course-offerings/${courseOfferingId}/classes/${classId}/enrollments/${enrollmentId}/transfer`,
+    `/classes/${classId}/enrollments/${enrollmentId}/transfer`,
     {
       method: "POST",
       body: input,
@@ -165,7 +152,6 @@ export type CreateSubjectEnrollmentInput = {
 };
 
 export function getSubjectEnrollmentCandidates(
-  courseOfferingId: string,
   targetClassId: string,
   keyword?: string,
 ): Promise<EnrollmentPage> {
@@ -179,22 +165,18 @@ export function getSubjectEnrollmentCandidates(
   }
 
   return apiRequest<EnrollmentPage>(
-    `/course-offerings/${courseOfferingId}/classes/${targetClassId}/enrollments/subject-candidates?${searchParams.toString()}`,
+    `/classes/${targetClassId}/enrollments/subject-candidates?${searchParams.toString()}`,
   );
 }
 
 export function createSubjectEnrollment(
-  courseOfferingId: string,
   classId: string,
   input: CreateSubjectEnrollmentInput,
 ): Promise<Enrollment> {
-  return apiRequest<Enrollment>(
-    `/course-offerings/${courseOfferingId}/classes/${classId}/enrollments/subjects`,
-    {
-      method: "POST",
-      body: input,
-    },
-  );
+  return apiRequest<Enrollment>(`/classes/${classId}/enrollments/subjects`, {
+    method: "POST",
+    body: input,
+  });
 }
 
 export type SessionParticipant = {
@@ -225,23 +207,21 @@ export type AssignSessionParticipantInput = {
 };
 
 export function getSessionParticipants(
-  courseOfferingId: string,
   classId: string,
   sessionId: string,
 ): Promise<SessionParticipant[]> {
   return apiRequest<SessionParticipant[]>(
-    `/course-offerings/${courseOfferingId}/classes/${classId}/sessions/${sessionId}/participants`,
+    `/classes/${classId}/sessions/${sessionId}/participants`,
   );
 }
 
 export function assignSessionParticipant(
-  courseOfferingId: string,
   classId: string,
   sessionId: string,
   input: AssignSessionParticipantInput,
 ): Promise<SessionParticipant> {
   return apiRequest<SessionParticipant>(
-    `/course-offerings/${courseOfferingId}/classes/${classId}/sessions/${sessionId}/participants`,
+    `/classes/${classId}/sessions/${sessionId}/participants`,
     {
       method: "POST",
       body: input,

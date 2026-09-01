@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ClassStatus } from '../generated/prisma/enums';
 import { toSeoulDateString } from '../common/seoul-date';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -11,13 +10,7 @@ export type InstructorClassResponse = {
   room: string | null;
   startDate: string;
   endDate: string;
-  status: ClassStatus;
   subjectCount: number;
-  assignment: {
-    assignedFrom: string;
-    assignedTo: string | null;
-    current: boolean;
-  };
 };
 
 @Injectable()
@@ -55,13 +48,7 @@ export class InstructorClassesService {
         room: classItem.room,
         startDate: this.toDateString(classItem.startDate),
         endDate: this.toDateString(classItem.endDate),
-        status: classItem.status,
         subjectCount: program.classSubjects.length,
-        assignment: {
-          assignedFrom: this.toDateString(classItem.startDate),
-          assignedTo: this.toDateString(classItem.endDate),
-          current: true,
-        },
       })),
     );
   }

@@ -40,26 +40,7 @@ enum SubjectMode {
   @@map("subject_mode")
 }
 
-/// 개설 강의 상태입니다.
-enum CourseStatus {
-  PLANNED
-  RECRUITING
-  IN_PROGRESS
-  COMPLETED
-  CANCELED
 
-  @@map("course_status")
-}
-
-/// 반 상태입니다.
-enum ClassStatus {
-  PLANNED
-  IN_PROGRESS
-  COMPLETED
-  CANCELED
-
-  @@map("class_status")
-}
 
 /// 수강 유형입니다.
 enum EnrollmentType {

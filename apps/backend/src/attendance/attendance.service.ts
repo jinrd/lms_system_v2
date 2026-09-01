@@ -124,6 +124,10 @@ export class AttendanceService {
               select: {
                 id: true,
                 name: true,
+              },
+            },
+            classProgram: {
+              select: {
                 courseOfferingId: true,
                 courseOffering: {
                   select: {
@@ -258,8 +262,8 @@ export class AttendanceService {
           id: session.id,
           classId: session.classId,
           className: session.class.name,
-          courseOfferingId: session.class.courseOfferingId,
-          courseOfferingName: session.class.courseOffering.name,
+          courseOfferingId: session.classProgram.courseOfferingId,
+          courseOfferingName: session.classProgram.courseOffering.name,
           subjectName: session.courseOfferingSubject.subject.name,
           title: session.title,
           startsAt: session.startsAt.toISOString(),
@@ -469,16 +473,11 @@ export class AttendanceService {
     };
   }
   async findCurrentCode(
-    courseOfferingId: string,
     classId: string,
     sessionId: string,
     actor: AuthenticatedUser,
   ): Promise<AttendanceCodeMetadataResponse | null> {
-    const session = await this.findSession(
-      courseOfferingId,
-      classId,
-      sessionId,
-    );
+    const session = await this.findSession(classId, sessionId);
 
     this.assertCodeManager(session.instructorId, actor);
 
@@ -532,7 +531,6 @@ export class AttendanceService {
   }
 
   async generateCode(
-    courseOfferingId: string,
     classId: string,
     sessionId: string,
     actor: AuthenticatedUser,
@@ -553,9 +551,6 @@ export class AttendanceService {
         where: {
           id: sessionId,
           classId,
-          class: {
-            courseOfferingId,
-          },
         },
         include: {
           instructor: {
@@ -694,7 +689,7 @@ export class AttendanceService {
         include: {
           classSession: {
             include: {
-              class: {
+              classProgram: {
                 select: {
                   courseOfferingId: true,
                 },
@@ -863,7 +858,7 @@ export class AttendanceService {
       }
 
       if (
-        enrollment.courseOfferingId !== session.class.courseOfferingId ||
+        enrollment.courseOfferingId !== session.classProgram.courseOfferingId ||
         enrollment.studentId !== actor.id ||
         enrollmentSubject.courseOfferingSubjectId !==
           session.courseOfferingSubjectId
@@ -957,7 +952,6 @@ export class AttendanceService {
   }
 
   private async findSession(
-    courseOfferingId: string,
     classId: string,
     sessionId: string,
   ): Promise<{
@@ -968,9 +962,6 @@ export class AttendanceService {
       where: {
         id: sessionId,
         classId,
-        class: {
-          courseOfferingId,
-        },
       },
       select: {
         id: true,

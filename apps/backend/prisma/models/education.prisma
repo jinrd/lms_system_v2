@@ -63,18 +63,6 @@ model CourseOffering {
   id                      String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// name 컬럼입니다.
   name                    String       @db.VarChar(200)
-  /// description 컬럼입니다.
-  description             String?      @db.Text
-  /// curriculum 컬럼입니다.
-  curriculum              String?      @db.Text
-  /// startDate 컬럼입니다.
-  startDate               DateTime     @map("start_date") @db.Date
-  /// endDate 컬럼입니다.
-  endDate                 DateTime     @map("end_date") @db.Date
-  /// capacity 컬럼입니다.
-  capacity                Int
-  /// status 컬럼입니다.
-  status                  CourseStatus
   /// createdById 컬럼입니다.
   createdById             String?      @map("created_by") @db.Uuid
   /// createdAt 컬럼입니다.
@@ -92,7 +80,6 @@ model CourseOffering {
   instructor            User                    @relation("CourseOfferingInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
   createdBy             User?                   @relation("CourseOfferingCreator", fields: [createdById], references: [id], onDelete: SetNull)
   subjects              CourseOfferingSubject[]
-  classes               Class[]
   classPrograms         ClassProgram[]
   enrollments           Enrollment[]
   exams                 Exam[]
@@ -100,7 +87,6 @@ model CourseOffering {
   examClassTargets      ExamClassTarget[]
   examAttempts          ExamAttempt[]
 
-  @@index([status, startDate, endDate], map: "idx_course_offerings_status_dates")
   @@index([archivedAt, name], map: "idx_course_offerings_archived_name")
   @@index([instructorId], map: "idx_course_offerings_instructor")
   @@map("course_offerings")
@@ -114,16 +100,6 @@ model CourseOfferingSubject {
   courseOfferingId String    @map("course_offering_id") @db.Uuid
   /// subjectId 컬럼입니다.
   subjectId        String    @map("subject_id") @db.Uuid
-  /// sequence 컬럼입니다.
-  sequence         Int       @default(1)
-  /// plannedStartDate 컬럼입니다.
-  plannedStartDate DateTime? @map("planned_start_date") @db.Date
-  /// plannedEndDate 컬럼입니다.
-  plannedEndDate   DateTime? @map("planned_end_date") @db.Date
-  /// plannedMinutes 컬럼입니다.
-  plannedMinutes   Int?      @map("planned_minutes")
-  /// curriculum 컬럼입니다.
-  curriculum       String?   @db.Text
   /// createdAt 컬럼입니다.
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   /// updatedAt 컬럼입니다.
@@ -140,7 +116,6 @@ model CourseOfferingSubject {
   examQuestions       ExamQuestion[]
 
   @@unique([courseOfferingId, subjectId], map: "uq_course_offering_subjects_subject")
-  @@unique([courseOfferingId, sequence], map: "uq_course_offering_subjects_sequence")
   @@unique([id, courseOfferingId], map: "uq_course_offering_subjects_id_offering")
   @@map("course_offering_subjects")
 }

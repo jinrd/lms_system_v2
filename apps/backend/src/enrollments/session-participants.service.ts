@@ -77,11 +77,10 @@ export class SessionParticipantsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(
-    courseOfferingId: string,
     classId: string,
     sessionId: string,
   ): Promise<SessionParticipantResponse[]> {
-    await this.assertSessionExists(courseOfferingId, classId, sessionId);
+    await this.assertSessionExists(classId, sessionId);
 
     const participants = await this.prisma.sessionParticipant.findMany({
       where: {
@@ -97,7 +96,6 @@ export class SessionParticipantsService {
   }
 
   async assign(
-    courseOfferingId: string,
     classId: string,
     sessionId: string,
     dto: AssignSessionParticipantDto,
@@ -118,13 +116,11 @@ export class SessionParticipantsService {
         where: {
           id: sessionId,
           classId,
-          class: {
-            courseOfferingId,
-          },
         },
         select: {
           id: true,
           classId: true,
+          classProgram: { select: { courseOfferingId: true } },
           courseOfferingSubjectId: true,
           startsAt: true,
           status: true,
@@ -146,7 +142,7 @@ export class SessionParticipantsService {
       const sourceEnrollment = await tx.enrollment.findFirst({
         where: {
           id: dto.sourceEnrollmentId,
-          courseOfferingId,
+          courseOfferingId: session.classProgram.courseOfferingId,
           status: {
             in: [EnrollmentStatus.SCHEDULED, EnrollmentStatus.ACTIVE],
           },
@@ -340,7 +336,6 @@ export class SessionParticipantsService {
   }
 
   private async assertSessionExists(
-    courseOfferingId: string,
     classId: string,
     sessionId: string,
   ): Promise<void> {
@@ -348,9 +343,6 @@ export class SessionParticipantsService {
       where: {
         id: sessionId,
         classId,
-        class: {
-          courseOfferingId,
-        },
       },
       select: {
         id: true,

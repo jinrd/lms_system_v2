@@ -1,16 +1,16 @@
 import {
-  ArrayMinSize,
-  ArrayUnique,
-  IsArray,
   IsDateString,
   IsInt,
   IsOptional,
   IsString,
-  IsUUID,
   MaxLength,
   Min,
 } from 'class-validator';
 
+/**
+ * 반 생성 후에는 포함 교육과정을 변경하지 않는다.
+ * 잘못 만든 반은 운영 시작 전에 삭제하고 새로 생성한다.
+ */
 export class UpdateClassDto {
   @IsOptional()
   @IsString()
@@ -34,11 +34,4 @@ export class UpdateClassDto {
   @IsInt()
   @Min(1)
   capacity?: number;
-
-  @IsOptional()
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayUnique()
-  @IsUUID('4', { each: true })
-  programIds?: string[];
 }

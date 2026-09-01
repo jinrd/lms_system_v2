@@ -22,7 +22,7 @@ import {
   updateClassSession,
   type ClassSession,
   type SessionStatus,
-} from "../classes/classes.api";
+} from "../classes/class-management.api";
 import { AttendanceCodeAction } from "../attendance/AttendanceCodeAction";
 
 type SessionEditor =
@@ -124,12 +124,23 @@ export function InstructorSchedulePage() {
     queryFn: getInstructorClasses,
   });
 
-  const classes = classesQuery.data ?? [];
+  // 강사 담당 반 목록은 (반 × 담당 교육과정) 단위로 내려오므로 반 기준으로 합친다.
+  const classes = Object.values(
+    (classesQuery.data ?? []).reduce<
+      Record<string, { id: string; name: string; programNames: string[] }>
+    >((accumulator, item) => {
+      const current = accumulator[item.id] ?? {
+        id: item.id,
+        name: item.name,
+        programNames: [],
+      };
+      current.programNames.push(item.courseOfferingName);
+      accumulator[item.id] = current;
+      return accumulator;
+    }, {}),
+  );
   const selectedClass =
-    classes.find((item) => item.id === selectedClassId) ??
-    classes.find((item) => item.assignment.current) ??
-    classes[0] ??
-    null;
+    classes.find((item) => item.id === selectedClassId) ?? classes[0] ?? null;
 
   const sessionsQueryKey = [
     "instructor",
@@ -143,7 +154,7 @@ export function InstructorSchedulePage() {
   const sessionsQuery = useQuery({
     queryKey: sessionsQueryKey,
     queryFn: () =>
-      getClassSessions(selectedClass!.courseOfferingId, selectedClass!.id, {
+      getClassSessions(selectedClass!.id, {
         startDate,
         endDate,
       }),
@@ -174,12 +185,7 @@ export function InstructorSchedulePage() {
         throw new Error("담당 반을 선택해 주세요.");
       }
 
-      return updateClassSession(
-        selectedClass.courseOfferingId,
-        selectedClass.id,
-        session.id,
-        input,
-      );
+      return updateClassSession(selectedClass.id, session.id, input);
     },
     onSuccess: async () => {
       setEditor(null);
@@ -202,7 +208,6 @@ export function InstructorSchedulePage() {
       }
 
       return changeClassSessionStatus(
-        selectedClass.courseOfferingId,
         selectedClass.id,
         session.id,
         status,
@@ -291,8 +296,7 @@ export function InstructorSchedulePage() {
               >
                 {classes.map((classItem) => (
                   <option key={classItem.id} value={classItem.id}>
-                    {classItem.courseOfferingName} · {classItem.name}
-                    {classItem.assignment.current ? "" : " (과거 담당)"}
+                    {classItem.name} · {classItem.programNames.join(", ")}
                   </option>
                 ))}
               </select>
@@ -337,14 +341,8 @@ export function InstructorSchedulePage() {
                 </p>
               </div>
 
-              <span
-                className={`status-badge ${
-                  selectedClass.assignment.current
-                    ? "status-badge--success"
-                    : "status-badge--neutral"
-                }`}
-              >
-                {selectedClass.assignment.current ? "현재 담당" : "과거 담당"}
+              <span className="status-badge status-badge--success">
+                {selectedClass.programNames.join(", ")}
               </span>
             </header>
 
@@ -405,7 +403,6 @@ export function InstructorSchedulePage() {
 
                       <div className="instructor-session-card__actions">
                         <AttendanceCodeAction
-                          courseOfferingId={selectedClass.courseOfferingId}
                           classId={selectedClass.id}
                           sessionId={session.id}
                           sessionTitle={session.title || session.subjectName}

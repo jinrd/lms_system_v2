@@ -2,8 +2,10 @@ import { ArrowRightLeft, UserMinus } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Modal } from "../../components/ui/Modal";
-import type { ClassItem } from "../classes/classes.api";
-import { getClasses } from "../classes/classes.api";
+import {
+  getManagedClasses,
+  type ManagedClass,
+} from "../classes/class-management.api";
 import {
   transferEnrollment,
   withdrawEnrollment,
@@ -11,8 +13,7 @@ import {
 } from "./enrollments.api";
 
 type EnrollmentActionsProps = {
-  courseOfferingId: string;
-  classItem: ClassItem;
+  classItem: ManagedClass;
   enrollment: Enrollment;
   onChanged: () => Promise<void>;
 };
@@ -35,7 +36,6 @@ function getInitialTransferDate(enrollment: Enrollment): string {
 }
 
 export function EnrollmentActions({
-  courseOfferingId,
   classItem,
   enrollment,
   onChanged,
@@ -43,14 +43,20 @@ export function EnrollmentActions({
   const [action, setAction] = useState<EnrollmentAction>(null);
 
   const targetClassesQuery = useQuery({
-    queryKey: ["course-offerings", courseOfferingId, "transfer-target-classes"],
-    queryFn: () => getClasses(courseOfferingId, undefined, 1, 100),
+    queryKey: ["managed-classes", "transfer-targets"],
+    queryFn: () => getManagedClasses(false),
     enabled: action === "transfer",
   });
 
   const withdrawMutation = useMutation({
-    mutationFn: ({ effectiveOn, reason }: { effectiveOn: string; reason: string }) =>
-      withdrawEnrollment(courseOfferingId, classItem.id, enrollment.id, {
+    mutationFn: ({
+      effectiveOn,
+      reason,
+    }: {
+      effectiveOn: string;
+      reason: string;
+    }) =>
+      withdrawEnrollment(classItem.id, enrollment.id, {
         effectiveOn,
         reason,
       }),
@@ -61,15 +67,20 @@ export function EnrollmentActions({
   });
 
   const transferMutation = useMutation({
-    mutationFn: ({ targetClassId, transferOn, reason }: {
-      targetClassId: string;
-      transferOn: string;
-      reason: string;
-    }) => transferEnrollment(courseOfferingId, classItem.id, enrollment.id, {
+    mutationFn: ({
       targetClassId,
       transferOn,
       reason,
-    }),
+    }: {
+      targetClassId: string;
+      transferOn: string;
+      reason: string;
+    }) =>
+      transferEnrollment(classItem.id, enrollment.id, {
+        targetClassId,
+        transferOn,
+        reason,
+      }),
     onSuccess: async () => {
       setAction(null);
       await onChanged();
@@ -99,11 +110,14 @@ export function EnrollmentActions({
   const canTransfer =
     enrollment.type === "REGULAR" &&
     (enrollment.status === "SCHEDULED" || enrollment.status === "ACTIVE");
+  // 이동 대상은 학생의 교육과정을 운영하는, 아직 끝나지 않은 다른 반이어야 한다.
   const targetClasses = (targetClassesQuery.data?.items ?? []).filter(
     (item) =>
       item.id !== classItem.id &&
-      item.status !== "COMPLETED" &&
-      item.status !== "CANCELED",
+      item.derivedStatus !== "ENDED" &&
+      item.programs.some(
+        (program) => program.courseOfferingId === enrollment.courseOfferingId,
+      ),
   );
 
   if (!canWithdraw && !canTransfer) return null;
@@ -117,7 +131,8 @@ export function EnrollmentActions({
             className="button button--danger button--compact"
             onClick={() => setAction("withdraw")}
           >
-            <UserMinus size={14} />중도 퇴원
+            <UserMinus size={14} />
+            중도 퇴원
           </button>
         )}
         {canTransfer && (
@@ -200,22 +215,31 @@ export function EnrollmentActions({
           <form className="stack" onSubmit={handleTransferSubmit}>
             <div className="info-banner">
               <ArrowRightLeft size={19} />
-              <div><strong>현재 반</strong><p>{classItem.name}</p></div>
+              <div>
+                <strong>현재 반</strong>
+                <p>{classItem.name}</p>
+              </div>
             </div>
             <label className="form-field form-field--flush">
               <span>이동할 반</span>
               <select
                 name="targetClassId"
-                disabled={targetClassesQuery.isLoading || targetClasses.length === 0}
+                disabled={
+                  targetClassesQuery.isLoading || targetClasses.length === 0
+                }
                 required
               >
-                {targetClassesQuery.isLoading && <option value="">반 목록 불러오는 중...</option>}
-                {!targetClassesQuery.isLoading && targetClasses.length === 0 && (
-                  <option value="">이동 가능한 반이 없습니다.</option>
+                {targetClassesQuery.isLoading && (
+                  <option value="">반 목록 불러오는 중...</option>
                 )}
+                {!targetClassesQuery.isLoading &&
+                  targetClasses.length === 0 && (
+                    <option value="">이동 가능한 반이 없습니다.</option>
+                  )}
                 {targetClasses.map((targetClass) => (
                   <option key={targetClass.id} value={targetClass.id}>
-                    {targetClass.name} · {targetClass.enrollmentCount}/{targetClass.capacity}명
+                    {targetClass.name} · {targetClass.enrollmentCount}/
+                    {targetClass.capacity}명
                   </option>
                 ))}
               </select>
@@ -241,19 +265,31 @@ export function EnrollmentActions({
               />
             </label>
             {targetClassesQuery.isError && (
-              <div className="form-alert" role="alert">{getErrorMessage(targetClassesQuery.error)}</div>
+              <div className="form-alert" role="alert">
+                {getErrorMessage(targetClassesQuery.error)}
+              </div>
             )}
             {transferMutation.isError && (
-              <div className="form-alert" role="alert">{getErrorMessage(transferMutation.error)}</div>
+              <div className="form-alert" role="alert">
+                {getErrorMessage(transferMutation.error)}
+              </div>
             )}
             <div className="dialog__actions">
-              <button type="button" className="button button--secondary" onClick={() => setAction(null)}>
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={() => setAction(null)}
+              >
                 취소
               </button>
               <button
                 type="submit"
                 className="button button--primary"
-                disabled={transferMutation.isPending || targetClassesQuery.isLoading || targetClasses.length === 0}
+                disabled={
+                  transferMutation.isPending ||
+                  targetClassesQuery.isLoading ||
+                  targetClasses.length === 0
+                }
               >
                 {transferMutation.isPending ? "이동 중..." : "반 이동"}
               </button>

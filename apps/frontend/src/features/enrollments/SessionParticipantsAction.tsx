@@ -3,7 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Modal } from "../../components/ui/Modal";
 import { ErrorState, LoadingState } from "../../components/ui/PageStates";
-import type { ClassItem, ClassSession } from "../classes/classes.api";
+import type {
+  ClassSession,
+  ManagedClass,
+} from "../classes/class-management.api";
 import {
   assignSessionParticipant,
   getSessionParticipants,
@@ -12,8 +15,7 @@ import {
 } from "./enrollments.api";
 
 type SessionParticipantsActionProps = {
-  courseOfferingId: string;
-  classItem: ClassItem;
+  classItem: ManagedClass;
   session: ClassSession;
 };
 
@@ -36,7 +38,6 @@ function formatSessionDate(startsAt: string): string {
 }
 
 export function SessionParticipantsAction({
-  courseOfferingId,
   classItem,
   session,
 }: SessionParticipantsActionProps) {
@@ -47,8 +48,6 @@ export function SessionParticipantsAction({
   const [sourceEnrollmentId, setSourceEnrollmentId] = useState("");
 
   const participantQueryKey = [
-    "course-offerings",
-    courseOfferingId,
     "classes",
     classItem.id,
     "sessions",
@@ -58,15 +57,12 @@ export function SessionParticipantsAction({
 
   const participantsQuery = useQuery({
     queryKey: participantQueryKey,
-    queryFn: () =>
-      getSessionParticipants(courseOfferingId, classItem.id, session.id),
+    queryFn: () => getSessionParticipants(classItem.id, session.id),
     enabled: modalOpen,
   });
 
   const candidatesQuery = useQuery({
     queryKey: [
-      "course-offerings",
-      courseOfferingId,
       "classes",
       classItem.id,
       "session-participant-candidates",
@@ -74,11 +70,7 @@ export function SessionParticipantsAction({
       keyword,
     ],
     queryFn: () =>
-      getSubjectEnrollmentCandidates(
-        courseOfferingId,
-        classItem.id,
-        keyword || undefined,
-      ),
+      getSubjectEnrollmentCandidates(classItem.id, keyword || undefined),
     enabled: modalOpen,
   });
 
@@ -92,7 +84,7 @@ export function SessionParticipantsAction({
       type: SubjectEnrollmentType;
       reason: string;
     }) =>
-      assignSessionParticipant(courseOfferingId, classItem.id, session.id, {
+      assignSessionParticipant(classItem.id, session.id, {
         sourceEnrollmentId,
         type,
         reason,

@@ -24,37 +24,27 @@ import { SubmitAttendanceCodeDto } from './dto/submit-attendance-code.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 
 @Roles(UserRole.INSTRUCTOR)
-@Controller(
-  'course-offerings/:courseOfferingId/classes/:classId/sessions/:sessionId/attendance-code',
-)
+@Controller('classes/:classId/sessions/:sessionId/attendance-code')
 export class AttendanceCodesController {
   constructor(private readonly attendanceService: AttendanceService) {}
 
   @Get()
   findCurrent(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
     @Param('classId', ParseUUIDPipe) classId: string,
     @Param('sessionId', ParseUUIDPipe) sessionId: string,
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<AttendanceCodeMetadataResponse | null> {
-    return this.attendanceService.findCurrentCode(
-      courseOfferingId,
-      classId,
-      sessionId,
-      actor,
-    );
+    return this.attendanceService.findCurrentCode(classId, sessionId, actor);
   }
 
   @Post()
   generate(
-    @Param('courseOfferingId', ParseUUIDPipe) courseOfferingId: string,
     @Param('classId', ParseUUIDPipe) classId: string,
     @Param('sessionId', ParseUUIDPipe) sessionId: string,
     @CurrentUser() actor: AuthenticatedUser,
     @Req() request: Request,
   ): Promise<AttendanceCodeGenerationResponse> {
     return this.attendanceService.generateCode(
-      courseOfferingId,
       classId,
       sessionId,
       actor,
