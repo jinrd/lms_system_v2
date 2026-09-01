@@ -25,6 +25,7 @@ import {
   type SessionStatus,
 } from "../classes/class-management.api";
 import { AttendanceCodeAction } from "../attendance/AttendanceCodeAction";
+import { SessionAttendanceAction } from "../attendance/SessionAttendanceAction";
 
 type SessionEditor =
   | {
@@ -406,6 +407,15 @@ export function InstructorSchedulePage() {
                           sessionTitle={session.title || session.subjectName}
                           sessionStatus={session.status}
                         />
+
+                        {(session.status === "IN_PROGRESS" ||
+                          session.status === "COMPLETED") && (
+                          <SessionAttendanceAction
+                            sessionId={session.id}
+                            sessionTitle={session.title || session.subjectName}
+                            sessionStartsAt={session.startsAt}
+                          />
+                        )}
 
                         {(session.status === "IN_PROGRESS" ||
                           session.status === "COMPLETED") && (

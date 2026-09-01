@@ -88,6 +88,66 @@ export class AttendanceService {
       'ATTENDANCE_CODE_SECRET',
     );
   }
+  /**
+   * 학생 본인의 출석률 요약이다.
+   * 출석·지각 1.0, 조퇴 0.5, 결석 0으로 계산하고 공결·미처리는 분모에서 제외한다.
+   * 휴강 수업은 출석 기록이 있어도 계산에서 뺀다.
+   */
+  async findMyAttendanceSummary(actor: AuthenticatedUser): Promise<{
+    present: number;
+    late: number;
+    absent: number;
+    earlyLeave: number;
+    excused: number;
+    unprocessed: number;
+    countedTotal: number;
+    attendanceRate: number | null;
+  }> {
+    if (actor.role !== UserRole.STUDENT) {
+      throw new ForbiddenException(
+        '학생 계정만 본인의 출석률을 조회할 수 있습니다.',
+      );
+    }
+
+    await this.sessionMaintenance.runIfStale();
+
+    const grouped = await this.prisma.attendanceRecord.groupBy({
+      by: ['status'],
+      where: {
+        studentId: actor.id,
+        classSession: { status: { not: SessionStatus.CANCELED } },
+      },
+      _count: { _all: true },
+    });
+
+    const countOf = (status: AttendanceStatus): number =>
+      grouped.find((item) => item.status === status)?._count._all ?? 0;
+
+    const present = countOf(AttendanceStatus.PRESENT);
+    const late = countOf(AttendanceStatus.LATE);
+    const absent = countOf(AttendanceStatus.ABSENT);
+    const earlyLeave = countOf(AttendanceStatus.EARLY_LEAVE);
+    const excused = countOf(AttendanceStatus.EXCUSED);
+    const unprocessed = countOf(AttendanceStatus.UNPROCESSED);
+
+    const countedTotal = present + late + earlyLeave + absent;
+    const earned = present + late + earlyLeave * 0.5;
+
+    return {
+      present,
+      late,
+      absent,
+      earlyLeave,
+      excused,
+      unprocessed,
+      countedTotal,
+      attendanceRate:
+        countedTotal === 0
+          ? null
+          : Math.round((earned / countedTotal) * 1000) / 10,
+    };
+  }
+
   async findMySessions(
     actor: AuthenticatedUser,
   ): Promise<StudentAttendanceSessionResponse[]> {
@@ -195,9 +255,7 @@ export class AttendanceService {
             enrollment: {
               studentId: actor.id,
               attendanceManaged: true,
-              status: {
-                in: [EnrollmentStatus.SCHEDULED, EnrollmentStatus.ACTIVE],
-              },
+              status: EnrollmentStatus.ACTIVE,
               startsOn: {
                 lte: today,
               },
@@ -308,9 +366,7 @@ export class AttendanceService {
         courseOfferingSubjectId: session.courseOfferingSubjectId,
         enrollment: {
           classId: session.classId,
-          status: {
-            in: [EnrollmentStatus.SCHEDULED, EnrollmentStatus.ACTIVE],
-          },
+          status: EnrollmentStatus.ACTIVE,
         },
       },
       select: {
@@ -321,7 +377,9 @@ export class AttendanceService {
     });
 
     const now = new Date();
-    const ended = session.endsAt <= now;
+    // 휴강 수업은 출석률에서 제외하므로 자동 결석 대상이 아니다.
+    const ended =
+      session.endsAt <= now && session.status !== SessionStatus.CANCELED;
     if (ended && session.status === SessionStatus.IN_PROGRESS) {
       await this.prisma.classSession.update({
         where: { id: session.id },
@@ -768,9 +826,7 @@ export class AttendanceService {
         where: {
           studentId: actor.id,
           classId: session.classId,
-          status: {
-            in: [EnrollmentStatus.SCHEDULED, EnrollmentStatus.ACTIVE],
-          },
+          status: EnrollmentStatus.ACTIVE,
           attendanceManaged: true,
           startsOn: {
             lte: sessionDate,

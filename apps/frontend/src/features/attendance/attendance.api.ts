@@ -95,3 +95,64 @@ export function submitAttendanceCode(
     },
   });
 }
+
+export type AttendanceChangeHistory = {
+  id: string;
+  previousStatus: AttendanceStatus;
+  newStatus: AttendanceStatus;
+  previousCheckedAt: string | null;
+  newCheckedAt: string | null;
+  reason: string;
+  changedBy: { id: string; name: string } | null;
+  changedAt: string;
+};
+
+export type SessionAttendanceRecord = {
+  id: string;
+  student: { id: string; loginId: string | null; name: string };
+  status: AttendanceStatus;
+  method: AttendanceMethod | null;
+  checkedAt: string | null;
+  updatedAt: string;
+  histories: AttendanceChangeHistory[];
+};
+
+export type UpdateAttendanceInput = {
+  status: AttendanceStatus;
+  /** 출석·지각·조퇴는 실제 도착 시각이 필수다. */
+  checkedAt?: string;
+  reason: string;
+};
+
+export function getSessionAttendance(
+  sessionId: string,
+): Promise<SessionAttendanceRecord[]> {
+  return apiRequest(`/sessions/${sessionId}/attendance`);
+}
+
+export function updateAttendanceRecord(
+  sessionId: string,
+  attendanceRecordId: string,
+  input: UpdateAttendanceInput,
+): Promise<Omit<SessionAttendanceRecord, "histories">> {
+  return apiRequest(`/sessions/${sessionId}/attendance/${attendanceRecordId}`, {
+    method: "PATCH",
+    body: input,
+  });
+}
+
+export type MyAttendanceSummary = {
+  present: number;
+  late: number;
+  absent: number;
+  earlyLeave: number;
+  excused: number;
+  unprocessed: number;
+  countedTotal: number;
+  /** 계산 대상이 없으면 null */
+  attendanceRate: number | null;
+};
+
+export function getMyAttendanceSummary(): Promise<MyAttendanceSummary> {
+  return apiRequest("/attendance/my-summary");
+}

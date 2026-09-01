@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-01T14:40:22Z",
+  "title": "Design System: SKB Academy LMS",
+  "extensions": {
+    "colorMeta": {
+      "forest-deep": { "role": "primary", "displayName": "Deep Forest", "canonical": "#234A3B", "tonalRamp": ["#10251D", "#173329", "#234A3B", "#2F624F", "#4D7E69", "#7FA18F", "#B6C9BE", "#EEF3F0"] },
+      "forest-action": { "role": "primary", "displayName": "Action Leaf", "canonical": "#2F765A", "tonalRamp": ["#123024", "#1D4A38", "#2F765A", "#489074", "#6DAB90", "#9AC8B2", "#C8E1D5", "#F0F7F3"] },
+      "workspace": { "role": "neutral", "displayName": "Workspace", "canonical": "#F6F7F5", "tonalRamp": ["#1D2420", "#364039", "#56615A", "#77817A", "#9CA59F", "#BDC4BF", "#DDE2DE", "#F6F7F5"] },
+      "danger": { "role": "semantic", "displayName": "Danger", "canonical": "#C74646", "tonalRamp": ["#3C1212", "#672121", "#933232", "#C74646", "#DE7474", "#EBA6A6", "#F5CCCC", "#FDF2F2"] }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Page Headline", "purpose": "페이지 제목 한 단계에만 사용한다." },
+      "title": { "displayName": "Section Title", "purpose": "패널과 주요 목록 제목에 사용한다." },
+      "body": { "displayName": "Body", "purpose": "설명과 모바일 데이터의 기본 글자다." },
+      "label": { "displayName": "Label", "purpose": "필드와 데스크톱 데이터 머리글에 사용한다." }
+    },
+    "shadows": [
+      { "name": "floating-panel", "value": "0 12px 32px rgb(29 36 32 / 16%)", "purpose": "모달과 모바일 드로어에만 사용한다." },
+      { "name": "popover", "value": "0 6px 16px rgb(29 36 32 / 12%)", "purpose": "짧은 메뉴와 팝오버에만 사용한다." }
+    ],
+    "motion": [
+      { "name": "state-fast", "value": "150ms cubic-bezier(0.25, 1, 0.5, 1)", "purpose": "버튼과 선택 상태 피드백." },
+      { "name": "panel-enter", "value": "220ms cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "모달과 드로어 진입." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "767px" },
+      { "name": "tablet", "value": "1023px" },
+      { "name": "desktop", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "화면의 대표 행동 하나에만 사용한다.",
+      "html": "<button class=\"ds-btn-primary\">변경사항 저장</button>",
+      "css": ".ds-btn-primary{min-height:44px;padding:0 16px;border:0;border-radius:8px;background:#2F765A;color:#fff;font:700 14px Pretendard,sans-serif;transition:background 150ms cubic-bezier(.25,1,.5,1),transform 150ms cubic-bezier(.25,1,.5,1)}.ds-btn-primary:hover{background:#275F49}.ds-btn-primary:active{transform:translateY(1px)}.ds-btn-primary:focus-visible{outline:2px solid #2F765A;outline-offset:2px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "보조 행동과 취소에 사용한다.",
+      "html": "<button class=\"ds-btn-secondary\">목록으로</button>",
+      "css": ".ds-btn-secondary{min-height:44px;padding:0 16px;border:1px solid #C7D0CA;border-radius:8px;background:#fff;color:#1D2420;font:700 14px Pretendard,sans-serif}.ds-btn-secondary:hover{background:#EFF2EF}.ds-btn-secondary:focus-visible{outline:2px solid #2F765A;outline-offset:2px}"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "항상 보이는 라벨과 함께 사용하는 기본 입력창이다.",
+      "html": "<label class=\"ds-field\"><span>학생 이름</span><input placeholder=\"이름을 입력하세요\"></label>",
+      "css": ".ds-field{display:grid;gap:8px;color:#1D2420;font:600 14px Pretendard,sans-serif}.ds-field input{height:44px;padding:0 14px;border:1px solid #C7D0CA;border-radius:8px;background:#fff;color:#1D2420;font:400 16px Pretendard,sans-serif}.ds-field input:focus{border-color:#2F765A;outline:2px solid #C8E1D5;outline-offset:1px}"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "description": "색상과 텍스트를 함께 사용해 읽기 전용 상태를 표시한다.",
+      "html": "<span class=\"ds-status\"><i></i>운영 중</span>",
+      "css": ".ds-status{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;background:#F0F7F3;color:#1D6449;font:700 12px Pretendard,sans-serif}.ds-status i{width:7px;height:7px;border-radius:50%;background:#237A57}"
+    },
+    {
+      "name": "Navigation Item",
+      "kind": "nav",
+      "description": "현재 위치를 밝은 녹색 표면으로 표시한다.",
+      "html": "<a class=\"ds-nav-item\" href=\"#\">반 관리</a>",
+      "css": ".ds-nav-item{display:flex;align-items:center;min-height:44px;padding:0 12px;border-radius:8px;color:#DCE8E1;font:600 14px Pretendard,sans-serif;text-decoration:none}.ds-nav-item:hover{background:#2B5847}.ds-nav-item:focus-visible{outline:2px solid #fff;outline-offset:2px}"
+    },
+    {
+      "name": "Data Panel",
+      "kind": "card",
+      "refersTo": "card-default",
+      "description": "독립된 데이터 영역만 감싸는 평면 패널이다.",
+      "html": "<section class=\"ds-panel\"><h3>피부 기초 오전반</h3><p>2026.09.01 - 2026.12.20 · 302호</p></section>",
+      "css": ".ds-panel{padding:24px;border:1px solid #DDE2DE;border-radius:12px;background:#fff;color:#1D2420;font-family:Pretendard,sans-serif}.ds-panel h3{margin:0 0 8px;font-size:18px}.ds-panel p{margin:0;color:#616B65;font-size:14px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "정돈된 교무실",
+    "overview": "목록과 상세가 정확히 정리된 교무실의 명부와 일정표처럼 작동한다. 포레스트 그린은 선택과 주요 행동에만 사용하고 대부분의 구조는 중립 표면과 구분선으로 만든다.",
+    "keyCharacteristics": ["목록–상세 중심", "PC 고밀도·모바일 터치 우선", "평면 표면", "고정 글자 체계", "절제된 포레스트 그린"],
+    "rules": [
+      { "name": "Rare Accent", "body": "녹색은 화면 면적의 10%를 넘지 않는다.", "section": "colors" },
+      { "name": "No Blue", "body": "파란색과 보라색을 브랜드·장식 색상으로 사용하지 않는다.", "section": "colors" },
+      { "name": "Flat By Default", "body": "정적인 카드와 목록에는 그림자를 사용하지 않는다.", "section": "elevation" }
+    ],
+    "dos": ["4px 기반 간격 체계를 사용한다.", "빈 상태에서 이유와 다음 행동을 함께 안내한다.", "모든 동작에 focus-visible을 제공한다."],
+    "donts": ["그라데이션과 유리 효과를 사용하지 않는다.", "카드 안에 카드를 중첩하지 않는다.", "44px보다 작은 터치 대상을 만들지 않는다."]
+  }
+}

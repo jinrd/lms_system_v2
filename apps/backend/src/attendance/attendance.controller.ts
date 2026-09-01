@@ -72,6 +72,11 @@ export class StudentAttendanceController {
     );
   }
 
+  @Get('my-summary')
+  findMySummary(@CurrentUser() actor: AuthenticatedUser) {
+    return this.attendanceService.findMyAttendanceSummary(actor);
+  }
+
   @Get('my-sessions')
   findMySessions(
     @CurrentUser() actor: AuthenticatedUser,
