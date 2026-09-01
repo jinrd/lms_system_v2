@@ -75,9 +75,18 @@ ALTER TABLE "class_schedule_patterns" ALTER COLUMN "class_program_id" SET NOT NU
 ALTER TABLE "class_sessions" ALTER COLUMN "class_program_id" SET NOT NULL;
 
 -- 5. 반: 대표 교육과정 FK와 상태 컬럼을 제거한다.
+--    반 이름 유니크가 교육과정 범위였으므로 함께 정리하고,
+--    보관되지 않은 반끼리만 이름이 겹치지 않도록 부분 유니크 인덱스로 대체한다.
+DROP INDEX IF EXISTS "uq_classes_offering_name";
+DROP INDEX IF EXISTS "uq_classes_id_offering";
+DROP INDEX IF EXISTS "idx_classes_offering_status";
 ALTER TABLE "classes" DROP CONSTRAINT IF EXISTS "classes_course_offering_id_fkey";
 ALTER TABLE "classes" DROP COLUMN "course_offering_id";
 ALTER TABLE "classes" DROP COLUMN "status";
+
+CREATE UNIQUE INDEX "uq_classes_active_name"
+ON "classes"("name")
+WHERE "archived_at" IS NULL;
 
 -- 6. 교육과정: 운영 정보를 제거한다. (기간·정원·상태·설명·커리큘럼)
 DROP INDEX IF EXISTS "idx_course_offerings_status_dates";
