@@ -47,15 +47,31 @@ export function LoginPage() {
         </div>
 
         <div className="auth-brand-copy">
-          <p>LEARNING MANAGEMENT SYSTEM</p>
+          <p>학원 운영 시스템</p>
           <h1>
-            배움과 운영을
+            매일의 교육 운영을
             <br />
-            하나의 흐름으로
+            한곳에서 정리합니다
           </h1>
           <span>
-            학생, 강사, 운영자를 연결하는 통합 학습 관리 시스템입니다.
+            교육과정과 반, 수업과 출석을 구성원 모두가 같은 기준으로
+            확인합니다.
           </span>
+
+          <dl className="auth-brand-points">
+            <div>
+              <dt>운영</dt>
+              <dd>교육과정과 반을 빠르게 관리</dd>
+            </div>
+            <div>
+              <dt>수업</dt>
+              <dd>오늘 일정과 담당 수업을 명확하게 확인</dd>
+            </div>
+            <div>
+              <dt>출석</dt>
+              <dd>현장에서 바로 처리하고 이력을 보존</dd>
+            </div>
+          </dl>
         </div>
 
         <small>© 2026 SKB Academy</small>
@@ -69,9 +85,8 @@ export function LoginPage() {
           </div>
 
           <div className="auth-card__header">
-            <p>WELCOME BACK</p>
             <h2>로그인</h2>
-            <span>계정 정보를 입력해 주세요.</span>
+            <span>학원에서 발급받은 계정으로 로그인하세요.</span>
           </div>
 
           {errorMessage && (
@@ -189,7 +204,6 @@ export function ChangePasswordPage() {
         </div>
 
         <div className="auth-card__header">
-          <p>SECURITY</p>
           <h2>비밀번호 변경</h2>
           <span>
             임시 비밀번호를 사용 중입니다. 계속하려면 새 비밀번호를 설정하세요.

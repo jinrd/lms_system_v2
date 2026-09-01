@@ -22,6 +22,7 @@ function errorMessage(error: unknown): string {
 export function CoursesPage() {
   const client = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editor, setEditor] = useState<Editor>(null);
 
   const programsQuery = useQuery({
@@ -64,7 +65,10 @@ export function CoursesPage() {
   });
   const archiveMutation = useMutation({
     mutationFn: (item: EducationProgram) => changeProgramArchive(item.id, !item.archived),
-    onSuccess: refresh,
+    onSuccess: async () => {
+      setSelectedId(null);
+      await refresh();
+    },
   });
 
   if (programsQuery.isLoading || fieldsQuery.isLoading || subjectsQuery.isLoading || instructorsQuery.isLoading) {
@@ -77,6 +81,7 @@ export function CoursesPage() {
   const programs = programsQuery.data?.items ?? [];
   const instructors = instructorsQuery.data?.items ?? [];
   const subjectGroups = subjectsQuery.data ?? [];
+  const selected = programs.find((item) => item.id === selectedId) ?? programs[0] ?? null;
 
   const submit = (event: FormEvent<HTMLFormElement>, item?: EducationProgram) => {
     event.preventDefault();
@@ -92,32 +97,70 @@ export function CoursesPage() {
         </button>
       </header>
 
-      <div className="cluster">
-        <button className={`button ${showArchived ? "button--secondary" : "button--primary"}`} type="button" onClick={() => setShowArchived(false)}>사용 중</button>
-        <button className={`button ${showArchived ? "button--primary" : "button--secondary"}`} type="button" onClick={() => setShowArchived(true)}>보관됨</button>
+      <div className="segmented-control" aria-label="교육과정 목록 구분">
+        <button className={`segmented-control__button ${!showArchived ? "segmented-control__button--active" : ""}`} type="button" onClick={() => { setShowArchived(false); setSelectedId(null); }}>사용 중</button>
+        <button className={`segmented-control__button ${showArchived ? "segmented-control__button--active" : ""}`} type="button" onClick={() => { setShowArchived(true); setSelectedId(null); }}>보관됨</button>
       </div>
 
       {programs.length === 0 ? (
         <EmptyState title={showArchived ? "보관된 교육과정이 없습니다." : "교육과정이 없습니다."} description="교육 분야와 과목을 준비한 뒤 교육과정을 추가해 주세요." />
       ) : (
-        <section className="data-list">
-          {programs.map((item) => (
-            <article className="card" key={item.id}>
-              <div className="card-header">
-                <div><h2>{item.name}</h2><p>{item.primaryEducationField.name} · 담당 {item.instructor.name}</p></div>
+        <section className="master-detail-layout">
+          <div className="data-list card">
+            {programs.map((item) => (
+              <button
+                className={`selection-card ${selected?.id === item.id ? "selection-card--active" : ""}`}
+                key={item.id}
+                type="button"
+                onClick={() => setSelectedId(item.id)}
+              >
+                <span>
+                  <strong>{item.name}</strong>
+                  <small>{item.primaryEducationField.name} · {item.instructor.name}</small>
+                </span>
+                <span className="status-badge status-badge--neutral">반 {item.classCount}</span>
+              </button>
+            ))}
+          </div>
+
+          {selected && (
+            <article className="card program-detail">
+              <header className="card-header">
+                <div>
+                  <h2>{selected.name}</h2>
+                  <p>{selected.primaryEducationField.name} · 담당 강사 {selected.instructor.name}</p>
+                </div>
                 <div className="cluster">
-                  {!item.archived && <button className="button button--secondary" type="button" onClick={() => setEditor({ mode: "edit", item })}><Pencil size={16} /> 수정</button>}
-                  <button className="button button--secondary" type="button" onClick={() => archiveMutation.mutate(item)} disabled={archiveMutation.isPending}>
-                    {item.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}{item.archived ? "보관 해제" : "보관"}
+                  {!selected.archived && (
+                    <button className="button button--secondary" type="button" onClick={() => setEditor({ mode: "edit", item: selected })}>
+                      <Pencil size={16} /> 수정
+                    </button>
+                  )}
+                  <button className="button button--secondary" type="button" onClick={() => archiveMutation.mutate(selected)} disabled={archiveMutation.isPending}>
+                    {selected.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+                    {selected.archived ? "보관 해제" : "보관"}
                   </button>
                 </div>
-              </div>
+              </header>
+
               <div className="card-body">
-                <div className="detail-section"><h3>포함 과목</h3><p>{item.subjects.map((subject) => `${subject.educationFieldName} · ${subject.name}`).join(", ")}</p></div>
-                <p className="muted">사용 중인 반 {item.classCount}개 · 생성 후 과목 구성은 변경할 수 없습니다.</p>
+                <section className="detail-section">
+                  <h3>포함 과목</h3>
+                  <ul className="program-subject-list">
+                    {selected.subjects.map((subject) => (
+                      <li key={subject.id}>
+                        <span>{subject.educationFieldName}</span>
+                        <strong>{subject.name}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+                <p className="muted program-detail__note">
+                  사용 중인 반 {selected.classCount}개 · 생성 후 과목 구성은 변경할 수 없습니다.
+                </p>
               </div>
             </article>
-          ))}
+          )}
         </section>
       )}
 

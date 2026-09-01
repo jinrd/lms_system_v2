@@ -398,6 +398,7 @@ export const ModelName = {
   ClassInstructorAssignment: 'ClassInstructorAssignment',
   ClassSchedulePattern: 'ClassSchedulePattern',
   ClassSession: 'ClassSession',
+  ClassSessionJournalHistory: 'ClassSessionJournalHistory',
   Notice: 'Notice',
   NoticeClassTarget: 'NoticeClassTarget',
   NoticeFile: 'NoticeFile',
@@ -468,7 +469,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "studentProfile" | "userStatusHistory" | "authSession" | "attendanceCode" | "attendanceCodeAttempt" | "attendanceRecord" | "attendanceChangeHistory" | "class" | "classProgram" | "classSubject" | "classInstructorAssignment" | "classSchedulePattern" | "classSession" | "notice" | "noticeClassTarget" | "noticeFile" | "noticeRead" | "inquiry" | "inquiryReply" | "inquiryFile" | "handover" | "handoverFile" | "educationField" | "subject" | "courseOffering" | "courseOfferingSubject" | "enrollment" | "enrollmentSubject" | "sessionParticipant" | "exam" | "examSubject" | "examClassTarget" | "examPart" | "examQuestion" | "examQuestionOption" | "examQuestionAcceptedAnswer" | "examPracticalCriterion" | "examAttempt" | "examPartSubmission" | "examAttemptQuestionOrder" | "examAttemptOptionOrder" | "examAnswer" | "examAnswerSelectedOption" | "practicalScore" | "examResultRevision" | "fileAsset" | "practicalSubmissionFile" | "assignment" | "assignmentSubmission" | "assignmentSubmissionVersion" | "assignmentSubmissionFile" | "learningMaterial" | "learningMaterialFile" | "auditLog" | "systemLog" | "backupRun" | "dataLifecycleRun" | "systemSetting" | "questionBank" | "questionOption" | "questionAcceptedAnswer" | "examTemplate" | "examTemplateSubject" | "examTemplatePart" | "examTemplateQuestion" | "examTemplatePracticalCriterion" | "termsDocument" | "termsConsent"
+    modelProps: "user" | "studentProfile" | "userStatusHistory" | "authSession" | "attendanceCode" | "attendanceCodeAttempt" | "attendanceRecord" | "attendanceChangeHistory" | "class" | "classProgram" | "classSubject" | "classInstructorAssignment" | "classSchedulePattern" | "classSession" | "classSessionJournalHistory" | "notice" | "noticeClassTarget" | "noticeFile" | "noticeRead" | "inquiry" | "inquiryReply" | "inquiryFile" | "handover" | "handoverFile" | "educationField" | "subject" | "courseOffering" | "courseOfferingSubject" | "enrollment" | "enrollmentSubject" | "sessionParticipant" | "exam" | "examSubject" | "examClassTarget" | "examPart" | "examQuestion" | "examQuestionOption" | "examQuestionAcceptedAnswer" | "examPracticalCriterion" | "examAttempt" | "examPartSubmission" | "examAttemptQuestionOrder" | "examAttemptOptionOrder" | "examAnswer" | "examAnswerSelectedOption" | "practicalScore" | "examResultRevision" | "fileAsset" | "practicalSubmissionFile" | "assignment" | "assignmentSubmission" | "assignmentSubmissionVersion" | "assignmentSubmissionFile" | "learningMaterial" | "learningMaterialFile" | "auditLog" | "systemLog" | "backupRun" | "dataLifecycleRun" | "systemSetting" | "questionBank" | "questionOption" | "questionAcceptedAnswer" | "examTemplate" | "examTemplateSubject" | "examTemplatePart" | "examTemplateQuestion" | "examTemplatePracticalCriterion" | "termsDocument" | "termsConsent"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1505,6 +1506,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ClassSessionCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ClassSessionCountAggregateOutputType> | number
+        }
+      }
+    }
+    ClassSessionJournalHistory: {
+      payload: Prisma.$ClassSessionJournalHistoryPayload<ExtArgs>
+      fields: Prisma.ClassSessionJournalHistoryFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ClassSessionJournalHistoryFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClassSessionJournalHistoryPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ClassSessionJournalHistoryFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClassSessionJournalHistoryPayload>
+        }
+        findFirst: {
+          args: Prisma.ClassSessionJournalHistoryFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClassSessionJournalHistoryPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ClassSessionJournalHistoryFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClassSessionJournalHistoryPayload>
+        }
+        findMany: {
+          args: Prisma.ClassSessionJournalHistoryFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClassSessionJournalHistoryPayload>[]
+        }
+        create: {
+          args: Prisma.ClassSessionJournalHistoryCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClassSessionJournalHistoryPayload>
+        }
+        createMany: {
+          args: Prisma.ClassSessionJournalHistoryCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ClassSessionJournalHistoryCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClassSessionJournalHistoryPayload>[]
+        }
+        delete: {
+          args: Prisma.ClassSessionJournalHistoryDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClassSessionJournalHistoryPayload>
+        }
+        update: {
+          args: Prisma.ClassSessionJournalHistoryUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClassSessionJournalHistoryPayload>
+        }
+        deleteMany: {
+          args: Prisma.ClassSessionJournalHistoryDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ClassSessionJournalHistoryUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ClassSessionJournalHistoryUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClassSessionJournalHistoryPayload>[]
+        }
+        upsert: {
+          args: Prisma.ClassSessionJournalHistoryUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClassSessionJournalHistoryPayload>
+        }
+        aggregate: {
+          args: Prisma.ClassSessionJournalHistoryAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateClassSessionJournalHistory>
+        }
+        groupBy: {
+          args: Prisma.ClassSessionJournalHistoryGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClassSessionJournalHistoryGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ClassSessionJournalHistoryCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClassSessionJournalHistoryCountAggregateOutputType> | number
         }
       }
     }
@@ -5852,10 +5927,27 @@ export const ClassSessionScalarFieldEnum = {
   updatedAt: 'updatedAt',
   actualStartedAt: 'actualStartedAt',
   actualEndedAt: 'actualEndedAt',
-  journalWrittenAt: 'journalWrittenAt'
+  journalWrittenAt: 'journalWrittenAt',
+  journalWrittenById: 'journalWrittenById',
+  journalUpdatedAt: 'journalUpdatedAt',
+  journalUpdatedById: 'journalUpdatedById'
 } as const
 
 export type ClassSessionScalarFieldEnum = (typeof ClassSessionScalarFieldEnum)[keyof typeof ClassSessionScalarFieldEnum]
+
+
+export const ClassSessionJournalHistoryScalarFieldEnum = {
+  id: 'id',
+  classSessionId: 'classSessionId',
+  previousTitle: 'previousTitle',
+  previousLessonContent: 'previousLessonContent',
+  newTitle: 'newTitle',
+  newLessonContent: 'newLessonContent',
+  changedById: 'changedById',
+  changedAt: 'changedAt'
+} as const
+
+export type ClassSessionJournalHistoryScalarFieldEnum = (typeof ClassSessionJournalHistoryScalarFieldEnum)[keyof typeof ClassSessionJournalHistoryScalarFieldEnum]
 
 
 export const NoticeScalarFieldEnum = {
@@ -7310,6 +7402,7 @@ export type GlobalOmitConfig = {
   classInstructorAssignment?: Prisma.ClassInstructorAssignmentOmit
   classSchedulePattern?: Prisma.ClassSchedulePatternOmit
   classSession?: Prisma.ClassSessionOmit
+  classSessionJournalHistory?: Prisma.ClassSessionJournalHistoryOmit
   notice?: Prisma.NoticeOmit
   noticeClassTarget?: Prisma.NoticeClassTargetOmit
   noticeFile?: Prisma.NoticeFileOmit

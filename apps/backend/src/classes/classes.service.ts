@@ -315,18 +315,27 @@ export class ClassesService {
     actor: AuthenticatedUser,
     ipAddress?: string,
   ): Promise<void> {
-    const item = await this.prisma.class.findUnique({ where: { id: classId } });
-    if (!item) {
-      throw new NotFoundException('반을 찾을 수 없습니다.');
-    }
-
-    const upcoming =
-      this.deriveStatus(item.startDate, item.endDate) === 'UPCOMING';
-    const operationalCount = await this.prisma.classSession.count({
-      where: { classId },
-    });
-
     await this.prisma.$transaction(async (tx) => {
+      // 물리 삭제 여부 판정과 삭제를 같은 트랜잭션에서 처리한다.
+      // 밖에서 판정하면 판정 직후 수업이 생겨도 그대로 삭제될 수 있다.
+      await tx.$queryRaw`
+        SELECT id
+        FROM classes
+        WHERE id = ${classId}::uuid
+        FOR UPDATE
+      `;
+
+      const item = await tx.class.findUnique({ where: { id: classId } });
+      if (!item) {
+        throw new NotFoundException('반을 찾을 수 없습니다.');
+      }
+
+      const upcoming =
+        this.deriveStatus(item.startDate, item.endDate) === 'UPCOMING';
+      const operationalCount = await tx.classSession.count({
+        where: { classId },
+      });
+
       let removedEnrollmentCount = 0;
 
       if (upcoming && operationalCount === 0) {

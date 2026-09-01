@@ -136,18 +136,24 @@ export function ClassesPage() {
           <CirclePlus size={18} /> 반 추가
         </button>
       </header>
-      <div className="cluster">
+      <div className="segmented-control" aria-label="반 목록 구분">
         <button
-          className={`button ${showArchived ? "button--secondary" : "button--primary"}`}
+          className={`segmented-control__button ${!showArchived ? "segmented-control__button--active" : ""}`}
           type="button"
-          onClick={() => setShowArchived(false)}
+          onClick={() => {
+            setShowArchived(false);
+            setSelectedId(null);
+          }}
         >
           기본 목록
         </button>
         <button
-          className={`button ${showArchived ? "button--primary" : "button--secondary"}`}
+          className={`segmented-control__button ${showArchived ? "segmented-control__button--active" : ""}`}
           type="button"
-          onClick={() => setShowArchived(true)}
+          onClick={() => {
+            setShowArchived(true);
+            setSelectedId(null);
+          }}
         >
           보관된 반
         </button>

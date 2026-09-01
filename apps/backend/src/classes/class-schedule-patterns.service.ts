@@ -97,10 +97,11 @@ export class ClassSchedulePatternsService {
 
       await this.assertNoOverlap(
         tx,
-        classId,
+        classItem,
         dto.dayOfWeek,
         startTime,
         endTime,
+        dto.room?.trim() || null,
       );
 
       const created = await tx.classSchedulePattern.create({
@@ -178,12 +179,16 @@ export class ClassSchedulePatternsService {
         : current.startTime;
       const endTime = dto.endTime ? this.toTime(dto.endTime) : current.endTime;
       this.assertTimeOrder(startTime, endTime);
+      const room =
+        dto.room !== undefined ? dto.room.trim() || null : current.room;
+
       await this.assertNoOverlap(
         tx,
-        classId,
+        classItem,
         dayOfWeek,
         startTime,
         endTime,
+        room,
         patternId,
       );
 
@@ -195,7 +200,7 @@ export class ClassSchedulePatternsService {
           dayOfWeek,
           startTime,
           endTime,
-          ...(dto.room !== undefined ? { room: dto.room.trim() || null } : {}),
+          room,
           ...(dto.active !== undefined ? { active: dto.active } : {}),
         },
       });
@@ -249,25 +254,77 @@ export class ClassSchedulePatternsService {
 
   private async assertNoOverlap(
     tx: Prisma.TransactionClient,
-    classId: string,
+    classItem: {
+      id: string;
+      room: string | null;
+      startDate: Date;
+      endDate: Date;
+    },
     dayOfWeek: number,
     startTime: Date,
     endTime: Date,
+    room: string | null,
     excludedId?: string,
   ): Promise<void> {
-    const overlapping = await tx.classSchedulePattern.findFirst({
+    // 같은 요일·시간에 겹치는 다른 시간표를 모두 가져와 두 가지를 본다.
+    // 같은 반이면 학생이 두 수업에 동시에 들어갈 수 없으므로 무조건 충돌이고,
+    // 다른 반이면 강의실이 같고 운영 기간까지 겹칠 때만 충돌이다.
+    const candidates = await tx.classSchedulePattern.findMany({
       where: {
-        classId,
         dayOfWeek,
         active: true,
         ...(excludedId ? { id: { not: excludedId } } : {}),
         startTime: { lt: endTime },
         endTime: { gt: startTime },
       },
+      include: {
+        class: {
+          select: {
+            id: true,
+            name: true,
+            room: true,
+            startDate: true,
+            endDate: true,
+            archivedAt: true,
+          },
+        },
+      },
     });
-    if (overlapping) {
+
+    const sameClass = candidates.find(
+      (candidate) => candidate.classId === classItem.id,
+    );
+    if (sameClass) {
       throw new ConflictException(
         '같은 요일에 시간이 겹치는 시간표가 있습니다.',
+      );
+    }
+
+    const effectiveRoom = room ?? classItem.room;
+    if (!effectiveRoom) {
+      return;
+    }
+
+    const roomConflict = candidates.find((candidate) => {
+      if (candidate.class.archivedAt) {
+        return false;
+      }
+
+      const candidateRoom = candidate.room ?? candidate.class.room;
+      if (candidateRoom !== effectiveRoom) {
+        return false;
+      }
+
+      // 운영 기간이 겹치지 않으면 같은 강의실을 써도 된다.
+      return (
+        candidate.class.startDate <= classItem.endDate &&
+        candidate.class.endDate >= classItem.startDate
+      );
+    });
+
+    if (roomConflict) {
+      throw new ConflictException(
+        `같은 시간에 ${effectiveRoom} 강의실을 사용하는 반이 있습니다: ${roomConflict.class.name}`,
       );
     }
   }

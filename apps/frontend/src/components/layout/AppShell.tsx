@@ -17,7 +17,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import type { UserRole } from "../../auth/auth.types";
@@ -170,6 +170,27 @@ export function AppShell() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
+
   if (!user) {
     return null;
   }
@@ -195,6 +216,10 @@ export function AppShell() {
 
   return (
     <div className="app-layout">
+      <a className="skip-link" href="#main-content">
+        본문 바로가기
+      </a>
+
       {mobileMenuOpen && (
         <button
           type="button"
@@ -214,8 +239,8 @@ export function AppShell() {
           </div>
 
           <div>
-            <strong>SKB ACADEMY</strong>
-            <span>Learning Management</span>
+            <strong>SKB 학원관리</strong>
+            <span>교육 운영 시스템</span>
           </div>
 
           <button
@@ -287,31 +312,32 @@ export function AppShell() {
             <Menu size={23} />
           </button>
 
-          <strong>SKB LMS</strong>
+          <strong>SKB 학원관리</strong>
 
-          <button type="button" className="icon-button" aria-label="알림">
-            <Bell size={21} />
-          </button>
+          <span className="mobile-header__account" aria-label={user.name}>
+            {user.name.slice(0, 1)}
+          </span>
         </header>
 
         <header className="desktop-header">
           <div className="desktop-header__location">
-            <span>{ROLE_LABELS[user.role]} 화면</span>
-            <ChevronDown size={16} />
+            <span>교육 운영</span>
+            <ChevronDown size={15} aria-hidden="true" />
+            <strong>{ROLE_LABELS[user.role]} 화면</strong>
           </div>
 
           <div className="desktop-header__user">
-            <button type="button" className="notification-button">
-              <Bell size={19} />
-              <span>알림</span>
-              <span className="notification-dot" aria-label="새 알림 있음" />
-            </button>
-
-            <span>{user.name}</span>
+            <span className="desktop-header__avatar" aria-hidden="true">
+              {user.name.slice(0, 1)}
+            </span>
+            <div>
+              <strong>{user.name}</strong>
+              <span>{ROLE_LABELS[user.role]}</span>
+            </div>
           </div>
         </header>
 
-        <main className="page-container">
+        <main className="page-container" id="main-content" tabIndex={-1}>
           <Outlet />
         </main>
       </div>

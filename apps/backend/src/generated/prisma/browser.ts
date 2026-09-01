@@ -88,6 +88,11 @@ export type ClassSchedulePattern = Prisma.ClassSchedulePatternModel
  */
 export type ClassSession = Prisma.ClassSessionModel
 /**
+ * Model ClassSessionJournalHistory
+ * 수업 일지의 변경 이력입니다. 작성과 수정 모두 한 건씩 남깁니다.
+ */
+export type ClassSessionJournalHistory = Prisma.ClassSessionJournalHistoryModel
+/**
  * Model Notice
  * 학생 또는 강사 대상 공지입니다.
  */

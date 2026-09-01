@@ -294,7 +294,6 @@ function OperationDashboard() {
       value: pendingQuery.data?.pagination.total,
       detail: "확인이 필요합니다",
       icon: UserCheck,
-      tone: "blue",
       to: "/users",
     },
     {
@@ -302,7 +301,6 @@ function OperationDashboard() {
       value: studentsQuery.data?.pagination.total,
       detail: "수강 가능한 학생",
       icon: Users,
-      tone: "green",
       to: "/users",
     },
     {
@@ -310,7 +308,6 @@ function OperationDashboard() {
       value: operating,
       detail: `전체 ${classes.length}개 반`,
       icon: BookOpenCheck,
-      tone: "purple",
       to: "/classes",
     },
     {
@@ -318,7 +315,6 @@ function OperationDashboard() {
       value: programsQuery.data?.pagination.total,
       detail: "보관 제외",
       icon: ClipboardList,
-      tone: "orange",
       to: "/courses",
     },
   ];
@@ -332,22 +328,39 @@ function OperationDashboard() {
         </div>
       </section>
 
-      <section className="summary-grid">
-        {cards.map((card) => (
-          <Link className="summary-card" key={card.label} to={card.to}>
-            <div className={`summary-card__icon tone-${card.tone}`}>
-              <card.icon size={22} />
-            </div>
+      <section className="surface-card operation-overview">
+        <header className="card-header">
+          <div>
+            <h2>오늘의 운영 현황</h2>
+            <p>확인이 필요한 항목부터 살펴보세요.</p>
+          </div>
+          <span className="operation-overview__date">
+            {new Intl.DateTimeFormat("ko-KR", {
+              timeZone: "Asia/Seoul",
+              month: "long",
+              day: "numeric",
+              weekday: "short",
+            }).format(new Date())}
+          </span>
+        </header>
 
-            <div>
-              <p>{card.label}</p>
-              <strong>{card.value ?? "—"}</strong>
-              <span>{card.detail}</span>
-            </div>
+        <div className="summary-grid">
+          {cards.map((card) => (
+            <Link className="summary-card" key={card.label} to={card.to}>
+              <div className="summary-card__icon">
+                <card.icon size={20} />
+              </div>
 
-            <ChevronRight size={18} />
-          </Link>
-        ))}
+              <div>
+                <p>{card.label}</p>
+                <strong>{card.value ?? "—"}</strong>
+                <span>{card.detail}</span>
+              </div>
+
+              <ChevronRight size={17} aria-hidden="true" />
+            </Link>
+          ))}
+        </div>
       </section>
     </>
   );
@@ -363,7 +376,6 @@ export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
     <>
       <section className="page-header">
         <div>
-          <p className="page-eyebrow">SKB ACADEMY</p>
           <h1>{title}</h1>
           <p>{description}</p>
         </div>

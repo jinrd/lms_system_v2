@@ -60,6 +60,9 @@ export type ClassSessionMinAggregateOutputType = {
   actualStartedAt: Date | null
   actualEndedAt: Date | null
   journalWrittenAt: Date | null
+  journalWrittenById: string | null
+  journalUpdatedAt: Date | null
+  journalUpdatedById: string | null
 }
 
 export type ClassSessionMaxAggregateOutputType = {
@@ -88,6 +91,9 @@ export type ClassSessionMaxAggregateOutputType = {
   actualStartedAt: Date | null
   actualEndedAt: Date | null
   journalWrittenAt: Date | null
+  journalWrittenById: string | null
+  journalUpdatedAt: Date | null
+  journalUpdatedById: string | null
 }
 
 export type ClassSessionCountAggregateOutputType = {
@@ -116,6 +122,9 @@ export type ClassSessionCountAggregateOutputType = {
   actualStartedAt: number
   actualEndedAt: number
   journalWrittenAt: number
+  journalWrittenById: number
+  journalUpdatedAt: number
+  journalUpdatedById: number
   _all: number
 }
 
@@ -154,6 +163,9 @@ export type ClassSessionMinAggregateInputType = {
   actualStartedAt?: true
   actualEndedAt?: true
   journalWrittenAt?: true
+  journalWrittenById?: true
+  journalUpdatedAt?: true
+  journalUpdatedById?: true
 }
 
 export type ClassSessionMaxAggregateInputType = {
@@ -182,6 +194,9 @@ export type ClassSessionMaxAggregateInputType = {
   actualStartedAt?: true
   actualEndedAt?: true
   journalWrittenAt?: true
+  journalWrittenById?: true
+  journalUpdatedAt?: true
+  journalUpdatedById?: true
 }
 
 export type ClassSessionCountAggregateInputType = {
@@ -210,6 +225,9 @@ export type ClassSessionCountAggregateInputType = {
   actualStartedAt?: true
   actualEndedAt?: true
   journalWrittenAt?: true
+  journalWrittenById?: true
+  journalUpdatedAt?: true
+  journalUpdatedById?: true
   _all?: true
 }
 
@@ -325,6 +343,9 @@ export type ClassSessionGroupByOutputType = {
   actualStartedAt: Date | null
   actualEndedAt: Date | null
   journalWrittenAt: Date | null
+  journalWrittenById: string | null
+  journalUpdatedAt: Date | null
+  journalUpdatedById: string | null
   _count: ClassSessionCountAggregateOutputType | null
   _avg: ClassSessionAvgAggregateOutputType | null
   _sum: ClassSessionSumAggregateOutputType | null
@@ -376,6 +397,9 @@ export type ClassSessionWhereInput = {
   actualStartedAt?: Prisma.DateTimeNullableFilter<"ClassSession"> | Date | string | null
   actualEndedAt?: Prisma.DateTimeNullableFilter<"ClassSession"> | Date | string | null
   journalWrittenAt?: Prisma.DateTimeNullableFilter<"ClassSession"> | Date | string | null
+  journalWrittenById?: Prisma.UuidNullableFilter<"ClassSession"> | string | null
+  journalUpdatedAt?: Prisma.DateTimeNullableFilter<"ClassSession"> | Date | string | null
+  journalUpdatedById?: Prisma.UuidNullableFilter<"ClassSession"> | string | null
   class?: Prisma.XOR<Prisma.ClassScalarRelationFilter, Prisma.ClassWhereInput>
   classSubject?: Prisma.XOR<Prisma.ClassSubjectScalarRelationFilter, Prisma.ClassSubjectWhereInput>
   courseOfferingSubject?: Prisma.XOR<Prisma.CourseOfferingSubjectScalarRelationFilter, Prisma.CourseOfferingSubjectWhereInput>
@@ -383,6 +407,9 @@ export type ClassSessionWhereInput = {
   schedulePattern?: Prisma.XOR<Prisma.ClassSchedulePatternNullableScalarRelationFilter, Prisma.ClassSchedulePatternWhereInput> | null
   instructor?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   canceledBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  journalWrittenBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  journalUpdatedBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryListRelationFilter
   createdBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   replacementFor?: Prisma.XOR<Prisma.ClassSessionNullableScalarRelationFilter, Prisma.ClassSessionWhereInput> | null
   replacementSessions?: Prisma.ClassSessionListRelationFilter
@@ -417,6 +444,9 @@ export type ClassSessionOrderByWithRelationInput = {
   actualStartedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   actualEndedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   journalWrittenAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  journalWrittenById?: Prisma.SortOrderInput | Prisma.SortOrder
+  journalUpdatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  journalUpdatedById?: Prisma.SortOrderInput | Prisma.SortOrder
   class?: Prisma.ClassOrderByWithRelationInput
   classSubject?: Prisma.ClassSubjectOrderByWithRelationInput
   courseOfferingSubject?: Prisma.CourseOfferingSubjectOrderByWithRelationInput
@@ -424,6 +454,9 @@ export type ClassSessionOrderByWithRelationInput = {
   schedulePattern?: Prisma.ClassSchedulePatternOrderByWithRelationInput
   instructor?: Prisma.UserOrderByWithRelationInput
   canceledBy?: Prisma.UserOrderByWithRelationInput
+  journalWrittenBy?: Prisma.UserOrderByWithRelationInput
+  journalUpdatedBy?: Prisma.UserOrderByWithRelationInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryOrderByRelationAggregateInput
   createdBy?: Prisma.UserOrderByWithRelationInput
   replacementFor?: Prisma.ClassSessionOrderByWithRelationInput
   replacementSessions?: Prisma.ClassSessionOrderByRelationAggregateInput
@@ -464,6 +497,9 @@ export type ClassSessionWhereUniqueInput = Prisma.AtLeast<{
   actualStartedAt?: Prisma.DateTimeNullableFilter<"ClassSession"> | Date | string | null
   actualEndedAt?: Prisma.DateTimeNullableFilter<"ClassSession"> | Date | string | null
   journalWrittenAt?: Prisma.DateTimeNullableFilter<"ClassSession"> | Date | string | null
+  journalWrittenById?: Prisma.UuidNullableFilter<"ClassSession"> | string | null
+  journalUpdatedAt?: Prisma.DateTimeNullableFilter<"ClassSession"> | Date | string | null
+  journalUpdatedById?: Prisma.UuidNullableFilter<"ClassSession"> | string | null
   class?: Prisma.XOR<Prisma.ClassScalarRelationFilter, Prisma.ClassWhereInput>
   classSubject?: Prisma.XOR<Prisma.ClassSubjectScalarRelationFilter, Prisma.ClassSubjectWhereInput>
   courseOfferingSubject?: Prisma.XOR<Prisma.CourseOfferingSubjectScalarRelationFilter, Prisma.CourseOfferingSubjectWhereInput>
@@ -471,6 +507,9 @@ export type ClassSessionWhereUniqueInput = Prisma.AtLeast<{
   schedulePattern?: Prisma.XOR<Prisma.ClassSchedulePatternNullableScalarRelationFilter, Prisma.ClassSchedulePatternWhereInput> | null
   instructor?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   canceledBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  journalWrittenBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  journalUpdatedBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryListRelationFilter
   createdBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   replacementFor?: Prisma.XOR<Prisma.ClassSessionNullableScalarRelationFilter, Prisma.ClassSessionWhereInput> | null
   replacementSessions?: Prisma.ClassSessionListRelationFilter
@@ -505,6 +544,9 @@ export type ClassSessionOrderByWithAggregationInput = {
   actualStartedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   actualEndedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   journalWrittenAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  journalWrittenById?: Prisma.SortOrderInput | Prisma.SortOrder
+  journalUpdatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  journalUpdatedById?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.ClassSessionCountOrderByAggregateInput
   _avg?: Prisma.ClassSessionAvgOrderByAggregateInput
   _max?: Prisma.ClassSessionMaxOrderByAggregateInput
@@ -541,6 +583,9 @@ export type ClassSessionScalarWhereWithAggregatesInput = {
   actualStartedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ClassSession"> | Date | string | null
   actualEndedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ClassSession"> | Date | string | null
   journalWrittenAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ClassSession"> | Date | string | null
+  journalWrittenById?: Prisma.UuidNullableWithAggregatesFilter<"ClassSession"> | string | null
+  journalUpdatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ClassSession"> | Date | string | null
+  journalUpdatedById?: Prisma.UuidNullableWithAggregatesFilter<"ClassSession"> | string | null
 }
 
 export type ClassSessionCreateInput = {
@@ -560,6 +605,7 @@ export type ClassSessionCreateInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
   class: Prisma.ClassCreateNestedOneWithoutSessionsInput
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
   courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
@@ -567,6 +613,9 @@ export type ClassSessionCreateInput = {
   schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
   instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
   canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
   createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
   replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
   replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
@@ -601,6 +650,10 @@ export type ClassSessionUncheckedCreateInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
   replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
@@ -624,6 +677,7 @@ export type ClassSessionUpdateInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
   courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
@@ -631,6 +685,9 @@ export type ClassSessionUpdateInput = {
   schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
   instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
   canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
   createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
   replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
   replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
@@ -665,6 +722,10 @@ export type ClassSessionUncheckedUpdateInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
   replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
@@ -697,6 +758,9 @@ export type ClassSessionCreateManyInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
 }
 
 export type ClassSessionUpdateManyMutationInput = {
@@ -716,6 +780,7 @@ export type ClassSessionUpdateManyMutationInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type ClassSessionUncheckedUpdateManyInput = {
@@ -744,6 +809,9 @@ export type ClassSessionUncheckedUpdateManyInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type ClassSessionListRelationFilter = {
@@ -808,6 +876,9 @@ export type ClassSessionCountOrderByAggregateInput = {
   actualStartedAt?: Prisma.SortOrder
   actualEndedAt?: Prisma.SortOrder
   journalWrittenAt?: Prisma.SortOrder
+  journalWrittenById?: Prisma.SortOrder
+  journalUpdatedAt?: Prisma.SortOrder
+  journalUpdatedById?: Prisma.SortOrder
 }
 
 export type ClassSessionAvgOrderByAggregateInput = {
@@ -840,6 +911,9 @@ export type ClassSessionMaxOrderByAggregateInput = {
   actualStartedAt?: Prisma.SortOrder
   actualEndedAt?: Prisma.SortOrder
   journalWrittenAt?: Prisma.SortOrder
+  journalWrittenById?: Prisma.SortOrder
+  journalUpdatedAt?: Prisma.SortOrder
+  journalUpdatedById?: Prisma.SortOrder
 }
 
 export type ClassSessionMinOrderByAggregateInput = {
@@ -868,6 +942,9 @@ export type ClassSessionMinOrderByAggregateInput = {
   actualStartedAt?: Prisma.SortOrder
   actualEndedAt?: Prisma.SortOrder
   journalWrittenAt?: Prisma.SortOrder
+  journalWrittenById?: Prisma.SortOrder
+  journalUpdatedAt?: Prisma.SortOrder
+  journalUpdatedById?: Prisma.SortOrder
 }
 
 export type ClassSessionSumOrderByAggregateInput = {
@@ -885,6 +962,20 @@ export type ClassSessionCreateNestedManyWithoutCanceledByInput = {
   create?: Prisma.XOR<Prisma.ClassSessionCreateWithoutCanceledByInput, Prisma.ClassSessionUncheckedCreateWithoutCanceledByInput> | Prisma.ClassSessionCreateWithoutCanceledByInput[] | Prisma.ClassSessionUncheckedCreateWithoutCanceledByInput[]
   connectOrCreate?: Prisma.ClassSessionCreateOrConnectWithoutCanceledByInput | Prisma.ClassSessionCreateOrConnectWithoutCanceledByInput[]
   createMany?: Prisma.ClassSessionCreateManyCanceledByInputEnvelope
+  connect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+}
+
+export type ClassSessionCreateNestedManyWithoutJournalWrittenByInput = {
+  create?: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalWrittenByInput, Prisma.ClassSessionUncheckedCreateWithoutJournalWrittenByInput> | Prisma.ClassSessionCreateWithoutJournalWrittenByInput[] | Prisma.ClassSessionUncheckedCreateWithoutJournalWrittenByInput[]
+  connectOrCreate?: Prisma.ClassSessionCreateOrConnectWithoutJournalWrittenByInput | Prisma.ClassSessionCreateOrConnectWithoutJournalWrittenByInput[]
+  createMany?: Prisma.ClassSessionCreateManyJournalWrittenByInputEnvelope
+  connect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+}
+
+export type ClassSessionCreateNestedManyWithoutJournalUpdatedByInput = {
+  create?: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalUpdatedByInput, Prisma.ClassSessionUncheckedCreateWithoutJournalUpdatedByInput> | Prisma.ClassSessionCreateWithoutJournalUpdatedByInput[] | Prisma.ClassSessionUncheckedCreateWithoutJournalUpdatedByInput[]
+  connectOrCreate?: Prisma.ClassSessionCreateOrConnectWithoutJournalUpdatedByInput | Prisma.ClassSessionCreateOrConnectWithoutJournalUpdatedByInput[]
+  createMany?: Prisma.ClassSessionCreateManyJournalUpdatedByInputEnvelope
   connect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
 }
 
@@ -906,6 +997,20 @@ export type ClassSessionUncheckedCreateNestedManyWithoutCanceledByInput = {
   create?: Prisma.XOR<Prisma.ClassSessionCreateWithoutCanceledByInput, Prisma.ClassSessionUncheckedCreateWithoutCanceledByInput> | Prisma.ClassSessionCreateWithoutCanceledByInput[] | Prisma.ClassSessionUncheckedCreateWithoutCanceledByInput[]
   connectOrCreate?: Prisma.ClassSessionCreateOrConnectWithoutCanceledByInput | Prisma.ClassSessionCreateOrConnectWithoutCanceledByInput[]
   createMany?: Prisma.ClassSessionCreateManyCanceledByInputEnvelope
+  connect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+}
+
+export type ClassSessionUncheckedCreateNestedManyWithoutJournalWrittenByInput = {
+  create?: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalWrittenByInput, Prisma.ClassSessionUncheckedCreateWithoutJournalWrittenByInput> | Prisma.ClassSessionCreateWithoutJournalWrittenByInput[] | Prisma.ClassSessionUncheckedCreateWithoutJournalWrittenByInput[]
+  connectOrCreate?: Prisma.ClassSessionCreateOrConnectWithoutJournalWrittenByInput | Prisma.ClassSessionCreateOrConnectWithoutJournalWrittenByInput[]
+  createMany?: Prisma.ClassSessionCreateManyJournalWrittenByInputEnvelope
+  connect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+}
+
+export type ClassSessionUncheckedCreateNestedManyWithoutJournalUpdatedByInput = {
+  create?: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalUpdatedByInput, Prisma.ClassSessionUncheckedCreateWithoutJournalUpdatedByInput> | Prisma.ClassSessionCreateWithoutJournalUpdatedByInput[] | Prisma.ClassSessionUncheckedCreateWithoutJournalUpdatedByInput[]
+  connectOrCreate?: Prisma.ClassSessionCreateOrConnectWithoutJournalUpdatedByInput | Prisma.ClassSessionCreateOrConnectWithoutJournalUpdatedByInput[]
+  createMany?: Prisma.ClassSessionCreateManyJournalUpdatedByInputEnvelope
   connect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
 }
 
@@ -941,6 +1046,34 @@ export type ClassSessionUpdateManyWithoutCanceledByNestedInput = {
   connect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
   update?: Prisma.ClassSessionUpdateWithWhereUniqueWithoutCanceledByInput | Prisma.ClassSessionUpdateWithWhereUniqueWithoutCanceledByInput[]
   updateMany?: Prisma.ClassSessionUpdateManyWithWhereWithoutCanceledByInput | Prisma.ClassSessionUpdateManyWithWhereWithoutCanceledByInput[]
+  deleteMany?: Prisma.ClassSessionScalarWhereInput | Prisma.ClassSessionScalarWhereInput[]
+}
+
+export type ClassSessionUpdateManyWithoutJournalWrittenByNestedInput = {
+  create?: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalWrittenByInput, Prisma.ClassSessionUncheckedCreateWithoutJournalWrittenByInput> | Prisma.ClassSessionCreateWithoutJournalWrittenByInput[] | Prisma.ClassSessionUncheckedCreateWithoutJournalWrittenByInput[]
+  connectOrCreate?: Prisma.ClassSessionCreateOrConnectWithoutJournalWrittenByInput | Prisma.ClassSessionCreateOrConnectWithoutJournalWrittenByInput[]
+  upsert?: Prisma.ClassSessionUpsertWithWhereUniqueWithoutJournalWrittenByInput | Prisma.ClassSessionUpsertWithWhereUniqueWithoutJournalWrittenByInput[]
+  createMany?: Prisma.ClassSessionCreateManyJournalWrittenByInputEnvelope
+  set?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  disconnect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  delete?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  connect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  update?: Prisma.ClassSessionUpdateWithWhereUniqueWithoutJournalWrittenByInput | Prisma.ClassSessionUpdateWithWhereUniqueWithoutJournalWrittenByInput[]
+  updateMany?: Prisma.ClassSessionUpdateManyWithWhereWithoutJournalWrittenByInput | Prisma.ClassSessionUpdateManyWithWhereWithoutJournalWrittenByInput[]
+  deleteMany?: Prisma.ClassSessionScalarWhereInput | Prisma.ClassSessionScalarWhereInput[]
+}
+
+export type ClassSessionUpdateManyWithoutJournalUpdatedByNestedInput = {
+  create?: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalUpdatedByInput, Prisma.ClassSessionUncheckedCreateWithoutJournalUpdatedByInput> | Prisma.ClassSessionCreateWithoutJournalUpdatedByInput[] | Prisma.ClassSessionUncheckedCreateWithoutJournalUpdatedByInput[]
+  connectOrCreate?: Prisma.ClassSessionCreateOrConnectWithoutJournalUpdatedByInput | Prisma.ClassSessionCreateOrConnectWithoutJournalUpdatedByInput[]
+  upsert?: Prisma.ClassSessionUpsertWithWhereUniqueWithoutJournalUpdatedByInput | Prisma.ClassSessionUpsertWithWhereUniqueWithoutJournalUpdatedByInput[]
+  createMany?: Prisma.ClassSessionCreateManyJournalUpdatedByInputEnvelope
+  set?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  disconnect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  delete?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  connect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  update?: Prisma.ClassSessionUpdateWithWhereUniqueWithoutJournalUpdatedByInput | Prisma.ClassSessionUpdateWithWhereUniqueWithoutJournalUpdatedByInput[]
+  updateMany?: Prisma.ClassSessionUpdateManyWithWhereWithoutJournalUpdatedByInput | Prisma.ClassSessionUpdateManyWithWhereWithoutJournalUpdatedByInput[]
   deleteMany?: Prisma.ClassSessionScalarWhereInput | Prisma.ClassSessionScalarWhereInput[]
 }
 
@@ -983,6 +1116,34 @@ export type ClassSessionUncheckedUpdateManyWithoutCanceledByNestedInput = {
   connect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
   update?: Prisma.ClassSessionUpdateWithWhereUniqueWithoutCanceledByInput | Prisma.ClassSessionUpdateWithWhereUniqueWithoutCanceledByInput[]
   updateMany?: Prisma.ClassSessionUpdateManyWithWhereWithoutCanceledByInput | Prisma.ClassSessionUpdateManyWithWhereWithoutCanceledByInput[]
+  deleteMany?: Prisma.ClassSessionScalarWhereInput | Prisma.ClassSessionScalarWhereInput[]
+}
+
+export type ClassSessionUncheckedUpdateManyWithoutJournalWrittenByNestedInput = {
+  create?: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalWrittenByInput, Prisma.ClassSessionUncheckedCreateWithoutJournalWrittenByInput> | Prisma.ClassSessionCreateWithoutJournalWrittenByInput[] | Prisma.ClassSessionUncheckedCreateWithoutJournalWrittenByInput[]
+  connectOrCreate?: Prisma.ClassSessionCreateOrConnectWithoutJournalWrittenByInput | Prisma.ClassSessionCreateOrConnectWithoutJournalWrittenByInput[]
+  upsert?: Prisma.ClassSessionUpsertWithWhereUniqueWithoutJournalWrittenByInput | Prisma.ClassSessionUpsertWithWhereUniqueWithoutJournalWrittenByInput[]
+  createMany?: Prisma.ClassSessionCreateManyJournalWrittenByInputEnvelope
+  set?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  disconnect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  delete?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  connect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  update?: Prisma.ClassSessionUpdateWithWhereUniqueWithoutJournalWrittenByInput | Prisma.ClassSessionUpdateWithWhereUniqueWithoutJournalWrittenByInput[]
+  updateMany?: Prisma.ClassSessionUpdateManyWithWhereWithoutJournalWrittenByInput | Prisma.ClassSessionUpdateManyWithWhereWithoutJournalWrittenByInput[]
+  deleteMany?: Prisma.ClassSessionScalarWhereInput | Prisma.ClassSessionScalarWhereInput[]
+}
+
+export type ClassSessionUncheckedUpdateManyWithoutJournalUpdatedByNestedInput = {
+  create?: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalUpdatedByInput, Prisma.ClassSessionUncheckedCreateWithoutJournalUpdatedByInput> | Prisma.ClassSessionCreateWithoutJournalUpdatedByInput[] | Prisma.ClassSessionUncheckedCreateWithoutJournalUpdatedByInput[]
+  connectOrCreate?: Prisma.ClassSessionCreateOrConnectWithoutJournalUpdatedByInput | Prisma.ClassSessionCreateOrConnectWithoutJournalUpdatedByInput[]
+  upsert?: Prisma.ClassSessionUpsertWithWhereUniqueWithoutJournalUpdatedByInput | Prisma.ClassSessionUpsertWithWhereUniqueWithoutJournalUpdatedByInput[]
+  createMany?: Prisma.ClassSessionCreateManyJournalUpdatedByInputEnvelope
+  set?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  disconnect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  delete?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  connect?: Prisma.ClassSessionWhereUniqueInput | Prisma.ClassSessionWhereUniqueInput[]
+  update?: Prisma.ClassSessionUpdateWithWhereUniqueWithoutJournalUpdatedByInput | Prisma.ClassSessionUpdateWithWhereUniqueWithoutJournalUpdatedByInput[]
+  updateMany?: Prisma.ClassSessionUpdateManyWithWhereWithoutJournalUpdatedByInput | Prisma.ClassSessionUpdateManyWithWhereWithoutJournalUpdatedByInput[]
   deleteMany?: Prisma.ClassSessionScalarWhereInput | Prisma.ClassSessionScalarWhereInput[]
 }
 
@@ -1270,6 +1431,20 @@ export type ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput = {
   deleteMany?: Prisma.ClassSessionScalarWhereInput | Prisma.ClassSessionScalarWhereInput[]
 }
 
+export type ClassSessionCreateNestedOneWithoutJournalHistoriesInput = {
+  create?: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalHistoriesInput, Prisma.ClassSessionUncheckedCreateWithoutJournalHistoriesInput>
+  connectOrCreate?: Prisma.ClassSessionCreateOrConnectWithoutJournalHistoriesInput
+  connect?: Prisma.ClassSessionWhereUniqueInput
+}
+
+export type ClassSessionUpdateOneRequiredWithoutJournalHistoriesNestedInput = {
+  create?: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalHistoriesInput, Prisma.ClassSessionUncheckedCreateWithoutJournalHistoriesInput>
+  connectOrCreate?: Prisma.ClassSessionCreateOrConnectWithoutJournalHistoriesInput
+  upsert?: Prisma.ClassSessionUpsertWithoutJournalHistoriesInput
+  connect?: Prisma.ClassSessionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ClassSessionUpdateToOneWithWhereWithoutJournalHistoriesInput, Prisma.ClassSessionUpdateWithoutJournalHistoriesInput>, Prisma.ClassSessionUncheckedUpdateWithoutJournalHistoriesInput>
+}
+
 export type ClassSessionCreateNestedManyWithoutCourseOfferingSubjectInput = {
   create?: Prisma.XOR<Prisma.ClassSessionCreateWithoutCourseOfferingSubjectInput, Prisma.ClassSessionUncheckedCreateWithoutCourseOfferingSubjectInput> | Prisma.ClassSessionCreateWithoutCourseOfferingSubjectInput[] | Prisma.ClassSessionUncheckedCreateWithoutCourseOfferingSubjectInput[]
   connectOrCreate?: Prisma.ClassSessionCreateOrConnectWithoutCourseOfferingSubjectInput | Prisma.ClassSessionCreateOrConnectWithoutCourseOfferingSubjectInput[]
@@ -1343,12 +1518,16 @@ export type ClassSessionCreateWithoutInstructorInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
   class: Prisma.ClassCreateNestedOneWithoutSessionsInput
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
   courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
   classProgram: Prisma.ClassProgramCreateNestedOneWithoutSessionsInput
   schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
   canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
   createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
   replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
   replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
@@ -1382,6 +1561,10 @@ export type ClassSessionUncheckedCreateWithoutInstructorInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
   replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
@@ -1415,12 +1598,16 @@ export type ClassSessionCreateWithoutCanceledByInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
   class: Prisma.ClassCreateNestedOneWithoutSessionsInput
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
   courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
   classProgram: Prisma.ClassProgramCreateNestedOneWithoutSessionsInput
   schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
   instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
   createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
   replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
   replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
@@ -1454,6 +1641,10 @@ export type ClassSessionUncheckedCreateWithoutCanceledByInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
   replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
@@ -1467,6 +1658,166 @@ export type ClassSessionCreateOrConnectWithoutCanceledByInput = {
 
 export type ClassSessionCreateManyCanceledByInputEnvelope = {
   data: Prisma.ClassSessionCreateManyCanceledByInput | Prisma.ClassSessionCreateManyCanceledByInput[]
+  skipDuplicates?: boolean
+}
+
+export type ClassSessionCreateWithoutJournalWrittenByInput = {
+  id?: string
+  kind: $Enums.SessionKind
+  title?: string | null
+  lessonContent?: string | null
+  startsAt: Date | string
+  endsAt: Date | string
+  room?: string | null
+  status: $Enums.SessionStatus
+  completedMinutes?: number | null
+  canceledAt?: Date | string | null
+  cancelReason?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  actualStartedAt?: Date | string | null
+  actualEndedAt?: Date | string | null
+  journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
+  class: Prisma.ClassCreateNestedOneWithoutSessionsInput
+  classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
+  courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
+  classProgram: Prisma.ClassProgramCreateNestedOneWithoutSessionsInput
+  schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
+  instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
+  canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
+  createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
+  replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
+  replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
+  sessionParticipants?: Prisma.SessionParticipantCreateNestedManyWithoutClassSessionInput
+  attendanceCodes?: Prisma.AttendanceCodeCreateNestedManyWithoutClassSessionInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutClassSessionInput
+}
+
+export type ClassSessionUncheckedCreateWithoutJournalWrittenByInput = {
+  id?: string
+  classId: string
+  classSubjectId: string
+  courseOfferingSubjectId: string
+  classProgramId: string
+  schedulePatternId?: string | null
+  instructorId: string
+  kind: $Enums.SessionKind
+  replacementForSessionId?: string | null
+  title?: string | null
+  lessonContent?: string | null
+  startsAt: Date | string
+  endsAt: Date | string
+  room?: string | null
+  status: $Enums.SessionStatus
+  completedMinutes?: number | null
+  canceledAt?: Date | string | null
+  canceledById?: string | null
+  cancelReason?: string | null
+  createdById?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  actualStartedAt?: Date | string | null
+  actualEndedAt?: Date | string | null
+  journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
+  replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
+  sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
+  attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutClassSessionInput
+}
+
+export type ClassSessionCreateOrConnectWithoutJournalWrittenByInput = {
+  where: Prisma.ClassSessionWhereUniqueInput
+  create: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalWrittenByInput, Prisma.ClassSessionUncheckedCreateWithoutJournalWrittenByInput>
+}
+
+export type ClassSessionCreateManyJournalWrittenByInputEnvelope = {
+  data: Prisma.ClassSessionCreateManyJournalWrittenByInput | Prisma.ClassSessionCreateManyJournalWrittenByInput[]
+  skipDuplicates?: boolean
+}
+
+export type ClassSessionCreateWithoutJournalUpdatedByInput = {
+  id?: string
+  kind: $Enums.SessionKind
+  title?: string | null
+  lessonContent?: string | null
+  startsAt: Date | string
+  endsAt: Date | string
+  room?: string | null
+  status: $Enums.SessionStatus
+  completedMinutes?: number | null
+  canceledAt?: Date | string | null
+  cancelReason?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  actualStartedAt?: Date | string | null
+  actualEndedAt?: Date | string | null
+  journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
+  class: Prisma.ClassCreateNestedOneWithoutSessionsInput
+  classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
+  courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
+  classProgram: Prisma.ClassProgramCreateNestedOneWithoutSessionsInput
+  schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
+  instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
+  canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
+  createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
+  replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
+  replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
+  sessionParticipants?: Prisma.SessionParticipantCreateNestedManyWithoutClassSessionInput
+  attendanceCodes?: Prisma.AttendanceCodeCreateNestedManyWithoutClassSessionInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutClassSessionInput
+}
+
+export type ClassSessionUncheckedCreateWithoutJournalUpdatedByInput = {
+  id?: string
+  classId: string
+  classSubjectId: string
+  courseOfferingSubjectId: string
+  classProgramId: string
+  schedulePatternId?: string | null
+  instructorId: string
+  kind: $Enums.SessionKind
+  replacementForSessionId?: string | null
+  title?: string | null
+  lessonContent?: string | null
+  startsAt: Date | string
+  endsAt: Date | string
+  room?: string | null
+  status: $Enums.SessionStatus
+  completedMinutes?: number | null
+  canceledAt?: Date | string | null
+  canceledById?: string | null
+  cancelReason?: string | null
+  createdById?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  actualStartedAt?: Date | string | null
+  actualEndedAt?: Date | string | null
+  journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
+  replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
+  sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
+  attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutClassSessionInput
+}
+
+export type ClassSessionCreateOrConnectWithoutJournalUpdatedByInput = {
+  where: Prisma.ClassSessionWhereUniqueInput
+  create: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalUpdatedByInput, Prisma.ClassSessionUncheckedCreateWithoutJournalUpdatedByInput>
+}
+
+export type ClassSessionCreateManyJournalUpdatedByInputEnvelope = {
+  data: Prisma.ClassSessionCreateManyJournalUpdatedByInput | Prisma.ClassSessionCreateManyJournalUpdatedByInput[]
   skipDuplicates?: boolean
 }
 
@@ -1487,6 +1838,7 @@ export type ClassSessionCreateWithoutCreatedByInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
   class: Prisma.ClassCreateNestedOneWithoutSessionsInput
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
   courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
@@ -1494,6 +1846,9 @@ export type ClassSessionCreateWithoutCreatedByInput = {
   schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
   instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
   canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
   replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
   replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
   sessionParticipants?: Prisma.SessionParticipantCreateNestedManyWithoutClassSessionInput
@@ -1526,6 +1881,10 @@ export type ClassSessionUncheckedCreateWithoutCreatedByInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
   replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
@@ -1587,6 +1946,9 @@ export type ClassSessionScalarWhereInput = {
   actualStartedAt?: Prisma.DateTimeNullableFilter<"ClassSession"> | Date | string | null
   actualEndedAt?: Prisma.DateTimeNullableFilter<"ClassSession"> | Date | string | null
   journalWrittenAt?: Prisma.DateTimeNullableFilter<"ClassSession"> | Date | string | null
+  journalWrittenById?: Prisma.UuidNullableFilter<"ClassSession"> | string | null
+  journalUpdatedAt?: Prisma.DateTimeNullableFilter<"ClassSession"> | Date | string | null
+  journalUpdatedById?: Prisma.UuidNullableFilter<"ClassSession"> | string | null
 }
 
 export type ClassSessionUpsertWithWhereUniqueWithoutCanceledByInput = {
@@ -1603,6 +1965,38 @@ export type ClassSessionUpdateWithWhereUniqueWithoutCanceledByInput = {
 export type ClassSessionUpdateManyWithWhereWithoutCanceledByInput = {
   where: Prisma.ClassSessionScalarWhereInput
   data: Prisma.XOR<Prisma.ClassSessionUpdateManyMutationInput, Prisma.ClassSessionUncheckedUpdateManyWithoutCanceledByInput>
+}
+
+export type ClassSessionUpsertWithWhereUniqueWithoutJournalWrittenByInput = {
+  where: Prisma.ClassSessionWhereUniqueInput
+  update: Prisma.XOR<Prisma.ClassSessionUpdateWithoutJournalWrittenByInput, Prisma.ClassSessionUncheckedUpdateWithoutJournalWrittenByInput>
+  create: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalWrittenByInput, Prisma.ClassSessionUncheckedCreateWithoutJournalWrittenByInput>
+}
+
+export type ClassSessionUpdateWithWhereUniqueWithoutJournalWrittenByInput = {
+  where: Prisma.ClassSessionWhereUniqueInput
+  data: Prisma.XOR<Prisma.ClassSessionUpdateWithoutJournalWrittenByInput, Prisma.ClassSessionUncheckedUpdateWithoutJournalWrittenByInput>
+}
+
+export type ClassSessionUpdateManyWithWhereWithoutJournalWrittenByInput = {
+  where: Prisma.ClassSessionScalarWhereInput
+  data: Prisma.XOR<Prisma.ClassSessionUpdateManyMutationInput, Prisma.ClassSessionUncheckedUpdateManyWithoutJournalWrittenByInput>
+}
+
+export type ClassSessionUpsertWithWhereUniqueWithoutJournalUpdatedByInput = {
+  where: Prisma.ClassSessionWhereUniqueInput
+  update: Prisma.XOR<Prisma.ClassSessionUpdateWithoutJournalUpdatedByInput, Prisma.ClassSessionUncheckedUpdateWithoutJournalUpdatedByInput>
+  create: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalUpdatedByInput, Prisma.ClassSessionUncheckedCreateWithoutJournalUpdatedByInput>
+}
+
+export type ClassSessionUpdateWithWhereUniqueWithoutJournalUpdatedByInput = {
+  where: Prisma.ClassSessionWhereUniqueInput
+  data: Prisma.XOR<Prisma.ClassSessionUpdateWithoutJournalUpdatedByInput, Prisma.ClassSessionUncheckedUpdateWithoutJournalUpdatedByInput>
+}
+
+export type ClassSessionUpdateManyWithWhereWithoutJournalUpdatedByInput = {
+  where: Prisma.ClassSessionScalarWhereInput
+  data: Prisma.XOR<Prisma.ClassSessionUpdateManyMutationInput, Prisma.ClassSessionUncheckedUpdateManyWithoutJournalUpdatedByInput>
 }
 
 export type ClassSessionUpsertWithWhereUniqueWithoutCreatedByInput = {
@@ -1638,6 +2032,7 @@ export type ClassSessionCreateWithoutAttendanceCodesInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
   class: Prisma.ClassCreateNestedOneWithoutSessionsInput
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
   courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
@@ -1645,6 +2040,9 @@ export type ClassSessionCreateWithoutAttendanceCodesInput = {
   schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
   instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
   canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
   createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
   replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
   replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
@@ -1678,6 +2076,10 @@ export type ClassSessionUncheckedCreateWithoutAttendanceCodesInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
   replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutClassSessionInput
@@ -1716,6 +2118,7 @@ export type ClassSessionUpdateWithoutAttendanceCodesInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
   courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
@@ -1723,6 +2126,9 @@ export type ClassSessionUpdateWithoutAttendanceCodesInput = {
   schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
   instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
   canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
   createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
   replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
   replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
@@ -1756,6 +2162,10 @@ export type ClassSessionUncheckedUpdateWithoutAttendanceCodesInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
   replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutClassSessionNestedInput
@@ -1778,6 +2188,7 @@ export type ClassSessionCreateWithoutAttendanceRecordsInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
   class: Prisma.ClassCreateNestedOneWithoutSessionsInput
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
   courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
@@ -1785,6 +2196,9 @@ export type ClassSessionCreateWithoutAttendanceRecordsInput = {
   schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
   instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
   canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
   createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
   replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
   replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
@@ -1818,6 +2232,10 @@ export type ClassSessionUncheckedCreateWithoutAttendanceRecordsInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
   replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
@@ -1856,6 +2274,7 @@ export type ClassSessionUpdateWithoutAttendanceRecordsInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
   courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
@@ -1863,6 +2282,9 @@ export type ClassSessionUpdateWithoutAttendanceRecordsInput = {
   schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
   instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
   canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
   createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
   replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
   replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
@@ -1896,6 +2318,10 @@ export type ClassSessionUncheckedUpdateWithoutAttendanceRecordsInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
   replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
@@ -1918,12 +2344,16 @@ export type ClassSessionCreateWithoutClassInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
   courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
   classProgram: Prisma.ClassProgramCreateNestedOneWithoutSessionsInput
   schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
   instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
   canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
   createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
   replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
   replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
@@ -1957,6 +2387,10 @@ export type ClassSessionUncheckedCreateWithoutClassInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
   replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
@@ -2006,12 +2440,16 @@ export type ClassSessionCreateWithoutClassProgramInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
   class: Prisma.ClassCreateNestedOneWithoutSessionsInput
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
   courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
   schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
   instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
   canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
   createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
   replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
   replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
@@ -2045,6 +2483,10 @@ export type ClassSessionUncheckedCreateWithoutClassProgramInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
   replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
@@ -2094,12 +2536,16 @@ export type ClassSessionCreateWithoutClassSubjectInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
   class: Prisma.ClassCreateNestedOneWithoutSessionsInput
   courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
   classProgram: Prisma.ClassProgramCreateNestedOneWithoutSessionsInput
   schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
   instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
   canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
   createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
   replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
   replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
@@ -2133,6 +2579,10 @@ export type ClassSessionUncheckedCreateWithoutClassSubjectInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
   replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
@@ -2182,12 +2632,16 @@ export type ClassSessionCreateWithoutSchedulePatternInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
   class: Prisma.ClassCreateNestedOneWithoutSessionsInput
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
   courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
   classProgram: Prisma.ClassProgramCreateNestedOneWithoutSessionsInput
   instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
   canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
   createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
   replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
   replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
@@ -2221,6 +2675,10 @@ export type ClassSessionUncheckedCreateWithoutSchedulePatternInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
   replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
@@ -2270,6 +2728,7 @@ export type ClassSessionCreateWithoutReplacementSessionsInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
   class: Prisma.ClassCreateNestedOneWithoutSessionsInput
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
   courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
@@ -2277,6 +2736,9 @@ export type ClassSessionCreateWithoutReplacementSessionsInput = {
   schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
   instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
   canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
   createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
   replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
   sessionParticipants?: Prisma.SessionParticipantCreateNestedManyWithoutClassSessionInput
@@ -2310,6 +2772,10 @@ export type ClassSessionUncheckedCreateWithoutReplacementSessionsInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutClassSessionInput
@@ -2337,6 +2803,7 @@ export type ClassSessionCreateWithoutReplacementForInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
   class: Prisma.ClassCreateNestedOneWithoutSessionsInput
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
   courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
@@ -2344,6 +2811,9 @@ export type ClassSessionCreateWithoutReplacementForInput = {
   schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
   instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
   canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
   createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
   replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
   sessionParticipants?: Prisma.SessionParticipantCreateNestedManyWithoutClassSessionInput
@@ -2376,6 +2846,10 @@ export type ClassSessionUncheckedCreateWithoutReplacementForInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
   replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
@@ -2420,6 +2894,7 @@ export type ClassSessionUpdateWithoutReplacementSessionsInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
   courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
@@ -2427,6 +2902,9 @@ export type ClassSessionUpdateWithoutReplacementSessionsInput = {
   schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
   instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
   canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
   createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
   replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
   sessionParticipants?: Prisma.SessionParticipantUpdateManyWithoutClassSessionNestedInput
@@ -2460,6 +2938,10 @@ export type ClassSessionUncheckedUpdateWithoutReplacementSessionsInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutClassSessionNestedInput
@@ -2481,6 +2963,162 @@ export type ClassSessionUpdateManyWithWhereWithoutReplacementForInput = {
   data: Prisma.XOR<Prisma.ClassSessionUpdateManyMutationInput, Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForInput>
 }
 
+export type ClassSessionCreateWithoutJournalHistoriesInput = {
+  id?: string
+  kind: $Enums.SessionKind
+  title?: string | null
+  lessonContent?: string | null
+  startsAt: Date | string
+  endsAt: Date | string
+  room?: string | null
+  status: $Enums.SessionStatus
+  completedMinutes?: number | null
+  canceledAt?: Date | string | null
+  cancelReason?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  actualStartedAt?: Date | string | null
+  actualEndedAt?: Date | string | null
+  journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
+  class: Prisma.ClassCreateNestedOneWithoutSessionsInput
+  classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
+  courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
+  classProgram: Prisma.ClassProgramCreateNestedOneWithoutSessionsInput
+  schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
+  instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
+  canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
+  replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
+  replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
+  sessionParticipants?: Prisma.SessionParticipantCreateNestedManyWithoutClassSessionInput
+  attendanceCodes?: Prisma.AttendanceCodeCreateNestedManyWithoutClassSessionInput
+  attendanceRecords?: Prisma.AttendanceRecordCreateNestedManyWithoutClassSessionInput
+}
+
+export type ClassSessionUncheckedCreateWithoutJournalHistoriesInput = {
+  id?: string
+  classId: string
+  classSubjectId: string
+  courseOfferingSubjectId: string
+  classProgramId: string
+  schedulePatternId?: string | null
+  instructorId: string
+  kind: $Enums.SessionKind
+  replacementForSessionId?: string | null
+  title?: string | null
+  lessonContent?: string | null
+  startsAt: Date | string
+  endsAt: Date | string
+  room?: string | null
+  status: $Enums.SessionStatus
+  completedMinutes?: number | null
+  canceledAt?: Date | string | null
+  canceledById?: string | null
+  cancelReason?: string | null
+  createdById?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  actualStartedAt?: Date | string | null
+  actualEndedAt?: Date | string | null
+  journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
+  sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
+  attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutClassSessionInput
+}
+
+export type ClassSessionCreateOrConnectWithoutJournalHistoriesInput = {
+  where: Prisma.ClassSessionWhereUniqueInput
+  create: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalHistoriesInput, Prisma.ClassSessionUncheckedCreateWithoutJournalHistoriesInput>
+}
+
+export type ClassSessionUpsertWithoutJournalHistoriesInput = {
+  update: Prisma.XOR<Prisma.ClassSessionUpdateWithoutJournalHistoriesInput, Prisma.ClassSessionUncheckedUpdateWithoutJournalHistoriesInput>
+  create: Prisma.XOR<Prisma.ClassSessionCreateWithoutJournalHistoriesInput, Prisma.ClassSessionUncheckedCreateWithoutJournalHistoriesInput>
+  where?: Prisma.ClassSessionWhereInput
+}
+
+export type ClassSessionUpdateToOneWithWhereWithoutJournalHistoriesInput = {
+  where?: Prisma.ClassSessionWhereInput
+  data: Prisma.XOR<Prisma.ClassSessionUpdateWithoutJournalHistoriesInput, Prisma.ClassSessionUncheckedUpdateWithoutJournalHistoriesInput>
+}
+
+export type ClassSessionUpdateWithoutJournalHistoriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumSessionKindFieldUpdateOperationsInput | $Enums.SessionKind
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lessonContent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  room?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  completedMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  cancelReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
+  classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
+  courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
+  classProgram?: Prisma.ClassProgramUpdateOneRequiredWithoutSessionsNestedInput
+  schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
+  instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
+  canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
+  replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
+  replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
+  sessionParticipants?: Prisma.SessionParticipantUpdateManyWithoutClassSessionNestedInput
+  attendanceCodes?: Prisma.AttendanceCodeUpdateManyWithoutClassSessionNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutClassSessionNestedInput
+}
+
+export type ClassSessionUncheckedUpdateWithoutJournalHistoriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  classId?: Prisma.StringFieldUpdateOperationsInput | string
+  classSubjectId?: Prisma.StringFieldUpdateOperationsInput | string
+  courseOfferingSubjectId?: Prisma.StringFieldUpdateOperationsInput | string
+  classProgramId?: Prisma.StringFieldUpdateOperationsInput | string
+  schedulePatternId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  instructorId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumSessionKindFieldUpdateOperationsInput | $Enums.SessionKind
+  replacementForSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lessonContent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  room?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  completedMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  canceledById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
+  sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
+  attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutClassSessionNestedInput
+}
+
 export type ClassSessionCreateWithoutCourseOfferingSubjectInput = {
   id?: string
   kind: $Enums.SessionKind
@@ -2498,12 +3136,16 @@ export type ClassSessionCreateWithoutCourseOfferingSubjectInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
   class: Prisma.ClassCreateNestedOneWithoutSessionsInput
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
   classProgram: Prisma.ClassProgramCreateNestedOneWithoutSessionsInput
   schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
   instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
   canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
   createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
   replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
   replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
@@ -2537,6 +3179,10 @@ export type ClassSessionUncheckedCreateWithoutCourseOfferingSubjectInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
   replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedCreateNestedManyWithoutClassSessionInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
@@ -2586,6 +3232,7 @@ export type ClassSessionCreateWithoutSessionParticipantsInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
   class: Prisma.ClassCreateNestedOneWithoutSessionsInput
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSessionsInput
   courseOfferingSubject: Prisma.CourseOfferingSubjectCreateNestedOneWithoutClassSessionsInput
@@ -2593,6 +3240,9 @@ export type ClassSessionCreateWithoutSessionParticipantsInput = {
   schedulePattern?: Prisma.ClassSchedulePatternCreateNestedOneWithoutSessionsInput
   instructor: Prisma.UserCreateNestedOneWithoutSessionsInstructedInput
   canceledBy?: Prisma.UserCreateNestedOneWithoutSessionsCanceledInput
+  journalWrittenBy?: Prisma.UserCreateNestedOneWithoutJournalAuthoredSessionsInput
+  journalUpdatedBy?: Prisma.UserCreateNestedOneWithoutJournalEditedSessionsInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryCreateNestedManyWithoutClassSessionInput
   createdBy?: Prisma.UserCreateNestedOneWithoutSessionsCreatedInput
   replacementFor?: Prisma.ClassSessionCreateNestedOneWithoutReplacementSessionsInput
   replacementSessions?: Prisma.ClassSessionCreateNestedManyWithoutReplacementForInput
@@ -2626,6 +3276,10 @@ export type ClassSessionUncheckedCreateWithoutSessionParticipantsInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedCreateNestedManyWithoutClassSessionInput
   replacementSessions?: Prisma.ClassSessionUncheckedCreateNestedManyWithoutReplacementForInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedCreateNestedManyWithoutClassSessionInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedCreateNestedManyWithoutClassSessionInput
@@ -2664,6 +3318,7 @@ export type ClassSessionUpdateWithoutSessionParticipantsInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
   courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
@@ -2671,6 +3326,9 @@ export type ClassSessionUpdateWithoutSessionParticipantsInput = {
   schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
   instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
   canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
   createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
   replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
   replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
@@ -2704,6 +3362,10 @@ export type ClassSessionUncheckedUpdateWithoutSessionParticipantsInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
   replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
   attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutClassSessionNestedInput
@@ -2734,6 +3396,9 @@ export type ClassSessionCreateManyInstructorInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
 }
 
 export type ClassSessionCreateManyCanceledByInput = {
@@ -2761,6 +3426,69 @@ export type ClassSessionCreateManyCanceledByInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+}
+
+export type ClassSessionCreateManyJournalWrittenByInput = {
+  id?: string
+  classId: string
+  classSubjectId: string
+  courseOfferingSubjectId: string
+  classProgramId: string
+  schedulePatternId?: string | null
+  instructorId: string
+  kind: $Enums.SessionKind
+  replacementForSessionId?: string | null
+  title?: string | null
+  lessonContent?: string | null
+  startsAt: Date | string
+  endsAt: Date | string
+  room?: string | null
+  status: $Enums.SessionStatus
+  completedMinutes?: number | null
+  canceledAt?: Date | string | null
+  canceledById?: string | null
+  cancelReason?: string | null
+  createdById?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  actualStartedAt?: Date | string | null
+  actualEndedAt?: Date | string | null
+  journalWrittenAt?: Date | string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
+}
+
+export type ClassSessionCreateManyJournalUpdatedByInput = {
+  id?: string
+  classId: string
+  classSubjectId: string
+  courseOfferingSubjectId: string
+  classProgramId: string
+  schedulePatternId?: string | null
+  instructorId: string
+  kind: $Enums.SessionKind
+  replacementForSessionId?: string | null
+  title?: string | null
+  lessonContent?: string | null
+  startsAt: Date | string
+  endsAt: Date | string
+  room?: string | null
+  status: $Enums.SessionStatus
+  completedMinutes?: number | null
+  canceledAt?: Date | string | null
+  canceledById?: string | null
+  cancelReason?: string | null
+  createdById?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  actualStartedAt?: Date | string | null
+  actualEndedAt?: Date | string | null
+  journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
 }
 
 export type ClassSessionCreateManyCreatedByInput = {
@@ -2788,6 +3516,9 @@ export type ClassSessionCreateManyCreatedByInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
 }
 
 export type ClassSessionUpdateWithoutInstructorInput = {
@@ -2807,12 +3538,16 @@ export type ClassSessionUpdateWithoutInstructorInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
   courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
   classProgram?: Prisma.ClassProgramUpdateOneRequiredWithoutSessionsNestedInput
   schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
   canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
   createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
   replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
   replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
@@ -2846,6 +3581,10 @@ export type ClassSessionUncheckedUpdateWithoutInstructorInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
   replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
@@ -2877,6 +3616,9 @@ export type ClassSessionUncheckedUpdateManyWithoutInstructorInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type ClassSessionUpdateWithoutCanceledByInput = {
@@ -2896,12 +3638,16 @@ export type ClassSessionUpdateWithoutCanceledByInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
   courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
   classProgram?: Prisma.ClassProgramUpdateOneRequiredWithoutSessionsNestedInput
   schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
   instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
   createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
   replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
   replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
@@ -2935,6 +3681,10 @@ export type ClassSessionUncheckedUpdateWithoutCanceledByInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
   replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
@@ -2966,6 +3716,209 @@ export type ClassSessionUncheckedUpdateManyWithoutCanceledByInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type ClassSessionUpdateWithoutJournalWrittenByInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumSessionKindFieldUpdateOperationsInput | $Enums.SessionKind
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lessonContent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  room?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  completedMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  cancelReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
+  classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
+  courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
+  classProgram?: Prisma.ClassProgramUpdateOneRequiredWithoutSessionsNestedInput
+  schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
+  instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
+  canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
+  createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
+  replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
+  replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
+  sessionParticipants?: Prisma.SessionParticipantUpdateManyWithoutClassSessionNestedInput
+  attendanceCodes?: Prisma.AttendanceCodeUpdateManyWithoutClassSessionNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutClassSessionNestedInput
+}
+
+export type ClassSessionUncheckedUpdateWithoutJournalWrittenByInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  classId?: Prisma.StringFieldUpdateOperationsInput | string
+  classSubjectId?: Prisma.StringFieldUpdateOperationsInput | string
+  courseOfferingSubjectId?: Prisma.StringFieldUpdateOperationsInput | string
+  classProgramId?: Prisma.StringFieldUpdateOperationsInput | string
+  schedulePatternId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  instructorId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumSessionKindFieldUpdateOperationsInput | $Enums.SessionKind
+  replacementForSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lessonContent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  room?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  completedMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  canceledById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
+  replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
+  sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
+  attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutClassSessionNestedInput
+}
+
+export type ClassSessionUncheckedUpdateManyWithoutJournalWrittenByInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  classId?: Prisma.StringFieldUpdateOperationsInput | string
+  classSubjectId?: Prisma.StringFieldUpdateOperationsInput | string
+  courseOfferingSubjectId?: Prisma.StringFieldUpdateOperationsInput | string
+  classProgramId?: Prisma.StringFieldUpdateOperationsInput | string
+  schedulePatternId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  instructorId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumSessionKindFieldUpdateOperationsInput | $Enums.SessionKind
+  replacementForSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lessonContent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  room?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  completedMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  canceledById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type ClassSessionUpdateWithoutJournalUpdatedByInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumSessionKindFieldUpdateOperationsInput | $Enums.SessionKind
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lessonContent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  room?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  completedMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  cancelReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
+  classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
+  courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
+  classProgram?: Prisma.ClassProgramUpdateOneRequiredWithoutSessionsNestedInput
+  schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
+  instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
+  canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
+  createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
+  replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
+  replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
+  sessionParticipants?: Prisma.SessionParticipantUpdateManyWithoutClassSessionNestedInput
+  attendanceCodes?: Prisma.AttendanceCodeUpdateManyWithoutClassSessionNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUpdateManyWithoutClassSessionNestedInput
+}
+
+export type ClassSessionUncheckedUpdateWithoutJournalUpdatedByInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  classId?: Prisma.StringFieldUpdateOperationsInput | string
+  classSubjectId?: Prisma.StringFieldUpdateOperationsInput | string
+  courseOfferingSubjectId?: Prisma.StringFieldUpdateOperationsInput | string
+  classProgramId?: Prisma.StringFieldUpdateOperationsInput | string
+  schedulePatternId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  instructorId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumSessionKindFieldUpdateOperationsInput | $Enums.SessionKind
+  replacementForSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lessonContent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  room?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  completedMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  canceledById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
+  replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
+  sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
+  attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
+  attendanceRecords?: Prisma.AttendanceRecordUncheckedUpdateManyWithoutClassSessionNestedInput
+}
+
+export type ClassSessionUncheckedUpdateManyWithoutJournalUpdatedByInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  classId?: Prisma.StringFieldUpdateOperationsInput | string
+  classSubjectId?: Prisma.StringFieldUpdateOperationsInput | string
+  courseOfferingSubjectId?: Prisma.StringFieldUpdateOperationsInput | string
+  classProgramId?: Prisma.StringFieldUpdateOperationsInput | string
+  schedulePatternId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  instructorId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumSessionKindFieldUpdateOperationsInput | $Enums.SessionKind
+  replacementForSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lessonContent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endsAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  room?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
+  completedMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  canceledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  canceledById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type ClassSessionUpdateWithoutCreatedByInput = {
@@ -2985,6 +3938,7 @@ export type ClassSessionUpdateWithoutCreatedByInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
   courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
@@ -2992,6 +3946,9 @@ export type ClassSessionUpdateWithoutCreatedByInput = {
   schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
   instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
   canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
   replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
   replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
   sessionParticipants?: Prisma.SessionParticipantUpdateManyWithoutClassSessionNestedInput
@@ -3024,6 +3981,10 @@ export type ClassSessionUncheckedUpdateWithoutCreatedByInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
   replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
@@ -3055,6 +4016,9 @@ export type ClassSessionUncheckedUpdateManyWithoutCreatedByInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type ClassSessionCreateManyClassInput = {
@@ -3082,6 +4046,9 @@ export type ClassSessionCreateManyClassInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
 }
 
 export type ClassSessionUpdateWithoutClassInput = {
@@ -3101,12 +4068,16 @@ export type ClassSessionUpdateWithoutClassInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
   courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
   classProgram?: Prisma.ClassProgramUpdateOneRequiredWithoutSessionsNestedInput
   schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
   instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
   canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
   createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
   replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
   replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
@@ -3140,6 +4111,10 @@ export type ClassSessionUncheckedUpdateWithoutClassInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
   replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
@@ -3171,6 +4146,9 @@ export type ClassSessionUncheckedUpdateManyWithoutClassInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type ClassSessionCreateManyClassProgramInput = {
@@ -3198,6 +4176,9 @@ export type ClassSessionCreateManyClassProgramInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
 }
 
 export type ClassSessionUpdateWithoutClassProgramInput = {
@@ -3217,12 +4198,16 @@ export type ClassSessionUpdateWithoutClassProgramInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
   courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
   schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
   instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
   canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
   createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
   replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
   replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
@@ -3256,6 +4241,10 @@ export type ClassSessionUncheckedUpdateWithoutClassProgramInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
   replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
@@ -3287,6 +4276,9 @@ export type ClassSessionUncheckedUpdateManyWithoutClassProgramInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type ClassSessionCreateManyClassSubjectInput = {
@@ -3314,6 +4306,9 @@ export type ClassSessionCreateManyClassSubjectInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
 }
 
 export type ClassSessionUpdateWithoutClassSubjectInput = {
@@ -3333,12 +4328,16 @@ export type ClassSessionUpdateWithoutClassSubjectInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
   courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
   classProgram?: Prisma.ClassProgramUpdateOneRequiredWithoutSessionsNestedInput
   schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
   instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
   canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
   createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
   replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
   replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
@@ -3372,6 +4371,10 @@ export type ClassSessionUncheckedUpdateWithoutClassSubjectInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
   replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
@@ -3403,6 +4406,9 @@ export type ClassSessionUncheckedUpdateManyWithoutClassSubjectInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type ClassSessionCreateManySchedulePatternInput = {
@@ -3430,6 +4436,9 @@ export type ClassSessionCreateManySchedulePatternInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
 }
 
 export type ClassSessionUpdateWithoutSchedulePatternInput = {
@@ -3449,12 +4458,16 @@ export type ClassSessionUpdateWithoutSchedulePatternInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
   courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
   classProgram?: Prisma.ClassProgramUpdateOneRequiredWithoutSessionsNestedInput
   instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
   canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
   createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
   replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
   replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
@@ -3488,6 +4501,10 @@ export type ClassSessionUncheckedUpdateWithoutSchedulePatternInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
   replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
@@ -3519,6 +4536,9 @@ export type ClassSessionUncheckedUpdateManyWithoutSchedulePatternInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type ClassSessionCreateManyReplacementForInput = {
@@ -3546,6 +4566,9 @@ export type ClassSessionCreateManyReplacementForInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
 }
 
 export type ClassSessionUpdateWithoutReplacementForInput = {
@@ -3565,6 +4588,7 @@ export type ClassSessionUpdateWithoutReplacementForInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
   courseOfferingSubject?: Prisma.CourseOfferingSubjectUpdateOneRequiredWithoutClassSessionsNestedInput
@@ -3572,6 +4596,9 @@ export type ClassSessionUpdateWithoutReplacementForInput = {
   schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
   instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
   canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
   createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
   replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
   sessionParticipants?: Prisma.SessionParticipantUpdateManyWithoutClassSessionNestedInput
@@ -3604,6 +4631,10 @@ export type ClassSessionUncheckedUpdateWithoutReplacementForInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
   replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
@@ -3635,6 +4666,9 @@ export type ClassSessionUncheckedUpdateManyWithoutReplacementForInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type ClassSessionCreateManyCourseOfferingSubjectInput = {
@@ -3662,6 +4696,9 @@ export type ClassSessionCreateManyCourseOfferingSubjectInput = {
   actualStartedAt?: Date | string | null
   actualEndedAt?: Date | string | null
   journalWrittenAt?: Date | string | null
+  journalWrittenById?: string | null
+  journalUpdatedAt?: Date | string | null
+  journalUpdatedById?: string | null
 }
 
 export type ClassSessionUpdateWithoutCourseOfferingSubjectInput = {
@@ -3681,12 +4718,16 @@ export type ClassSessionUpdateWithoutCourseOfferingSubjectInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   class?: Prisma.ClassUpdateOneRequiredWithoutSessionsNestedInput
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSessionsNestedInput
   classProgram?: Prisma.ClassProgramUpdateOneRequiredWithoutSessionsNestedInput
   schedulePattern?: Prisma.ClassSchedulePatternUpdateOneWithoutSessionsNestedInput
   instructor?: Prisma.UserUpdateOneRequiredWithoutSessionsInstructedNestedInput
   canceledBy?: Prisma.UserUpdateOneWithoutSessionsCanceledNestedInput
+  journalWrittenBy?: Prisma.UserUpdateOneWithoutJournalAuthoredSessionsNestedInput
+  journalUpdatedBy?: Prisma.UserUpdateOneWithoutJournalEditedSessionsNestedInput
+  journalHistories?: Prisma.ClassSessionJournalHistoryUpdateManyWithoutClassSessionNestedInput
   createdBy?: Prisma.UserUpdateOneWithoutSessionsCreatedNestedInput
   replacementFor?: Prisma.ClassSessionUpdateOneWithoutReplacementSessionsNestedInput
   replacementSessions?: Prisma.ClassSessionUpdateManyWithoutReplacementForNestedInput
@@ -3720,6 +4761,10 @@ export type ClassSessionUncheckedUpdateWithoutCourseOfferingSubjectInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalHistories?: Prisma.ClassSessionJournalHistoryUncheckedUpdateManyWithoutClassSessionNestedInput
   replacementSessions?: Prisma.ClassSessionUncheckedUpdateManyWithoutReplacementForNestedInput
   sessionParticipants?: Prisma.SessionParticipantUncheckedUpdateManyWithoutClassSessionNestedInput
   attendanceCodes?: Prisma.AttendanceCodeUncheckedUpdateManyWithoutClassSessionNestedInput
@@ -3751,6 +4796,9 @@ export type ClassSessionUncheckedUpdateManyWithoutCourseOfferingSubjectInput = {
   actualStartedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   actualEndedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   journalWrittenAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalWrittenById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  journalUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  journalUpdatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 
@@ -3759,6 +4807,7 @@ export type ClassSessionUncheckedUpdateManyWithoutCourseOfferingSubjectInput = {
  */
 
 export type ClassSessionCountOutputType = {
+  journalHistories: number
   replacementSessions: number
   sessionParticipants: number
   attendanceCodes: number
@@ -3766,6 +4815,7 @@ export type ClassSessionCountOutputType = {
 }
 
 export type ClassSessionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  journalHistories?: boolean | ClassSessionCountOutputTypeCountJournalHistoriesArgs
   replacementSessions?: boolean | ClassSessionCountOutputTypeCountReplacementSessionsArgs
   sessionParticipants?: boolean | ClassSessionCountOutputTypeCountSessionParticipantsArgs
   attendanceCodes?: boolean | ClassSessionCountOutputTypeCountAttendanceCodesArgs
@@ -3780,6 +4830,13 @@ export type ClassSessionCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types
    * Select specific fields to fetch from the ClassSessionCountOutputType
    */
   select?: Prisma.ClassSessionCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * ClassSessionCountOutputType without action
+ */
+export type ClassSessionCountOutputTypeCountJournalHistoriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ClassSessionJournalHistoryWhereInput
 }
 
 /**
@@ -3837,6 +4894,9 @@ export type ClassSessionSelect<ExtArgs extends runtime.Types.Extensions.Internal
   actualStartedAt?: boolean
   actualEndedAt?: boolean
   journalWrittenAt?: boolean
+  journalWrittenById?: boolean
+  journalUpdatedAt?: boolean
+  journalUpdatedById?: boolean
   class?: boolean | Prisma.ClassDefaultArgs<ExtArgs>
   classSubject?: boolean | Prisma.ClassSubjectDefaultArgs<ExtArgs>
   courseOfferingSubject?: boolean | Prisma.CourseOfferingSubjectDefaultArgs<ExtArgs>
@@ -3844,6 +4904,9 @@ export type ClassSessionSelect<ExtArgs extends runtime.Types.Extensions.Internal
   schedulePattern?: boolean | Prisma.ClassSession$schedulePatternArgs<ExtArgs>
   instructor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   canceledBy?: boolean | Prisma.ClassSession$canceledByArgs<ExtArgs>
+  journalWrittenBy?: boolean | Prisma.ClassSession$journalWrittenByArgs<ExtArgs>
+  journalUpdatedBy?: boolean | Prisma.ClassSession$journalUpdatedByArgs<ExtArgs>
+  journalHistories?: boolean | Prisma.ClassSession$journalHistoriesArgs<ExtArgs>
   createdBy?: boolean | Prisma.ClassSession$createdByArgs<ExtArgs>
   replacementFor?: boolean | Prisma.ClassSession$replacementForArgs<ExtArgs>
   replacementSessions?: boolean | Prisma.ClassSession$replacementSessionsArgs<ExtArgs>
@@ -3879,6 +4942,9 @@ export type ClassSessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   actualStartedAt?: boolean
   actualEndedAt?: boolean
   journalWrittenAt?: boolean
+  journalWrittenById?: boolean
+  journalUpdatedAt?: boolean
+  journalUpdatedById?: boolean
   class?: boolean | Prisma.ClassDefaultArgs<ExtArgs>
   classSubject?: boolean | Prisma.ClassSubjectDefaultArgs<ExtArgs>
   courseOfferingSubject?: boolean | Prisma.CourseOfferingSubjectDefaultArgs<ExtArgs>
@@ -3886,6 +4952,8 @@ export type ClassSessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   schedulePattern?: boolean | Prisma.ClassSession$schedulePatternArgs<ExtArgs>
   instructor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   canceledBy?: boolean | Prisma.ClassSession$canceledByArgs<ExtArgs>
+  journalWrittenBy?: boolean | Prisma.ClassSession$journalWrittenByArgs<ExtArgs>
+  journalUpdatedBy?: boolean | Prisma.ClassSession$journalUpdatedByArgs<ExtArgs>
   createdBy?: boolean | Prisma.ClassSession$createdByArgs<ExtArgs>
   replacementFor?: boolean | Prisma.ClassSession$replacementForArgs<ExtArgs>
 }, ExtArgs["result"]["classSession"]>
@@ -3916,6 +4984,9 @@ export type ClassSessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   actualStartedAt?: boolean
   actualEndedAt?: boolean
   journalWrittenAt?: boolean
+  journalWrittenById?: boolean
+  journalUpdatedAt?: boolean
+  journalUpdatedById?: boolean
   class?: boolean | Prisma.ClassDefaultArgs<ExtArgs>
   classSubject?: boolean | Prisma.ClassSubjectDefaultArgs<ExtArgs>
   courseOfferingSubject?: boolean | Prisma.CourseOfferingSubjectDefaultArgs<ExtArgs>
@@ -3923,6 +4994,8 @@ export type ClassSessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   schedulePattern?: boolean | Prisma.ClassSession$schedulePatternArgs<ExtArgs>
   instructor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   canceledBy?: boolean | Prisma.ClassSession$canceledByArgs<ExtArgs>
+  journalWrittenBy?: boolean | Prisma.ClassSession$journalWrittenByArgs<ExtArgs>
+  journalUpdatedBy?: boolean | Prisma.ClassSession$journalUpdatedByArgs<ExtArgs>
   createdBy?: boolean | Prisma.ClassSession$createdByArgs<ExtArgs>
   replacementFor?: boolean | Prisma.ClassSession$replacementForArgs<ExtArgs>
 }, ExtArgs["result"]["classSession"]>
@@ -3953,9 +5026,12 @@ export type ClassSessionSelectScalar = {
   actualStartedAt?: boolean
   actualEndedAt?: boolean
   journalWrittenAt?: boolean
+  journalWrittenById?: boolean
+  journalUpdatedAt?: boolean
+  journalUpdatedById?: boolean
 }
 
-export type ClassSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "classId" | "classSubjectId" | "courseOfferingSubjectId" | "classProgramId" | "schedulePatternId" | "instructorId" | "kind" | "replacementForSessionId" | "title" | "lessonContent" | "startsAt" | "endsAt" | "room" | "status" | "completedMinutes" | "canceledAt" | "canceledById" | "cancelReason" | "createdById" | "createdAt" | "updatedAt" | "actualStartedAt" | "actualEndedAt" | "journalWrittenAt", ExtArgs["result"]["classSession"]>
+export type ClassSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "classId" | "classSubjectId" | "courseOfferingSubjectId" | "classProgramId" | "schedulePatternId" | "instructorId" | "kind" | "replacementForSessionId" | "title" | "lessonContent" | "startsAt" | "endsAt" | "room" | "status" | "completedMinutes" | "canceledAt" | "canceledById" | "cancelReason" | "createdById" | "createdAt" | "updatedAt" | "actualStartedAt" | "actualEndedAt" | "journalWrittenAt" | "journalWrittenById" | "journalUpdatedAt" | "journalUpdatedById", ExtArgs["result"]["classSession"]>
 export type ClassSessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   class?: boolean | Prisma.ClassDefaultArgs<ExtArgs>
   classSubject?: boolean | Prisma.ClassSubjectDefaultArgs<ExtArgs>
@@ -3964,6 +5040,9 @@ export type ClassSessionInclude<ExtArgs extends runtime.Types.Extensions.Interna
   schedulePattern?: boolean | Prisma.ClassSession$schedulePatternArgs<ExtArgs>
   instructor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   canceledBy?: boolean | Prisma.ClassSession$canceledByArgs<ExtArgs>
+  journalWrittenBy?: boolean | Prisma.ClassSession$journalWrittenByArgs<ExtArgs>
+  journalUpdatedBy?: boolean | Prisma.ClassSession$journalUpdatedByArgs<ExtArgs>
+  journalHistories?: boolean | Prisma.ClassSession$journalHistoriesArgs<ExtArgs>
   createdBy?: boolean | Prisma.ClassSession$createdByArgs<ExtArgs>
   replacementFor?: boolean | Prisma.ClassSession$replacementForArgs<ExtArgs>
   replacementSessions?: boolean | Prisma.ClassSession$replacementSessionsArgs<ExtArgs>
@@ -3980,6 +5059,8 @@ export type ClassSessionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types
   schedulePattern?: boolean | Prisma.ClassSession$schedulePatternArgs<ExtArgs>
   instructor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   canceledBy?: boolean | Prisma.ClassSession$canceledByArgs<ExtArgs>
+  journalWrittenBy?: boolean | Prisma.ClassSession$journalWrittenByArgs<ExtArgs>
+  journalUpdatedBy?: boolean | Prisma.ClassSession$journalUpdatedByArgs<ExtArgs>
   createdBy?: boolean | Prisma.ClassSession$createdByArgs<ExtArgs>
   replacementFor?: boolean | Prisma.ClassSession$replacementForArgs<ExtArgs>
 }
@@ -3991,6 +5072,8 @@ export type ClassSessionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types
   schedulePattern?: boolean | Prisma.ClassSession$schedulePatternArgs<ExtArgs>
   instructor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   canceledBy?: boolean | Prisma.ClassSession$canceledByArgs<ExtArgs>
+  journalWrittenBy?: boolean | Prisma.ClassSession$journalWrittenByArgs<ExtArgs>
+  journalUpdatedBy?: boolean | Prisma.ClassSession$journalUpdatedByArgs<ExtArgs>
   createdBy?: boolean | Prisma.ClassSession$createdByArgs<ExtArgs>
   replacementFor?: boolean | Prisma.ClassSession$replacementForArgs<ExtArgs>
 }
@@ -4005,6 +5088,9 @@ export type $ClassSessionPayload<ExtArgs extends runtime.Types.Extensions.Intern
     schedulePattern: Prisma.$ClassSchedulePatternPayload<ExtArgs> | null
     instructor: Prisma.$UserPayload<ExtArgs>
     canceledBy: Prisma.$UserPayload<ExtArgs> | null
+    journalWrittenBy: Prisma.$UserPayload<ExtArgs> | null
+    journalUpdatedBy: Prisma.$UserPayload<ExtArgs> | null
+    journalHistories: Prisma.$ClassSessionJournalHistoryPayload<ExtArgs>[]
     createdBy: Prisma.$UserPayload<ExtArgs> | null
     replacementFor: Prisma.$ClassSessionPayload<ExtArgs> | null
     replacementSessions: Prisma.$ClassSessionPayload<ExtArgs>[]
@@ -4113,6 +5199,18 @@ export type $ClassSessionPayload<ExtArgs extends runtime.Types.Extensions.Intern
      * 수업 일지를 최초 작성한 시각입니다.
      */
     journalWrittenAt: Date | null
+    /**
+     * 수업 일지를 최초 작성한 사람입니다.
+     */
+    journalWrittenById: string | null
+    /**
+     * 수업 일지를 마지막으로 수정한 시각입니다.
+     */
+    journalUpdatedAt: Date | null
+    /**
+     * 수업 일지를 마지막으로 수정한 사람입니다.
+     */
+    journalUpdatedById: string | null
   }, ExtArgs["result"]["classSession"]>
   composites: {}
 }
@@ -4514,6 +5612,9 @@ export interface Prisma__ClassSessionClient<T, Null = never, ExtArgs extends run
   schedulePattern<T extends Prisma.ClassSession$schedulePatternArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClassSession$schedulePatternArgs<ExtArgs>>): Prisma.Prisma__ClassSchedulePatternClient<runtime.Types.Result.GetResult<Prisma.$ClassSchedulePatternPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   instructor<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   canceledBy<T extends Prisma.ClassSession$canceledByArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClassSession$canceledByArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  journalWrittenBy<T extends Prisma.ClassSession$journalWrittenByArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClassSession$journalWrittenByArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  journalUpdatedBy<T extends Prisma.ClassSession$journalUpdatedByArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClassSession$journalUpdatedByArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  journalHistories<T extends Prisma.ClassSession$journalHistoriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClassSession$journalHistoriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ClassSessionJournalHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   createdBy<T extends Prisma.ClassSession$createdByArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClassSession$createdByArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   replacementFor<T extends Prisma.ClassSession$replacementForArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClassSession$replacementForArgs<ExtArgs>>): Prisma.Prisma__ClassSessionClient<runtime.Types.Result.GetResult<Prisma.$ClassSessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   replacementSessions<T extends Prisma.ClassSession$replacementSessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClassSession$replacementSessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ClassSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -4574,6 +5675,9 @@ export interface ClassSessionFieldRefs {
   readonly actualStartedAt: Prisma.FieldRef<"ClassSession", 'DateTime'>
   readonly actualEndedAt: Prisma.FieldRef<"ClassSession", 'DateTime'>
   readonly journalWrittenAt: Prisma.FieldRef<"ClassSession", 'DateTime'>
+  readonly journalWrittenById: Prisma.FieldRef<"ClassSession", 'String'>
+  readonly journalUpdatedAt: Prisma.FieldRef<"ClassSession", 'DateTime'>
+  readonly journalUpdatedById: Prisma.FieldRef<"ClassSession", 'String'>
 }
     
 
@@ -5010,6 +6114,68 @@ export type ClassSession$canceledByArgs<ExtArgs extends runtime.Types.Extensions
    */
   include?: Prisma.UserInclude<ExtArgs> | null
   where?: Prisma.UserWhereInput
+}
+
+/**
+ * ClassSession.journalWrittenBy
+ */
+export type ClassSession$journalWrittenByArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the User
+   */
+  select?: Prisma.UserSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the User
+   */
+  omit?: Prisma.UserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserInclude<ExtArgs> | null
+  where?: Prisma.UserWhereInput
+}
+
+/**
+ * ClassSession.journalUpdatedBy
+ */
+export type ClassSession$journalUpdatedByArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the User
+   */
+  select?: Prisma.UserSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the User
+   */
+  omit?: Prisma.UserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserInclude<ExtArgs> | null
+  where?: Prisma.UserWhereInput
+}
+
+/**
+ * ClassSession.journalHistories
+ */
+export type ClassSession$journalHistoriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ClassSessionJournalHistory
+   */
+  select?: Prisma.ClassSessionJournalHistorySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ClassSessionJournalHistory
+   */
+  omit?: Prisma.ClassSessionJournalHistoryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ClassSessionJournalHistoryInclude<ExtArgs> | null
+  where?: Prisma.ClassSessionJournalHistoryWhereInput
+  orderBy?: Prisma.ClassSessionJournalHistoryOrderByWithRelationInput | Prisma.ClassSessionJournalHistoryOrderByWithRelationInput[]
+  cursor?: Prisma.ClassSessionJournalHistoryWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ClassSessionJournalHistoryScalarFieldEnum | Prisma.ClassSessionJournalHistoryScalarFieldEnum[]
 }
 
 /**

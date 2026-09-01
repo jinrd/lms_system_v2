@@ -65,6 +65,7 @@ export const ModelName = {
   ClassInstructorAssignment: 'ClassInstructorAssignment',
   ClassSchedulePattern: 'ClassSchedulePattern',
   ClassSession: 'ClassSession',
+  ClassSessionJournalHistory: 'ClassSessionJournalHistory',
   Notice: 'Notice',
   NoticeClassTarget: 'NoticeClassTarget',
   NoticeFile: 'NoticeFile',
@@ -373,10 +374,27 @@ export const ClassSessionScalarFieldEnum = {
   updatedAt: 'updatedAt',
   actualStartedAt: 'actualStartedAt',
   actualEndedAt: 'actualEndedAt',
-  journalWrittenAt: 'journalWrittenAt'
+  journalWrittenAt: 'journalWrittenAt',
+  journalWrittenById: 'journalWrittenById',
+  journalUpdatedAt: 'journalUpdatedAt',
+  journalUpdatedById: 'journalUpdatedById'
 } as const
 
 export type ClassSessionScalarFieldEnum = (typeof ClassSessionScalarFieldEnum)[keyof typeof ClassSessionScalarFieldEnum]
+
+
+export const ClassSessionJournalHistoryScalarFieldEnum = {
+  id: 'id',
+  classSessionId: 'classSessionId',
+  previousTitle: 'previousTitle',
+  previousLessonContent: 'previousLessonContent',
+  newTitle: 'newTitle',
+  newLessonContent: 'newLessonContent',
+  changedById: 'changedById',
+  changedAt: 'changedAt'
+} as const
+
+export type ClassSessionJournalHistoryScalarFieldEnum = (typeof ClassSessionJournalHistoryScalarFieldEnum)[keyof typeof ClassSessionJournalHistoryScalarFieldEnum]
 
 
 export const NoticeScalarFieldEnum = {
