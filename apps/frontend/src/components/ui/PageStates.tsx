@@ -1,9 +1,13 @@
-import { AlertTriangle, Inbox, LoaderCircle } from "lucide-react";
+import { AlertTriangle, Inbox } from "lucide-react";
 
 export function LoadingState({ message = "불러오는 중입니다." }) {
   return (
-    <div className="page-state" role="status">
-      <LoaderCircle className="page-state__spinner" size={30} />
+    <div className="page-state page-state--loading" role="status">
+      <div className="loading-skeleton" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
       <p>{message}</p>
     </div>
   );

@@ -196,10 +196,9 @@ export function UsersPage() {
     action?.type === "reject" ? rejectMutation : statusMutation;
 
   return (
-    <>
+    <div className="page-stack users-page">
       <section className="page-header">
         <div>
-          <p className="page-eyebrow">사용자 관리</p>
           <h1>학생·직원 관리</h1>
           <p>가입 승인과 사용자 계정 상태를 관리합니다.</p>
         </div>
@@ -754,7 +753,7 @@ export function UsersPage() {
           </form>
         </Modal>
       )}
-    </>
+    </div>
   );
 }
 

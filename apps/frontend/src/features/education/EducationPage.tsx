@@ -203,10 +203,9 @@ export function EducationPage() {
   }
 
   return (
-    <>
+    <div className="page-stack education-page">
       <section className="page-header">
         <div>
-          <p className="page-eyebrow">교육 관리</p>
           <h1>교육 분야·세부 과목</h1>
           <p>최상위 교육 분야와 실제 교육 단위인 세부 과목을 관리합니다.</p>
         </div>
@@ -619,6 +618,6 @@ export function EducationPage() {
           </form>
         </Modal>
       )}
-    </>
+    </div>
   );
 }

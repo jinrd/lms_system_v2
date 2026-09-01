@@ -116,7 +116,7 @@ export function ClassSchedulePanel({ classItem }: { classItem: ManagedClass }) {
     patterns.some((item) => item.active);
 
   return (
-    <section className="card">
+    <section className="card class-schedule-panel">
       <div className="card-header">
         <div>
           <h2>반복 시간표</h2>

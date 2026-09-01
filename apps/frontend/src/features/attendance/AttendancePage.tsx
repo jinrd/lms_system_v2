@@ -68,16 +68,15 @@ export function AttendancePage() {
 
   if (user?.role !== "STUDENT") {
     return (
-      <>
+      <div className="page-stack attendance-page">
         <section className="page-header">
           <div>
-            <p className="page-eyebrow">출석 관리</p>
             <h1>출석</h1>
             <p>출석 코드는 실제 수업 카드에서 생성할 수 있습니다.</p>
           </div>
         </section>
 
-        <section className="content-card">
+        <section className="content-card guidance-card">
           <div className="info-banner">
             <KeyRound size={20} />
             <div>
@@ -89,7 +88,7 @@ export function AttendancePage() {
             </div>
           </div>
         </section>
-      </>
+      </div>
     );
   }
 
@@ -109,18 +108,27 @@ export function AttendancePage() {
   const sessions = sessionsQuery.data ?? [];
 
   return (
-    <>
+    <div className="page-stack attendance-page attendance-page--student">
       <section className="page-header">
         <div>
-          <p className="page-eyebrow">학생 출석</p>
           <h1>출석 코드 입력</h1>
-          <p>오늘 진행되는 수업의 4자리 코드를 입력합니다.</p>
+          <p>선생님이 안내한 4자리 코드는 발급 후 5분 동안 사용할 수 있습니다.</p>
         </div>
       </section>
 
       {sessions.length ? (
-        <section className="content-card">
-          <form className="stack" onSubmit={handleSubmit}>
+        <section className="content-card attendance-entry-card">
+          <header className="attendance-entry-card__header">
+            <span className="attendance-entry-card__icon" aria-hidden="true">
+              <KeyRound size={22} />
+            </span>
+            <div>
+              <h2>오늘 수업 출석</h2>
+              <p>수업을 선택한 뒤 숫자 네 자리를 입력하세요.</p>
+            </div>
+          </header>
+
+          <form className="stack attendance-entry-form" onSubmit={handleSubmit}>
             <label className="form-field form-field--flush">
               <span>오늘 수업</span>
               <select name="classSessionId" required>
@@ -136,6 +144,7 @@ export function AttendancePage() {
             <label className="form-field">
               <span>4자리 출석 코드</span>
               <input
+                className="attendance-code-input"
                 name="code"
                 type="text"
                 inputMode="numeric"
@@ -146,6 +155,7 @@ export function AttendancePage() {
                 placeholder="0000"
                 required
               />
+              <small>숫자 4자리</small>
             </label>
 
             {submitMutation.isError && (
@@ -185,6 +195,6 @@ export function AttendancePage() {
           description="수강 중인 반의 오늘 수업이 표시됩니다."
         />
       )}
-    </>
+    </div>
   );
 }

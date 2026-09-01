@@ -137,7 +137,7 @@ export function ClassEnrollmentsPanel({
   const editable = !classItem.archived && classItem.derivedStatus !== "ENDED";
 
   return (
-    <section className="nested-section">
+    <section className="nested-section class-enrollments-panel">
       <header className="nested-section__header">
         <div>
           <h3>수강생 관리</h3>

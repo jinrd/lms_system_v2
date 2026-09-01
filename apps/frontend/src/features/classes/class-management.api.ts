@@ -153,6 +153,8 @@ export type ClassSession = {
   schedulePatternId: string | null;
   subjectId: string;
   subjectName: string;
+  courseOfferingId: string;
+  courseOfferingName: string;
   instructor: { id: string; name: string; loginId: string | null };
   kind: SessionKind;
   title: string | null;
@@ -264,7 +266,9 @@ export function getSessionJournalHistories(
   classId: string,
   sessionId: string,
 ): Promise<SessionJournalHistory[]> {
-  return apiRequest(`/classes/${classId}/sessions/${sessionId}/journal/histories`);
+  return apiRequest(
+    `/classes/${classId}/sessions/${sessionId}/journal/histories`,
+  );
 }
 
 export function updateSessionJournal(

@@ -32,6 +32,8 @@ export type ClassSessionResponse = {
   schedulePatternId: string | null;
   subjectId: string;
   subjectName: string;
+  courseOfferingId: string;
+  courseOfferingName: string;
   instructor: {
     id: string;
     name: string;
@@ -68,6 +70,16 @@ export type ClassSessionGenerationResponse = {
 };
 
 const SESSION_INCLUDE = {
+  classProgram: {
+    include: {
+      courseOffering: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  },
   classSubject: {
     include: {
       courseOfferingSubject: {
@@ -262,7 +274,7 @@ export class ClassSessionsService {
         schedulePatternId: string;
         instructorId: string;
         kind: SessionKind;
-        title: string;
+        title: string | null;
         startsAt: Date;
         endsAt: Date;
         room: string | null;
@@ -302,7 +314,8 @@ export class ClassSessionsService {
             schedulePatternId: pattern.id,
             instructorId: pattern.classProgram.courseOffering.instructor.id,
             kind: SessionKind.REGULAR,
-            title: pattern.classProgram.courseOffering.name,
+            // 제목은 수업 일지를 쓸 때 붙인다. 과목과 교육과정은 별도 열로 내려간다.
+            title: null,
             startsAt,
             endsAt,
             room: pattern.room ?? classItem.room,
@@ -1195,6 +1208,12 @@ export class ClassSessionsService {
     journalUpdatedBy: { id: string; name: string } | null;
     createdAt: Date;
     updatedAt: Date;
+    classProgram: {
+      courseOffering: {
+        id: string;
+        name: string;
+      };
+    };
     classSubject: {
       courseOfferingSubject: {
         subject: {
@@ -1224,6 +1243,8 @@ export class ClassSessionsService {
       schedulePatternId: session.schedulePatternId,
       subjectId: session.classSubject.courseOfferingSubject.subject.id,
       subjectName: session.classSubject.courseOfferingSubject.subject.name,
+      courseOfferingId: session.classProgram.courseOffering.id,
+      courseOfferingName: session.classProgram.courseOffering.name,
       instructor: session.instructor,
       kind: session.kind,
       title: session.title,

@@ -177,7 +177,7 @@ export function SessionParticipantsAction({
               </div>
             </div>
 
-            <section className="nested-section">
+            <section className="nested-section session-participants-panel">
               <header className="nested-section__header">
                 <div>
                   <h3>현재 추가 참여자</h3>

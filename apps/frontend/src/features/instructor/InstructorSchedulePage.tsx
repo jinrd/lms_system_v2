@@ -274,12 +274,11 @@ export function InstructorSchedulePage() {
   }
 
   return (
-    <>
+    <div className="page-stack instructor-schedule-page">
       <section className="page-header">
         <div>
-          <p className="page-eyebrow">강사 업무</p>
           <h1>내 수업</h1>
-          <p>담당 수업 일정과 진행 상태를 관리합니다.</p>
+          <p>이번 주 담당 수업을 확인하고 출석과 수업 일지를 처리합니다.</p>
         </div>
       </section>
 
@@ -370,9 +369,7 @@ export function InstructorSchedulePage() {
 
                       <div className="instructor-session-card__body">
                         <div className="cluster">
-                          <strong>
-                            {session.title || session.subjectName}
-                          </strong>
+                          <strong>{session.subjectName}</strong>
 
                           <span
                             className={`status-badge ${
@@ -381,9 +378,18 @@ export function InstructorSchedulePage() {
                           >
                             {STATUS_LABELS[session.status]}
                           </span>
+
+                          {session.kind === "MAKEUP" && (
+                            <span className="status-badge status-badge--warning">
+                              보강
+                            </span>
+                          )}
                         </div>
 
-                        <p>{formatDate(session.startsAt)}</p>
+                        <p>
+                          {session.courseOfferingName} ·{" "}
+                          {formatDate(session.startsAt)}
+                        </p>
 
                         <small>
                           <Clock3 size={13} />
@@ -394,7 +400,10 @@ export function InstructorSchedulePage() {
 
                         {session.lessonContent && (
                           <div className="session-content-preview">
-                            <strong>수업 일지</strong>
+                            <strong>
+                              수업 일지
+                              {session.title ? ` · ${session.title}` : ""}
+                            </strong>
                             <p>{session.lessonContent}</p>
                           </div>
                         )}
@@ -404,7 +413,7 @@ export function InstructorSchedulePage() {
                         <AttendanceCodeAction
                           classId={selectedClass.id}
                           sessionId={session.id}
-                          sessionTitle={session.title || session.subjectName}
+                          sessionTitle={session.subjectName}
                           sessionStatus={session.status}
                         />
 
@@ -412,7 +421,7 @@ export function InstructorSchedulePage() {
                           session.status === "COMPLETED") && (
                           <SessionAttendanceAction
                             sessionId={session.id}
-                            sessionTitle={session.title || session.subjectName}
+                            sessionTitle={session.subjectName}
                             sessionStartsAt={session.startsAt}
                           />
                         )}
@@ -507,6 +516,7 @@ export function InstructorSchedulePage() {
                   {formatDateTime(editor.session.startsAt)} ·{" "}
                   {editor.session.subjectName}
                 </strong>
+                <p>{editor.session.courseOfferingName}</p>
                 <p>
                   {editor.session.instructor.name}
                   {editor.session.journalWrittenAt
@@ -602,7 +612,7 @@ export function InstructorSchedulePage() {
       {editor?.type === "start" && (
         <Modal
           title="수업 시작"
-          description={`${editor.session.title || editor.session.subjectName} 수업을 시작합니다.`}
+          description={`${editor.session.subjectName} 수업을 시작합니다.`}
           onClose={() => setEditor(null)}
         >
           <div className="stack">
@@ -696,6 +706,6 @@ export function InstructorSchedulePage() {
           </form>
         </Modal>
       )}
-    </>
+    </div>
   );
 }

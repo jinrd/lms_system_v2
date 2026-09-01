@@ -152,7 +152,7 @@ export function SubjectEnrollmentPanel({
   const editable = !classItem.archived && classItem.derivedStatus !== "ENDED";
 
   return (
-    <section className="nested-section">
+    <section className="nested-section subject-enrollment-panel">
       <header className="nested-section__header">
         <div>
           <h3>과목 단위 보충·보강</h3>

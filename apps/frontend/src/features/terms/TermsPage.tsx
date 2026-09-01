@@ -171,10 +171,9 @@ export function TermsPage() {
   }
 
   return (
-    <>
+    <div className="page-stack terms-page">
       <section className="page-header">
         <div>
-          <p className="page-eyebrow">시스템 관리</p>
           <h1>약관 관리</h1>
           <p>회원가입에 사용하는 약관 문서와 버전을 관리합니다.</p>
         </div>
@@ -593,6 +592,6 @@ export function TermsPage() {
           </form>
         </Modal>
       )}
-    </>
+    </div>
   );
 }
