@@ -266,7 +266,7 @@ export type ClassSchedulePatternWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"ClassSchedulePattern"> | Date | string
   class?: Prisma.XOR<Prisma.ClassScalarRelationFilter, Prisma.ClassWhereInput>
   classSubject?: Prisma.XOR<Prisma.ClassSubjectScalarRelationFilter, Prisma.ClassSubjectWhereInput>
-  classProgram?: Prisma.XOR<Prisma.ClassProgramNullableScalarRelationFilter, Prisma.ClassProgramWhereInput> | null
+  classProgram?: Prisma.XOR<Prisma.ClassProgramScalarRelationFilter, Prisma.ClassProgramWhereInput>
   sessions?: Prisma.ClassSessionListRelationFilter
 }
 
@@ -306,7 +306,7 @@ export type ClassSchedulePatternWhereUniqueInput = Prisma.AtLeast<{
   updatedAt?: Prisma.DateTimeFilter<"ClassSchedulePattern"> | Date | string
   class?: Prisma.XOR<Prisma.ClassScalarRelationFilter, Prisma.ClassWhereInput>
   classSubject?: Prisma.XOR<Prisma.ClassSubjectScalarRelationFilter, Prisma.ClassSubjectWhereInput>
-  classProgram?: Prisma.XOR<Prisma.ClassProgramNullableScalarRelationFilter, Prisma.ClassProgramWhereInput> | null
+  classProgram?: Prisma.XOR<Prisma.ClassProgramScalarRelationFilter, Prisma.ClassProgramWhereInput>
   sessions?: Prisma.ClassSessionListRelationFilter
 }, "id" | "id_classId_classSubjectId">
 
@@ -357,7 +357,7 @@ export type ClassSchedulePatternCreateInput = {
   updatedAt?: Date | string
   class: Prisma.ClassCreateNestedOneWithoutSchedulePatternsInput
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSchedulePatternsInput
-  classProgram?: Prisma.ClassProgramCreateNestedOneWithoutSchedulePatternsInput
+  classProgram: Prisma.ClassProgramCreateNestedOneWithoutSchedulePatternsInput
   sessions?: Prisma.ClassSessionCreateNestedManyWithoutSchedulePatternInput
 }
 
@@ -387,7 +387,7 @@ export type ClassSchedulePatternUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   class?: Prisma.ClassUpdateOneRequiredWithoutSchedulePatternsNestedInput
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSchedulePatternsNestedInput
-  classProgram?: Prisma.ClassProgramUpdateOneWithoutSchedulePatternsNestedInput
+  classProgram?: Prisma.ClassProgramUpdateOneRequiredWithoutSchedulePatternsNestedInput
   sessions?: Prisma.ClassSessionUpdateManyWithoutSchedulePatternNestedInput
 }
 
@@ -668,7 +668,7 @@ export type ClassSchedulePatternCreateWithoutClassInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSchedulePatternsInput
-  classProgram?: Prisma.ClassProgramCreateNestedOneWithoutSchedulePatternsInput
+  classProgram: Prisma.ClassProgramCreateNestedOneWithoutSchedulePatternsInput
   sessions?: Prisma.ClassSessionCreateNestedManyWithoutSchedulePatternInput
 }
 
@@ -793,7 +793,7 @@ export type ClassSchedulePatternCreateWithoutClassSubjectInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   class: Prisma.ClassCreateNestedOneWithoutSchedulePatternsInput
-  classProgram?: Prisma.ClassProgramCreateNestedOneWithoutSchedulePatternsInput
+  classProgram: Prisma.ClassProgramCreateNestedOneWithoutSchedulePatternsInput
   sessions?: Prisma.ClassSessionCreateNestedManyWithoutSchedulePatternInput
 }
 
@@ -848,7 +848,7 @@ export type ClassSchedulePatternCreateWithoutSessionsInput = {
   updatedAt?: Date | string
   class: Prisma.ClassCreateNestedOneWithoutSchedulePatternsInput
   classSubject: Prisma.ClassSubjectCreateNestedOneWithoutSchedulePatternsInput
-  classProgram?: Prisma.ClassProgramCreateNestedOneWithoutSchedulePatternsInput
+  classProgram: Prisma.ClassProgramCreateNestedOneWithoutSchedulePatternsInput
 }
 
 export type ClassSchedulePatternUncheckedCreateWithoutSessionsInput = {
@@ -892,7 +892,7 @@ export type ClassSchedulePatternUpdateWithoutSessionsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   class?: Prisma.ClassUpdateOneRequiredWithoutSchedulePatternsNestedInput
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSchedulePatternsNestedInput
-  classProgram?: Prisma.ClassProgramUpdateOneWithoutSchedulePatternsNestedInput
+  classProgram?: Prisma.ClassProgramUpdateOneRequiredWithoutSchedulePatternsNestedInput
 }
 
 export type ClassSchedulePatternUncheckedUpdateWithoutSessionsInput = {
@@ -932,7 +932,7 @@ export type ClassSchedulePatternUpdateWithoutClassInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   classSubject?: Prisma.ClassSubjectUpdateOneRequiredWithoutSchedulePatternsNestedInput
-  classProgram?: Prisma.ClassProgramUpdateOneWithoutSchedulePatternsNestedInput
+  classProgram?: Prisma.ClassProgramUpdateOneRequiredWithoutSchedulePatternsNestedInput
   sessions?: Prisma.ClassSessionUpdateManyWithoutSchedulePatternNestedInput
 }
 
@@ -1040,7 +1040,7 @@ export type ClassSchedulePatternUpdateWithoutClassSubjectInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   class?: Prisma.ClassUpdateOneRequiredWithoutSchedulePatternsNestedInput
-  classProgram?: Prisma.ClassProgramUpdateOneWithoutSchedulePatternsNestedInput
+  classProgram?: Prisma.ClassProgramUpdateOneRequiredWithoutSchedulePatternsNestedInput
   sessions?: Prisma.ClassSessionUpdateManyWithoutSchedulePatternNestedInput
 }
 
@@ -1116,7 +1116,7 @@ export type ClassSchedulePatternSelect<ExtArgs extends runtime.Types.Extensions.
   updatedAt?: boolean
   class?: boolean | Prisma.ClassDefaultArgs<ExtArgs>
   classSubject?: boolean | Prisma.ClassSubjectDefaultArgs<ExtArgs>
-  classProgram?: boolean | Prisma.ClassSchedulePattern$classProgramArgs<ExtArgs>
+  classProgram?: boolean | Prisma.ClassProgramDefaultArgs<ExtArgs>
   sessions?: boolean | Prisma.ClassSchedulePattern$sessionsArgs<ExtArgs>
   _count?: boolean | Prisma.ClassSchedulePatternCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["classSchedulePattern"]>
@@ -1135,7 +1135,7 @@ export type ClassSchedulePatternSelectCreateManyAndReturn<ExtArgs extends runtim
   updatedAt?: boolean
   class?: boolean | Prisma.ClassDefaultArgs<ExtArgs>
   classSubject?: boolean | Prisma.ClassSubjectDefaultArgs<ExtArgs>
-  classProgram?: boolean | Prisma.ClassSchedulePattern$classProgramArgs<ExtArgs>
+  classProgram?: boolean | Prisma.ClassProgramDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["classSchedulePattern"]>
 
 export type ClassSchedulePatternSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1152,7 +1152,7 @@ export type ClassSchedulePatternSelectUpdateManyAndReturn<ExtArgs extends runtim
   updatedAt?: boolean
   class?: boolean | Prisma.ClassDefaultArgs<ExtArgs>
   classSubject?: boolean | Prisma.ClassSubjectDefaultArgs<ExtArgs>
-  classProgram?: boolean | Prisma.ClassSchedulePattern$classProgramArgs<ExtArgs>
+  classProgram?: boolean | Prisma.ClassProgramDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["classSchedulePattern"]>
 
 export type ClassSchedulePatternSelectScalar = {
@@ -1173,19 +1173,19 @@ export type ClassSchedulePatternOmit<ExtArgs extends runtime.Types.Extensions.In
 export type ClassSchedulePatternInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   class?: boolean | Prisma.ClassDefaultArgs<ExtArgs>
   classSubject?: boolean | Prisma.ClassSubjectDefaultArgs<ExtArgs>
-  classProgram?: boolean | Prisma.ClassSchedulePattern$classProgramArgs<ExtArgs>
+  classProgram?: boolean | Prisma.ClassProgramDefaultArgs<ExtArgs>
   sessions?: boolean | Prisma.ClassSchedulePattern$sessionsArgs<ExtArgs>
   _count?: boolean | Prisma.ClassSchedulePatternCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ClassSchedulePatternIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   class?: boolean | Prisma.ClassDefaultArgs<ExtArgs>
   classSubject?: boolean | Prisma.ClassSubjectDefaultArgs<ExtArgs>
-  classProgram?: boolean | Prisma.ClassSchedulePattern$classProgramArgs<ExtArgs>
+  classProgram?: boolean | Prisma.ClassProgramDefaultArgs<ExtArgs>
 }
 export type ClassSchedulePatternIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   class?: boolean | Prisma.ClassDefaultArgs<ExtArgs>
   classSubject?: boolean | Prisma.ClassSubjectDefaultArgs<ExtArgs>
-  classProgram?: boolean | Prisma.ClassSchedulePattern$classProgramArgs<ExtArgs>
+  classProgram?: boolean | Prisma.ClassProgramDefaultArgs<ExtArgs>
 }
 
 export type $ClassSchedulePatternPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1193,7 +1193,7 @@ export type $ClassSchedulePatternPayload<ExtArgs extends runtime.Types.Extension
   objects: {
     class: Prisma.$ClassPayload<ExtArgs>
     classSubject: Prisma.$ClassSubjectPayload<ExtArgs>
-    classProgram: Prisma.$ClassProgramPayload<ExtArgs> | null
+    classProgram: Prisma.$ClassProgramPayload<ExtArgs>
     sessions: Prisma.$ClassSessionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1637,7 +1637,7 @@ export interface Prisma__ClassSchedulePatternClient<T, Null = never, ExtArgs ext
   readonly [Symbol.toStringTag]: "PrismaPromise"
   class<T extends Prisma.ClassDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClassDefaultArgs<ExtArgs>>): Prisma.Prisma__ClassClient<runtime.Types.Result.GetResult<Prisma.$ClassPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   classSubject<T extends Prisma.ClassSubjectDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClassSubjectDefaultArgs<ExtArgs>>): Prisma.Prisma__ClassSubjectClient<runtime.Types.Result.GetResult<Prisma.$ClassSubjectPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  classProgram<T extends Prisma.ClassSchedulePattern$classProgramArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClassSchedulePattern$classProgramArgs<ExtArgs>>): Prisma.Prisma__ClassProgramClient<runtime.Types.Result.GetResult<Prisma.$ClassProgramPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  classProgram<T extends Prisma.ClassProgramDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClassProgramDefaultArgs<ExtArgs>>): Prisma.Prisma__ClassProgramClient<runtime.Types.Result.GetResult<Prisma.$ClassProgramPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   sessions<T extends Prisma.ClassSchedulePattern$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClassSchedulePattern$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ClassSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -2077,25 +2077,6 @@ export type ClassSchedulePatternDeleteManyArgs<ExtArgs extends runtime.Types.Ext
    * Limit how many ClassSchedulePatterns to delete.
    */
   limit?: number
-}
-
-/**
- * ClassSchedulePattern.classProgram
- */
-export type ClassSchedulePattern$classProgramArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the ClassProgram
-   */
-  select?: Prisma.ClassProgramSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the ClassProgram
-   */
-  omit?: Prisma.ClassProgramOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.ClassProgramInclude<ExtArgs> | null
-  where?: Prisma.ClassProgramWhereInput
 }
 
 /**

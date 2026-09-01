@@ -329,11 +329,6 @@ export type ClassProgramScalarRelationFilter = {
   isNot?: Prisma.ClassProgramWhereInput
 }
 
-export type ClassProgramNullableScalarRelationFilter = {
-  is?: Prisma.ClassProgramWhereInput | null
-  isNot?: Prisma.ClassProgramWhereInput | null
-}
-
 export type ClassProgramCreateNestedManyWithoutClassInput = {
   create?: Prisma.XOR<Prisma.ClassProgramCreateWithoutClassInput, Prisma.ClassProgramUncheckedCreateWithoutClassInput> | Prisma.ClassProgramCreateWithoutClassInput[] | Prisma.ClassProgramUncheckedCreateWithoutClassInput[]
   connectOrCreate?: Prisma.ClassProgramCreateOrConnectWithoutClassInput | Prisma.ClassProgramCreateOrConnectWithoutClassInput[]
@@ -396,12 +391,10 @@ export type ClassProgramCreateNestedOneWithoutSchedulePatternsInput = {
   connect?: Prisma.ClassProgramWhereUniqueInput
 }
 
-export type ClassProgramUpdateOneWithoutSchedulePatternsNestedInput = {
+export type ClassProgramUpdateOneRequiredWithoutSchedulePatternsNestedInput = {
   create?: Prisma.XOR<Prisma.ClassProgramCreateWithoutSchedulePatternsInput, Prisma.ClassProgramUncheckedCreateWithoutSchedulePatternsInput>
   connectOrCreate?: Prisma.ClassProgramCreateOrConnectWithoutSchedulePatternsInput
   upsert?: Prisma.ClassProgramUpsertWithoutSchedulePatternsInput
-  disconnect?: Prisma.ClassProgramWhereInput | boolean
-  delete?: Prisma.ClassProgramWhereInput | boolean
   connect?: Prisma.ClassProgramWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.ClassProgramUpdateToOneWithWhereWithoutSchedulePatternsInput, Prisma.ClassProgramUpdateWithoutSchedulePatternsInput>, Prisma.ClassProgramUncheckedUpdateWithoutSchedulePatternsInput>
 }
