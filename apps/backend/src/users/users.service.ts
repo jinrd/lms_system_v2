@@ -9,11 +9,11 @@ import * as argon2 from 'argon2';
 
 import type { AuthenticatedUser } from '../auth/auth.types';
 import {
-  ClassStatus,
   EnrollmentStatus,
   UserRole,
   UserStatus,
 } from '../generated/prisma/enums';
+import { todaySeoulDateOnly } from '../common/seoul-date';
 import { PrismaService } from '../prisma/prisma.service';
 import { PendingUsersQueryDto } from './dto/pending-users-query.dto';
 import { randomBytes } from 'crypto';
@@ -684,36 +684,30 @@ export class UsersService {
       }
 
       if (user.role === UserRole.INSTRUCTOR) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        // 담당 강사는 교육과정에 속한다. 아직 운영이 끝나지 않은 반이 이 강사의
+        // 교육과정을 포함하고 있으면, 담당 강사를 넘긴 뒤에만 비활성화할 수 있다.
+        const today = todaySeoulDateOnly();
 
-        const activeAssignments = await tx.classInstructorAssignment.count({
+        const activeClassCount = await tx.class.count({
           where: {
-            instructorId: user.id,
-            assignedFrom: {
-              lte: today,
+            archivedAt: null,
+            endDate: {
+              gte: today,
             },
-            OR: [
-              {
-                assignedTo: null,
-              },
-              {
-                assignedTo: {
-                  gte: today,
+            programs: {
+              some: {
+                courseOffering: {
+                  instructorId: user.id,
+                  archivedAt: null,
                 },
-              },
-            ],
-            class: {
-              status: {
-                in: [ClassStatus.PLANNED, ClassStatus.IN_PROGRESS],
               },
             },
           },
         });
 
-        if (activeAssignments > 0) {
+        if (activeClassCount > 0) {
           throw new ConflictException(
-            '활성 담당 반을 모두 인계하거나 담당 종료한 후 비활성화할 수 있습니다.',
+            '담당 교육과정을 다른 강사로 변경하거나 해당 반 운영이 끝난 뒤 비활성화할 수 있습니다.',
           );
         }
       }

@@ -892,6 +892,7 @@ export class ClassSessionsService {
           classId,
           classSubjectId: original.classSubjectId,
           courseOfferingSubjectId: original.courseOfferingSubjectId,
+          classProgramId: original.classProgramId,
           schedulePatternId: null,
           instructorId: original.classProgram.courseOffering.instructorId,
           kind: SessionKind.MAKEUP,
