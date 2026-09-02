@@ -47,6 +47,8 @@ export type AttendanceSubmissionResponse = {
   status: AttendanceStatus;
   method: AttendanceMethod;
   checkedAt: string;
+  /** 이미 처리된 출석이라 새로 기록하지 않고 기존 결과를 돌려준 경우다. */
+  alreadyProcessed: boolean;
 };
 
 type IpRateState = {
@@ -937,6 +939,11 @@ export class AttendanceService {
         },
       });
 
+      // 이미 출석 처리된 학생의 재입력은 새 기록을 만들지 않는다.
+      const alreadyProcessed =
+        existingRecord !== null &&
+        existingRecord.status !== AttendanceStatus.UNPROCESSED;
+
       const attendanceRecord = existingRecord
         ? existingRecord.status === AttendanceStatus.UNPROCESSED
           ? await tx.attendanceRecord.update({
@@ -978,6 +985,7 @@ export class AttendanceService {
       return {
         kind: 'SUCCESS' as const,
         attendanceRecord,
+        alreadyProcessed,
       };
     });
 
@@ -1006,6 +1014,7 @@ export class AttendanceService {
       status: attendanceRecord.status,
       method: attendanceRecord.method,
       checkedAt: attendanceRecord.checkedAt.toISOString(),
+      alreadyProcessed: result.alreadyProcessed,
     };
   }
 

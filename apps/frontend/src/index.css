@@ -4000,3 +4000,42 @@ a.summary-card:hover {
     gap: 2px;
   }
 }
+
+/* 학생 출석: 수업 한 건씩 카드로 보여준다 */
+.attendance-session-card {
+  display: grid;
+  gap: 14px;
+}
+
+.attendance-session-card__header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.attendance-session-card__header strong {
+  display: block;
+  font-size: 16px;
+}
+
+.attendance-session-card__header p {
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.attendance-session-card__header small {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* 출석이 끝난 수업은 입력 자리를 두지 않는다 */
+.attendance-session-card--done {
+  border-color: #bbf7d0;
+  background: #f8fffb;
+}

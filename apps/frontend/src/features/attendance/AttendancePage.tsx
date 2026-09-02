@@ -1,6 +1,6 @@
-import { CheckCircle2, KeyRound } from "lucide-react";
+import { CheckCircle2, Clock3, KeyRound } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useAuth } from "../../auth/AuthProvider";
 import {
   EmptyState,
@@ -10,6 +10,7 @@ import {
 import {
   getMyAttendanceSessions,
   submitAttendanceCode,
+  type StudentAttendanceSession,
 } from "./attendance.api";
 
 const ATTENDANCE_LABELS = {
@@ -23,6 +24,14 @@ const ATTENDANCE_LABELS = {
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "요청을 처리하지 못했습니다.";
+}
+
+function formatTime(value: string): string {
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
 }
 
 function formatDateTime(value: string): string {
@@ -54,17 +63,6 @@ export function AttendancePage() {
       await sessionsQuery.refetch();
     },
   });
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-
-    const formData = new FormData(event.currentTarget);
-
-    submitMutation.mutate({
-      classSessionId: String(formData.get("classSessionId") ?? ""),
-      code: String(formData.get("code") ?? ""),
-    });
-  };
 
   if (user?.role !== "STUDENT") {
     return (
@@ -111,90 +109,156 @@ export function AttendancePage() {
     <div className="page-stack attendance-page attendance-page--student">
       <section className="page-header">
         <div>
-          <h1>출석 코드 입력</h1>
-          <p>선생님이 안내한 4자리 코드는 발급 후 5분 동안 사용할 수 있습니다.</p>
+          <h1>출석</h1>
+          <p>
+            선생님이 안내한 4자리 코드는 발급 후 5분 동안 사용할 수 있습니다.
+          </p>
         </div>
       </section>
 
-      {sessions.length ? (
-        <section className="content-card attendance-entry-card">
-          <header className="attendance-entry-card__header">
-            <span className="attendance-entry-card__icon" aria-hidden="true">
-              <KeyRound size={22} />
-            </span>
-            <div>
-              <h2>오늘 수업 출석</h2>
-              <p>수업을 선택한 뒤 숫자 네 자리를 입력하세요.</p>
-            </div>
-          </header>
-
-          <form className="stack attendance-entry-form" onSubmit={handleSubmit}>
-            <label className="form-field form-field--flush">
-              <span>오늘 수업</span>
-              <select name="classSessionId" required>
-                {sessions.map((session) => (
-                  <option key={session.id} value={session.id}>
-                    {formatDateTime(session.startsAt)} ·{" "}
-                    {session.title || session.subjectName} · {session.className}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="form-field">
-              <span>4자리 출석 코드</span>
-              <input
-                className="attendance-code-input"
-                name="code"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]{4}"
-                minLength={4}
-                maxLength={4}
-                autoComplete="one-time-code"
-                placeholder="0000"
-                required
-              />
-              <small>숫자 4자리</small>
-            </label>
-
-            {submitMutation.isError && (
-              <div className="form-alert" role="alert">
-                {getErrorMessage(submitMutation.error)}
-              </div>
-            )}
-
-            {submitMutation.isSuccess && (
-              <div className="info-banner info-banner--success">
-                <CheckCircle2 size={20} />
-                <div>
-                  <strong>
-                    {ATTENDANCE_LABELS[submitMutation.data.status]}{" "}
-                    처리되었습니다.
-                  </strong>
-                  <p>
-                    처리 시각: {formatDateTime(submitMutation.data.checkedAt)}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="button button--primary"
-              disabled={submitMutation.isPending}
-            >
-              <KeyRound size={16} />
-              {submitMutation.isPending ? "확인 중..." : "출석 확인"}
-            </button>
-          </form>
-        </section>
-      ) : (
+      {sessions.length === 0 ? (
         <EmptyState
           title="오늘 출석 대상 수업이 없습니다."
-          description="수강 중인 반의 오늘 수업이 표시됩니다."
+          description="수강 중인 반의 오늘 수업이 여기에 표시됩니다."
         />
+      ) : (
+        <div className="data-list">
+          {sessions.map((session) => (
+            <SessionAttendanceCard
+              key={session.id}
+              session={session}
+              onSubmit={(code) =>
+                submitMutation.mutateAsync({
+                  classSessionId: session.id,
+                  code,
+                })
+              }
+            />
+          ))}
+        </div>
       )}
     </div>
+  );
+}
+
+type SessionCardProps = {
+  session: StudentAttendanceSession;
+  onSubmit: (code: string) => Promise<unknown>;
+};
+
+/**
+ * 수업 한 건의 출석 상태와 입력을 담는다.
+ * 이미 처리된 출석은 입력 자리를 아예 두지 않아 다시 낼 수 없다.
+ */
+function SessionAttendanceCard({ session, onSubmit }: SessionCardProps) {
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  const attendance = session.attendance;
+  const done = attendance !== null && attendance.status !== "UNPROCESSED";
+  const inProgress = session.status === "IN_PROGRESS";
+
+  const handleSubmit = async (
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    setError(null);
+    setPending(true);
+
+    try {
+      await onSubmit(String(formData.get("code") ?? ""));
+    } catch (caught: unknown) {
+      setError(getErrorMessage(caught));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <article
+      className={`content-card attendance-session-card ${
+        done ? "attendance-session-card--done" : ""
+      }`}
+    >
+      <header className="attendance-session-card__header">
+        <div>
+          <strong>{session.subjectName}</strong>
+          <p>
+            {session.courseOfferingName} · {session.className}
+          </p>
+          <small>
+            <Clock3 size={13} />
+            {formatTime(session.startsAt)}~{formatTime(session.endsAt)} ·{" "}
+            {session.room || "강의실 미정"}
+          </small>
+        </div>
+
+        <span
+          className={`status-badge ${
+            done ? "status-badge--success" : "status-badge--neutral"
+          }`}
+        >
+          {attendance ? ATTENDANCE_LABELS[attendance.status] : "미처리"}
+        </span>
+      </header>
+
+      {done ? (
+        <div className="info-banner info-banner--success">
+          <CheckCircle2 size={20} />
+          <div>
+            <strong>
+              {ATTENDANCE_LABELS[attendance.status]} 처리되었습니다.
+            </strong>
+            <p>
+              {attendance.checkedAt
+                ? `${formatDateTime(attendance.checkedAt)} 기준`
+                : "이 수업은 더 이상 코드를 입력하지 않습니다."}
+            </p>
+          </div>
+        </div>
+      ) : !inProgress ? (
+        <p className="field-hint">
+          수업이 시작되면 출석 코드를 입력할 수 있습니다.
+        </p>
+      ) : !session.codeAvailable ? (
+        <p className="field-hint">
+          선생님이 출석 코드를 만들면 여기에 입력할 수 있습니다.
+        </p>
+      ) : (
+        <form className="stack attendance-entry-form" onSubmit={handleSubmit}>
+          <label className="form-field">
+            <span>4자리 출석 코드</span>
+            <input
+              className="attendance-code-input"
+              name="code"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]{4}"
+              minLength={4}
+              maxLength={4}
+              autoComplete="one-time-code"
+              placeholder="0000"
+              required
+            />
+          </label>
+
+          {error && (
+            <div className="form-alert" role="alert">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="button button--primary"
+            disabled={pending}
+          >
+            <KeyRound size={16} />
+            {pending ? "확인 중..." : "출석 확인"}
+          </button>
+        </form>
+      )}
+    </article>
   );
 }
