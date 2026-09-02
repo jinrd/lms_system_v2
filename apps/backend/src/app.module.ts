@@ -19,6 +19,7 @@ import { CoursesModule } from './courses/courses.module';
 import { ClassesModule } from './classes/classes.module';
 import { EnrollmentsModule } from './enrollments/enrollments.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { QuestionsModule } from './questions/questions.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 
 @Module({
@@ -58,6 +59,7 @@ import { MaintenanceModule } from './maintenance/maintenance.module';
     ClassesModule,
     EnrollmentsModule,
     AttendanceModule,
+    QuestionsModule,
   ],
   controllers: [HealthController],
   providers: [
