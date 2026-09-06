@@ -21,6 +21,7 @@ import { EnrollmentsModule } from './enrollments/enrollments.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { QuestionsModule } from './questions/questions.module';
 import { ExamTemplatesModule } from './exam-templates/exam-templates.module';
+import { ExamsModule } from './exams/exams.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 
 @Module({
@@ -62,6 +63,7 @@ import { MaintenanceModule } from './maintenance/maintenance.module';
     AttendanceModule,
     QuestionsModule,
     ExamTemplatesModule,
+    ExamsModule,
   ],
   controllers: [HealthController],
   providers: [
