@@ -278,7 +278,7 @@ async function seedQuestionBankAndExamTemplate(
       defaultOpenDays: 3,
       minFiles: 1,
       maxFiles: 3,
-      maxFileSizeBytes: 10_485_760,
+      maxFileSizeBytes: 5_242_880,
       maxTotalSizeBytes: 31_457_280,
       instructions: '시술 전후 사진을 제출한다.',
     },

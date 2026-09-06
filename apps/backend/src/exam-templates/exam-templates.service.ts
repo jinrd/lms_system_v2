@@ -18,7 +18,7 @@ import { CreateExamTemplateDto } from './dto/create-exam-template.dto';
 import { ExamTemplateQueryDto } from './dto/exam-template-query.dto';
 import { UpdateExamTemplateDto } from './dto/update-exam-template.dto';
 import {
-  PRACTICAL_MAX_FILE_SIZE_BYTES,
+  PRACTICAL_FILE_SIZE_BYTES,
   PRACTICAL_MAX_FILES,
   PRACTICAL_MAX_TOTAL_SIZE_BYTES,
   UpsertExamTemplatePartDto,
@@ -802,8 +802,6 @@ export class ExamTemplatesService {
     }
 
     const maxFiles = dto.maxFiles ?? PRACTICAL_MAX_FILES;
-    const maxFileSizeBytes =
-      dto.maxFileSizeBytes ?? PRACTICAL_MAX_FILE_SIZE_BYTES;
     const maxTotalSizeBytes =
       dto.maxTotalSizeBytes ?? PRACTICAL_MAX_TOTAL_SIZE_BYTES;
 
@@ -818,7 +816,8 @@ export class ExamTemplatesService {
       durationMinutes: null,
       minFiles: dto.minFiles,
       maxFiles,
-      maxFileSizeBytes,
+      // 파일당 최대 크기는 클라이언트 입력과 무관하게 5MiB로 고정한다.
+      maxFileSizeBytes: PRACTICAL_FILE_SIZE_BYTES,
       maxTotalSizeBytes,
     };
   }

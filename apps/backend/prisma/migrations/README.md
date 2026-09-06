@@ -131,3 +131,8 @@ DROP FUNCTION IF EXISTS check_exam_template_part_totals(UUID);
 
 문제 유형별 보기·정답 개수 지연 제약 트리거 + 필기·실기 하위 데이터 혼입
 차단 트리거. 검증·롤백은 해당 `migration.sql` 파일 하단 주석에 있다.
+
+## 20260906030000_fix_practical_file_size_to_5mb
+
+실기 파트의 파일당 최대 크기를 5MiB로 고정하는 CHECK 제약 교체. 검증·롤백은
+해당 `migration.sql` 파일 하단 주석에 있다.
