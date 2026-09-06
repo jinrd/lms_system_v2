@@ -20,8 +20,15 @@ import type { PaginatedResult } from '../common/pagination';
 import { ExamPartType, UserRole } from '../generated/prisma/enums';
 import { CreateExamTemplateDto } from './dto/create-exam-template.dto';
 import { ExamTemplateQueryDto } from './dto/exam-template-query.dto';
+import { ReplaceTemplateCriteriaDto } from './dto/replace-template-criteria.dto';
+import { ReplaceTemplateQuestionsDto } from './dto/replace-template-questions.dto';
 import { UpdateExamTemplateDto } from './dto/update-exam-template.dto';
 import { UpsertExamTemplatePartDto } from './dto/upsert-exam-template-part.dto';
+import {
+  type TemplateCriteriaResponse,
+  ExamTemplateCompositionService,
+  type TemplateQuestionsResponse,
+} from './exam-template-composition.service';
 import {
   type ExamTemplateResponse,
   ExamTemplatesService,
@@ -35,7 +42,10 @@ import {
   UserRole.ADMIN,
 )
 export class ExamTemplatesController {
-  constructor(private readonly service: ExamTemplatesService) {}
+  constructor(
+    private readonly service: ExamTemplatesService,
+    private readonly composition: ExamTemplateCompositionService,
+  ) {}
 
   @Get()
   list(
@@ -70,6 +80,47 @@ export class ExamTemplatesController {
     @Req() request: Request,
   ): Promise<ExamTemplateResponse> {
     return this.service.update(id, dto, actor, request.ip);
+  }
+
+  @Get(':id/parts/WRITTEN/questions')
+  getWrittenQuestions(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<TemplateQuestionsResponse> {
+    return this.composition.getWrittenQuestions(id, actor);
+  }
+
+  @Put(':id/parts/WRITTEN/questions')
+  replaceWrittenQuestions(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReplaceTemplateQuestionsDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<TemplateQuestionsResponse> {
+    return this.composition.replaceWrittenQuestions(id, dto, actor, request.ip);
+  }
+
+  @Get(':id/parts/PRACTICAL/criteria')
+  getPracticalCriteria(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<TemplateCriteriaResponse> {
+    return this.composition.getPracticalCriteria(id, actor);
+  }
+
+  @Put(':id/parts/PRACTICAL/criteria')
+  replacePracticalCriteria(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReplaceTemplateCriteriaDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<TemplateCriteriaResponse> {
+    return this.composition.replacePracticalCriteria(
+      id,
+      dto,
+      actor,
+      request.ip,
+    );
   }
 
   @Put(':id/parts/:type')
