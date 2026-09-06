@@ -8,8 +8,8 @@ import { QuestionAccessService } from '../questions/question-access.service';
  *
  * 문제은행과 규칙은 같지만 판정 기준 집합이 다르다. 템플릿은
  * `exam_template_subjects`의 과목 전체를 강사가 담당하고 있을 때만 접근할 수
- * 있다. 하나라도 담당 범위 밖이면 접근 불가다. 본인이 만든 템플릿은 담당 반이
- * 바뀌어도 계속 다룰 수 있고, 실장·원장·관리자는 전체 범위다.
+ * 있다. 하나라도 담당 범위 밖이면 접근 불가다. 본인이 만든 템플릿은 담당
+ * 교육과정이 바뀌어도 계속 다룰 수 있고, 실장·원장·관리자는 전체 범위다.
  */
 @Injectable()
 export class ExamTemplateAccessService {
@@ -19,7 +19,7 @@ export class ExamTemplateAccessService {
     return this.questionAccess.isPrivileged(role);
   }
 
-  /** 강사가 현재 담당 중인 반을 통해 접근할 수 있는 세부 과목 식별자 집합이다. */
+  /** 강사가 담당하는 교육과정을 통해 접근할 수 있는 세부 과목 식별자 집합이다. */
   getAccessibleSubjectIds(instructorId: string): Promise<string[]> {
     return this.questionAccess.getAccessibleSubjectIds(instructorId);
   }
