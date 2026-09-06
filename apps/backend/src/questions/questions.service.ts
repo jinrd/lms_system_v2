@@ -23,6 +23,7 @@ import {
 import { QuestionQueryDto } from './dto/question-query.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { QuestionAccessService } from './question-access.service';
+import { checkQuestionStructure } from './question-structure';
 
 export type QuestionOptionResponse = {
   id: string;
@@ -432,49 +433,24 @@ export class QuestionsService {
   /**
    * 유형별 보기·허용 정답 개수 규칙을 검증한다(기획안 §12.1).
    *
-   * 생성·수정 저장 트랜잭션과 `active = true` 전환에서 같은 규칙을 쓴다.
+   * 생성·수정 저장 트랜잭션과 `active = true` 전환에서 같은 규칙을 쓴다. 실제
+   * 규칙은 `checkQuestionStructure`에 있고, 시험 템플릿 활성화 검증도 같은 함수를
+   * 재사용한다.
    */
   private assertStructure(
     type: QuestionType,
     options: Array<{ isCorrect: boolean }>,
     acceptedAnswers: string[],
   ): void {
-    if (type === QuestionType.SHORT_ANSWER) {
-      if (options.length > 0) {
-        throw new BadRequestException(
-          '단답형 문제에는 보기를 넣을 수 없습니다.',
-        );
-      }
-      if (acceptedAnswers.length === 0) {
-        throw new BadRequestException(
-          '단답형 문제에는 허용 정답이 최소 1개 필요합니다.',
-        );
-      }
-      return;
-    }
+    const message = checkQuestionStructure({
+      type,
+      optionCount: options.length,
+      correctOptionCount: options.filter((option) => option.isCorrect).length,
+      acceptedAnswerCount: acceptedAnswers.length,
+    });
 
-    if (acceptedAnswers.length > 0) {
-      throw new BadRequestException(
-        '객관식 문제에는 허용 정답 목록을 넣을 수 없습니다.',
-      );
-    }
-    if (options.length < 2) {
-      throw new BadRequestException(
-        '객관식 문제에는 보기가 2개 이상 필요합니다.',
-      );
-    }
-
-    const correctCount = options.filter((option) => option.isCorrect).length;
-
-    if (type === QuestionType.SINGLE_CHOICE && correctCount !== 1) {
-      throw new BadRequestException(
-        '단일 선택 문제의 정답 보기는 정확히 1개여야 합니다.',
-      );
-    }
-    if (type === QuestionType.MULTIPLE_CHOICE && correctCount < 1) {
-      throw new BadRequestException(
-        '복수 선택 문제의 정답 보기는 1개 이상이어야 합니다.',
-      );
+    if (message) {
+      throw new BadRequestException(message);
     }
   }
 

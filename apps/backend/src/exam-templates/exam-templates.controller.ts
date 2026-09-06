@@ -29,6 +29,7 @@ import {
   ExamTemplateCompositionService,
   type TemplateQuestionsResponse,
 } from './exam-template-composition.service';
+import type { ExamTemplateValidationResult } from './exam-template-validation.service';
 import {
   type ExamTemplateResponse,
   ExamTemplatesService,
@@ -80,6 +81,41 @@ export class ExamTemplatesController {
     @Req() request: Request,
   ): Promise<ExamTemplateResponse> {
     return this.service.update(id, dto, actor, request.ip);
+  }
+
+  @Get(':id/validate')
+  validate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<ExamTemplateValidationResult> {
+    return this.service.validate(id, actor);
+  }
+
+  @Post(':id/activate')
+  activate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ExamTemplateResponse> {
+    return this.service.activate(id, actor, request.ip);
+  }
+
+  @Post(':id/deactivate')
+  deactivate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ExamTemplateResponse> {
+    return this.service.deactivate(id, actor, request.ip);
+  }
+
+  @Post(':id/duplicate')
+  duplicate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ExamTemplateResponse> {
+    return this.service.duplicate(id, actor, request.ip);
   }
 
   @Get(':id/parts/WRITTEN/questions')

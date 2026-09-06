@@ -24,6 +24,10 @@ import {
   UpsertExamTemplatePartDto,
 } from './dto/upsert-exam-template-part.dto';
 import { ExamTemplateAccessService } from './exam-template-access.service';
+import {
+  type ExamTemplateValidationResult,
+  ExamTemplateValidationService,
+} from './exam-template-validation.service';
 
 export type ExamTemplateSubjectResponse = {
   subjectId: string;
@@ -94,6 +98,7 @@ export class ExamTemplatesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: ExamTemplateAccessService,
+    private readonly validation: ExamTemplateValidationService,
   ) {}
 
   async list(
@@ -432,6 +437,248 @@ export class ExamTemplatesService {
     });
 
     return this.getById(id, actor);
+  }
+
+  /**
+   * 활성화하지 않고 검증 결과만 돌려준다.
+   *
+   * 접근 권한을 먼저 확인한다. 조회 불가는 404로 숨긴다.
+   */
+  async validate(
+    id: string,
+    actor: AuthenticatedUser,
+  ): Promise<ExamTemplateValidationResult> {
+    await this.loadForStateChange(id, actor);
+    return this.validation.validate(id);
+  }
+
+  /**
+   * 검증을 통과하면 템플릿을 활성화한다.
+   *
+   * 검증 실패 시 400과 함께 모든 결함 사유를 내려준다. 이미 활성이면 409다.
+   */
+  async activate(
+    id: string,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<ExamTemplateResponse> {
+    const entity = await this.loadForStateChange(id, actor);
+    if (entity.active) {
+      throw new ConflictException('이미 활성 상태인 템플릿입니다.');
+    }
+
+    const result = await this.validation.validate(id);
+    if (!result.valid) {
+      throw new BadRequestException(
+        result.issues.map((issue) => issue.message),
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.examTemplate.update({
+        where: { id },
+        data: { active: true },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorRole: actor.role,
+          action: 'EXAM_TEMPLATE_ACTIVATED',
+          resourceType: 'EXAM_TEMPLATE',
+          resourceId: id,
+          afterData: { active: true },
+          ipAddress,
+          result: 'SUCCESS',
+        },
+      });
+    });
+
+    return this.getById(id, actor);
+  }
+
+  /**
+   * 템플릿을 비활성화한다(기획안 §23). 검증 없이 허용한다. 이미 비활성이면 409다.
+   */
+  async deactivate(
+    id: string,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<ExamTemplateResponse> {
+    const entity = await this.loadForStateChange(id, actor);
+    if (!entity.active) {
+      throw new ConflictException('이미 비활성 상태인 템플릿입니다.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.examTemplate.update({
+        where: { id },
+        data: { active: false },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorRole: actor.role,
+          action: 'EXAM_TEMPLATE_DEACTIVATED',
+          resourceType: 'EXAM_TEMPLATE',
+          resourceId: id,
+          afterData: { active: false },
+          ipAddress,
+          result: 'SUCCESS',
+        },
+      });
+    });
+
+    return this.getById(id, actor);
+  }
+
+  /**
+   * 템플릿의 전체 구성을 복제해 새 초안을 만든다.
+   *
+   * 템플릿 + 과목 + 파트 + 파트별 문제 + 실기 평가 항목을 한 트랜잭션에 복사하고,
+   * 이름에 접미사를 붙이며 `active = false`, `created_by = 실행자`로 만든다.
+   * 원본과 사본은 이후 독립적으로 편집된다.
+   */
+  async duplicate(
+    id: string,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<ExamTemplateResponse> {
+    await this.loadForStateChange(id, actor);
+
+    const source = await this.prisma.examTemplate.findUnique({
+      where: { id },
+      include: {
+        subjects: { select: { subjectId: true } },
+        parts: {
+          include: {
+            questions: {
+              orderBy: { displayOrder: 'asc' },
+              select: {
+                questionId: true,
+                displayOrder: true,
+                score: true,
+              },
+            },
+            practicalCriteria: {
+              orderBy: { displayOrder: 'asc' },
+              select: {
+                name: true,
+                description: true,
+                maxScore: true,
+                displayOrder: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!source) {
+      throw new NotFoundException('시험 템플릿을 찾을 수 없습니다.');
+    }
+
+    const newId = await this.prisma.$transaction(async (tx) => {
+      const copy = await tx.examTemplate.create({
+        data: {
+          name: `${source.name} (복제본)`,
+          description: source.description,
+          scope: source.scope,
+          stage: source.stage,
+          defaultOpenDays: source.defaultOpenDays,
+          active: false,
+          createdById: actor.id,
+          subjects: {
+            create: source.subjects.map((link) => ({
+              subjectId: link.subjectId,
+            })),
+          },
+        },
+      });
+
+      for (const part of source.parts) {
+        await tx.examTemplatePart.create({
+          data: {
+            examTemplateId: copy.id,
+            type: part.type,
+            totalScore: part.totalScore,
+            passScore: part.passScore,
+            durationMinutes: part.durationMinutes,
+            defaultOpenOffsetDays: part.defaultOpenOffsetDays,
+            defaultOpenDays: part.defaultOpenDays,
+            minFiles: part.minFiles,
+            maxFiles: part.maxFiles,
+            maxFileSizeBytes: part.maxFileSizeBytes,
+            maxTotalSizeBytes: part.maxTotalSizeBytes,
+            instructions: part.instructions,
+            questions: {
+              create: part.questions.map((entry) => ({
+                questionId: entry.questionId,
+                displayOrder: entry.displayOrder,
+                score: entry.score,
+              })),
+            },
+            practicalCriteria: {
+              create: part.practicalCriteria.map((criterion) => ({
+                name: criterion.name,
+                description: criterion.description,
+                maxScore: criterion.maxScore,
+                displayOrder: criterion.displayOrder,
+              })),
+            },
+          },
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorRole: actor.role,
+          action: 'EXAM_TEMPLATE_DUPLICATED',
+          resourceType: 'EXAM_TEMPLATE',
+          resourceId: copy.id,
+          afterData: { sourceTemplateId: id },
+          ipAddress,
+          result: 'SUCCESS',
+        },
+      });
+
+      return copy.id;
+    });
+
+    return this.getById(newId, actor);
+  }
+
+  /**
+   * 상태 전환·복제 전 공통 확인: 존재와 접근 권한(조회 불가는 404로 숨김).
+   *
+   * 활성 여부는 각 메서드가 판단하므로 여기서 막지 않는다.
+   */
+  private async loadForStateChange(
+    id: string,
+    actor: AuthenticatedUser,
+  ): Promise<{ active: boolean; createdById: string | null }> {
+    const entity = await this.prisma.examTemplate.findUnique({
+      where: { id },
+      select: {
+        active: true,
+        createdById: true,
+        subjects: { select: { subjectId: true } },
+      },
+    });
+    if (!entity) {
+      throw new NotFoundException('시험 템플릿을 찾을 수 없습니다.');
+    }
+
+    const canAccess = await this.access.canAccessTemplate(actor, {
+      createdById: entity.createdById,
+      subjectIds: entity.subjects.map((subject) => subject.subjectId),
+    });
+    if (!canAccess) {
+      throw new NotFoundException('시험 템플릿을 찾을 수 없습니다.');
+    }
+
+    return { active: entity.active, createdById: entity.createdById };
   }
 
   /** 파트 쓰기 전 공통 확인: 존재·접근 권한(404로 숨김)·초안 상태(활성이면 409). */
