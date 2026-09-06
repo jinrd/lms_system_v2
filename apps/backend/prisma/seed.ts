@@ -1,17 +1,26 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as argon2 from 'argon2';
-import { normalizeAnswer } from '../src/common/answer-normalizer';
+import {
+  ANSWER_NORMALIZATION_VERSION,
+  normalizeAnswer,
+} from '../src/common/answer-normalizer';
 import { PrismaClient } from '../src/generated/prisma/client';
 import {
   DifficultyLevel,
+  EnrollmentStatus,
+  EnrollmentType,
   ExamPartType,
   ExamScope,
   ExamStage,
+  ExamStatus,
   QuestionType,
   SubjectMode,
   UserRole,
   UserStatus,
 } from '../src/generated/prisma/enums';
+
+/** 하루를 밀리초로. 실제 시험 시드에서 파트 시각을 계산할 때 쓴다. */
+const DAY_MS = 86_400_000;
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL 환경변수가 필요합니다.');
@@ -313,6 +322,295 @@ async function seedQuestionBankAndExamTemplate(
   );
 }
 
+/**
+ * 활성 템플릿으로 예약(`SCHEDULED`) 상태의 실제 시험 1건을 만든다.
+ *
+ * 응시·답안·파일 데이터는 시드하지 않는다. 대상 반과 성적 관리 수강생 몇 명을
+ * 함께 만들어, 실행 직후 `POST /exams/:id/targets/rebuild`로 명단을 만들고 필기
+ * 응시·자동 채점·결과 공개까지 손으로 확인할 수 있게 한다.
+ *
+ * 재실행 안전: 같은 제목의 시험이 있으면 통째로 지우고 다시 만든다. 반·수강은
+ * 자연 키로 찾아 갱신한다.
+ */
+async function seedRealExam(
+  subjectIds: Map<string, string>,
+  users: Map<string, { id: string }>,
+): Promise<void> {
+  const adminId = users.get('admin')!.id;
+  const examTitle = '피부 이론 정기 시험 (자동 시드)';
+  const className = '피부 기초 1기';
+
+  const offering = await prisma.courseOffering.findFirst({
+    where: { name: '피부 기초 교육과정' },
+    select: { id: true },
+  });
+  const template = await prisma.examTemplate.findFirst({
+    where: { name: '피부 이론 정기 시험 (예제)', active: true },
+    include: {
+      subjects: { select: { subjectId: true } },
+      parts: {
+        orderBy: { type: 'asc' },
+        include: {
+          questions: {
+            orderBy: { displayOrder: 'asc' },
+            include: {
+              question: {
+                include: {
+                  options: { orderBy: { displayOrder: 'asc' } },
+                  acceptedAnswers: { orderBy: { displayOrder: 'asc' } },
+                },
+              },
+            },
+          },
+          practicalCriteria: { orderBy: { displayOrder: 'asc' } },
+        },
+      },
+    },
+  });
+  if (!offering || !template) {
+    console.log(
+      '실제 시험 시드를 건너뛴다: 개설 강의 또는 활성 템플릿이 없다.',
+    );
+    return;
+  }
+
+  const theorySubjectId = subjectIds.get('피부:피부 이론')!;
+  const offeringSubject = await prisma.courseOfferingSubject.findFirst({
+    where: { courseOfferingId: offering.id, subjectId: theorySubjectId },
+    select: { id: true },
+  });
+  if (!offeringSubject) {
+    console.log(
+      '실제 시험 시드를 건너뛴다: 개설 강의에 피부 이론 과목이 없다.',
+    );
+    return;
+  }
+
+  // 대상 반과 교육과정 연결.
+  const existingClass = await prisma.class.findFirst({
+    where: { name: className, archivedAt: null },
+    select: { id: true },
+  });
+  const seededClass = existingClass
+    ? existingClass
+    : await prisma.class.create({
+        data: {
+          name: className,
+          startDate: new Date('2026-01-05T00:00:00.000Z'),
+          endDate: new Date('2026-12-20T00:00:00.000Z'),
+          capacity: 20,
+          createdById: adminId,
+        },
+        select: { id: true },
+      });
+  await prisma.classProgram.upsert({
+    where: {
+      classId_courseOfferingId: {
+        classId: seededClass.id,
+        courseOfferingId: offering.id,
+      },
+    },
+    update: {},
+    create: { classId: seededClass.id, courseOfferingId: offering.id },
+  });
+
+  // 성적 관리 수강생 5명(student01~05).
+  for (let index = 1; index <= 5; index += 1) {
+    const student = users.get(`student${String(index).padStart(2, '0')}`);
+    if (!student) continue;
+
+    const existingEnrollment = await prisma.enrollment.findFirst({
+      where: {
+        studentId: student.id,
+        courseOfferingId: offering.id,
+        classId: seededClass.id,
+      },
+      select: { id: true },
+    });
+    const enrollment = existingEnrollment
+      ? await prisma.enrollment.update({
+          where: { id: existingEnrollment.id },
+          data: {
+            type: EnrollmentType.REGULAR,
+            status: EnrollmentStatus.ACTIVE,
+            attendanceManaged: true,
+            gradeManaged: true,
+          },
+          select: { id: true },
+        })
+      : await prisma.enrollment.create({
+          data: {
+            studentId: student.id,
+            courseOfferingId: offering.id,
+            classId: seededClass.id,
+            type: EnrollmentType.REGULAR,
+            status: EnrollmentStatus.ACTIVE,
+            startsOn: new Date('2026-01-05T00:00:00.000Z'),
+            attendanceManaged: true,
+            gradeManaged: true,
+            assignedById: adminId,
+          },
+          select: { id: true },
+        });
+
+    await prisma.enrollmentSubject.upsert({
+      where: {
+        enrollmentId_courseOfferingSubjectId: {
+          enrollmentId: enrollment.id,
+          courseOfferingSubjectId: offeringSubject.id,
+        },
+      },
+      update: { gradeManaged: true, attendanceManaged: true },
+      create: {
+        enrollmentId: enrollment.id,
+        courseOfferingId: offering.id,
+        courseOfferingSubjectId: offeringSubject.id,
+        startsOn: new Date('2026-01-05T00:00:00.000Z'),
+        attendanceManaged: true,
+        gradeManaged: true,
+      },
+    });
+  }
+
+  // 재실행: 기존 시드 시험을 통째로 제거(응시 기록 먼저).
+  const priorExam = await prisma.exam.findFirst({
+    where: { title: examTitle },
+    select: { id: true },
+  });
+  if (priorExam) {
+    await prisma.examAttempt.deleteMany({ where: { examId: priorExam.id } });
+    await prisma.exam.delete({ where: { id: priorExam.id } });
+  }
+
+  // 파트 시작을 30일 뒤 자정으로 잡고, 템플릿의 상대 오프셋으로 각 파트 시각을 계산.
+  const base = new Date();
+  base.setUTCHours(0, 0, 0, 0);
+  base.setUTCDate(base.getUTCDate() + 30);
+
+  await prisma.$transaction(async (tx) => {
+    const exam = await tx.exam.create({
+      data: {
+        courseOfferingId: offering.id,
+        sourceTemplateId: template.id,
+        title: examTitle,
+        description: '자동 시드로 만든 예약 상태 예제 시험이다.',
+        scope: ExamScope.SUBJECT,
+        stage: ExamStage.REGULAR,
+        status: ExamStatus.DRAFT,
+        opensAt: base,
+        closesAt: new Date(base.getTime() + DAY_MS),
+        createdById: adminId,
+      },
+    });
+
+    await tx.examSubject.create({
+      data: {
+        examId: exam.id,
+        courseOfferingId: offering.id,
+        courseOfferingSubjectId: offeringSubject.id,
+      },
+    });
+    await tx.examClassTarget.create({
+      data: {
+        examId: exam.id,
+        courseOfferingId: offering.id,
+        classId: seededClass.id,
+      },
+    });
+
+    let minOpens = Number.POSITIVE_INFINITY;
+    let maxCloses = Number.NEGATIVE_INFINITY;
+
+    for (const part of template.parts) {
+      const opensAt = new Date(
+        base.getTime() + part.defaultOpenOffsetDays * DAY_MS,
+      );
+      const closesAt = new Date(
+        opensAt.getTime() + part.defaultOpenDays * DAY_MS,
+      );
+      minOpens = Math.min(minOpens, opensAt.getTime());
+      maxCloses = Math.max(maxCloses, closesAt.getTime());
+
+      const createdPart = await tx.examPart.create({
+        data: {
+          examId: exam.id,
+          type: part.type,
+          totalScore: part.totalScore,
+          passScore: part.passScore,
+          opensAt,
+          closesAt,
+          durationMinutes: part.durationMinutes,
+          minFiles: part.minFiles,
+          maxFiles: part.maxFiles,
+          maxFileSizeBytes: part.maxFileSizeBytes,
+          maxTotalSizeBytes: part.maxTotalSizeBytes,
+          instructions: part.instructions,
+        },
+      });
+
+      if (part.type === ExamPartType.WRITTEN) {
+        for (const [index, templateQuestion] of part.questions.entries()) {
+          const bank = templateQuestion.question;
+          await tx.examQuestion.create({
+            data: {
+              examId: exam.id,
+              examPartId: createdPart.id,
+              courseOfferingSubjectId: offeringSubject.id,
+              sourceQuestionId: bank.id,
+              type: bank.type,
+              prompt: bank.prompt,
+              explanation: bank.explanation,
+              score: templateQuestion.score,
+              displayOrder: index,
+              normalizationVersion:
+                bank.type === QuestionType.SHORT_ANSWER
+                  ? String(ANSWER_NORMALIZATION_VERSION)
+                  : null,
+              options: {
+                create: bank.options.map((option, optionIndex) => ({
+                  content: option.content,
+                  displayOrder: optionIndex,
+                  isCorrect: option.isCorrect,
+                })),
+              },
+              acceptedAnswers: {
+                create: bank.acceptedAnswers.map((answer) => ({
+                  answerText: answer.answerText,
+                  normalizedAnswer: answer.normalizedAnswer,
+                })),
+              },
+            },
+          });
+        }
+      } else {
+        await tx.examPracticalCriterion.createMany({
+          data: part.practicalCriteria.map((criterion, index) => ({
+            examPartId: createdPart.id,
+            name: criterion.name,
+            description: criterion.description,
+            maxScore: criterion.maxScore,
+            displayOrder: index,
+          })),
+        });
+      }
+    }
+
+    // 시험 전체 기간을 파트 봉투에 맞추고 예약 상태로 전이한다.
+    await tx.exam.update({
+      where: { id: exam.id },
+      data: {
+        opensAt: new Date(minOpens),
+        closesAt: new Date(maxCloses),
+        status: ExamStatus.SCHEDULED,
+      },
+    });
+  });
+
+  console.log(
+    `대상 반 "${className}"·성적 관리 수강생 5명, 예약 상태 실제 시험 "${examTitle}" 준비 완료`,
+  );
+}
+
 async function seed(): Promise<void> {
   const passwordHashes = new Map<string, string>();
   for (const password of new Set(credentials.map((item) => item.password))) {
@@ -447,18 +745,27 @@ async function seed(): Promise<void> {
           },
         });
 
-    await prisma.courseOfferingSubject.deleteMany({
-      where: { courseOfferingId: course.id },
-    });
-    await prisma.courseOfferingSubject.createMany({
-      data: program.subjects.map((name) => ({
-        courseOfferingId: course.id,
-        subjectId: subjectIds.get(`${program.field}:${name}`)!,
-      })),
-    });
+    // 과목 연결은 삭제 후 재생성이 아니라 upsert 로 유지한다. 수강·시험 데이터가
+    // 이 행의 id 를 참조하므로 재실행할 때마다 id 가 바뀌면 FK 가 깨진다.
+    for (const name of program.subjects) {
+      await prisma.courseOfferingSubject.upsert({
+        where: {
+          courseOfferingId_subjectId: {
+            courseOfferingId: course.id,
+            subjectId: subjectIds.get(`${program.field}:${name}`)!,
+          },
+        },
+        update: {},
+        create: {
+          courseOfferingId: course.id,
+          subjectId: subjectIds.get(`${program.field}:${name}`)!,
+        },
+      });
+    }
   }
 
   await seedQuestionBankAndExamTemplate(subjectIds, users.get('admin')!.id);
+  await seedRealExam(subjectIds, users);
 
   console.table(
     credentials.map(({ loginId, password, role }) => ({
