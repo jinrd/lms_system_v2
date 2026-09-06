@@ -18,6 +18,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import type { PaginatedResult } from '../common/pagination';
 import { ExamPartType, UserRole } from '../generated/prisma/enums';
+import { CancelExamDto } from './dto/cancel-exam.dto';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { ExamQueryDto } from './dto/exam-query.dto';
 import { ReplaceExamPracticalCriteriaDto } from './dto/replace-exam-practical-criteria.dto';
@@ -29,6 +30,7 @@ import {
   ExamCompositionService,
   type ExamQuestionsResponse,
 } from './exam-composition.service';
+import type { ExamScheduleValidationResult } from './exam-schedule-validation.service';
 import { type ExamResponse, ExamsService } from './exams.service';
 
 @Controller('exams')
@@ -77,6 +79,33 @@ export class ExamsController {
     @Req() request: Request,
   ): Promise<ExamResponse> {
     return this.service.update(id, dto, actor, request.ip);
+  }
+
+  @Get(':id/validate')
+  validate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<ExamScheduleValidationResult> {
+    return this.service.validate(id, actor);
+  }
+
+  @Post(':id/schedule')
+  schedule(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ExamResponse> {
+    return this.service.schedule(id, actor, request.ip);
+  }
+
+  @Post(':id/cancel')
+  cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CancelExamDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ExamResponse> {
+    return this.service.cancel(id, dto, actor, request.ip);
   }
 
   @Get(':id/parts/WRITTEN/questions')

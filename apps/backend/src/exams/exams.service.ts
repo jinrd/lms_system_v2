@@ -19,6 +19,7 @@ import {
   ExamStatus,
 } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
+import { CancelExamDto } from './dto/cancel-exam.dto';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { ExamQueryDto } from './dto/exam-query.dto';
 import {
@@ -30,6 +31,10 @@ import {
 import { UpdateExamDto } from './dto/update-exam.dto';
 import { ExamAccessService } from './exam-access.service';
 import { ExamCompositionService } from './exam-composition.service';
+import {
+  type ExamScheduleValidationResult,
+  ExamScheduleValidationService,
+} from './exam-schedule-validation.service';
 
 export type ExamSubjectResponse = {
   courseOfferingSubjectId: string;
@@ -120,6 +125,7 @@ export class ExamsService {
     private readonly prisma: PrismaService,
     private readonly access: ExamAccessService,
     private readonly composition: ExamCompositionService,
+    private readonly scheduleValidation: ExamScheduleValidationService,
   ) {}
 
   async list(
@@ -496,6 +502,145 @@ export class ExamsService {
           resourceType: 'EXAM',
           resourceId: id,
           afterData: { type },
+          ipAddress,
+          result: 'SUCCESS',
+        },
+      });
+    });
+
+    return this.getById(id, actor);
+  }
+
+  /**
+   * 예약하지 않고 §14.9 검증 결과만 돌려준다.
+   *
+   * 접근 권한을 먼저 확인한다. 조회 불가는 404로 숨긴다.
+   */
+  async validate(
+    id: string,
+    actor: AuthenticatedUser,
+  ): Promise<ExamScheduleValidationResult> {
+    await this.loadForManage(id, actor);
+    return this.scheduleValidation.validate(id);
+  }
+
+  /**
+   * 검증을 통과하면 시험을 `DRAFT → SCHEDULED`로 전환한다.
+   *
+   * 같은 트랜잭션에서 시험 전체 응시 기간을 파트 봉투(최소 시작 ~ 최대 종료)에
+   * 맞춘다(기획안 §14.4). 검증 실패 시 400과 함께 모든 결함 사유를 내려준다.
+   */
+  async schedule(
+    id: string,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<ExamResponse> {
+    const existing = await this.loadForManage(id, actor);
+    if (existing.status !== ExamStatus.DRAFT) {
+      throw new ConflictException('초안 상태의 시험만 예약할 수 있습니다.');
+    }
+
+    const result = await this.scheduleValidation.validate(id);
+    if (!result.valid) {
+      throw new BadRequestException(
+        result.issues.map((issue) => issue.message),
+      );
+    }
+
+    const parts = await this.prisma.examPart.findMany({
+      where: { examId: id },
+      select: { opensAt: true, closesAt: true },
+    });
+    const opensAt = new Date(
+      Math.min(...parts.map((part) => part.opensAt.getTime())),
+    );
+    const closesAt = new Date(
+      Math.max(...parts.map((part) => part.closesAt.getTime())),
+    );
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.exam.update({
+        where: { id },
+        data: { status: ExamStatus.SCHEDULED, opensAt, closesAt },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorRole: actor.role,
+          action: 'EXAM_SCHEDULED',
+          resourceType: 'EXAM',
+          resourceId: id,
+          afterData: {
+            status: ExamStatus.SCHEDULED,
+            opensAt: opensAt.toISOString(),
+            closesAt: closesAt.toISOString(),
+          },
+          ipAddress,
+          result: 'SUCCESS',
+        },
+      });
+    });
+
+    return this.getById(id, actor);
+  }
+
+  /**
+   * 시험을 취소한다(기획안 §14.1·D-31).
+   *
+   * 아직 아무도 응시를 시작하지 않았고 담당 강사 본인이면 강사도 취소할 수 있다.
+   * 한 명이라도 응시를 시작했으면 실장·원장·관리자만 취소한다. 취소는 되돌릴 수
+   * 없으며 기존 답안·제출·채점 기록은 보존한다.
+   */
+  async cancel(
+    id: string,
+    dto: CancelExamDto,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<ExamResponse> {
+    const existing = await this.loadForManage(id, actor);
+    if (
+      existing.status === ExamStatus.CANCELED ||
+      existing.status === ExamStatus.COMPLETED
+    ) {
+      throw new ConflictException('이미 종결된 시험은 취소할 수 없습니다.');
+    }
+
+    const startedCount = await this.prisma.examAttempt.count({
+      where: { examId: id, startedAt: { not: null } },
+    });
+    if (startedCount > 0 && !this.access.isPrivileged(actor.role)) {
+      throw new ForbiddenException(
+        '이미 응시가 시작된 시험은 실장·원장·관리자만 취소할 수 있습니다.',
+      );
+    }
+
+    const reason = dto.reason.trim();
+    if (reason.length === 0) {
+      throw new BadRequestException('취소 사유가 필요합니다.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.exam.update({
+        where: { id },
+        data: {
+          status: ExamStatus.CANCELED,
+          canceledAt: new Date(),
+          canceledById: actor.id,
+          cancelReason: reason,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorRole: actor.role,
+          action: 'EXAM_CANCELED',
+          resourceType: 'EXAM',
+          resourceId: id,
+          beforeData: { status: existing.status },
+          afterData: { status: ExamStatus.CANCELED },
+          reason,
           ipAddress,
           result: 'SUCCESS',
         },
