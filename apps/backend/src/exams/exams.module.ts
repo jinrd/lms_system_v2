@@ -9,6 +9,7 @@ import { ExamsController } from './exams.controller';
 import { ExamsService } from './exams.service';
 import { StudentExamsController } from './student-exams.controller';
 import { StudentExamsService } from './student-exams.service';
+import { WrittenGradingService } from './written-grading.service';
 
 @Module({
   imports: [QuestionsModule],
@@ -21,6 +22,7 @@ import { StudentExamsService } from './student-exams.service';
     ExamTargetsService,
     ExamMaintenanceService,
     StudentExamsService,
+    WrittenGradingService,
   ],
   exports: [
     ExamsService,

@@ -14,6 +14,7 @@ import {
 } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { SaveWrittenAnswerDto } from './dto/save-written-answer.dto';
+import { WrittenGradingService } from './written-grading.service';
 
 /** 학생에게 노출해도 되는 시험 요약이다. 정답·해설은 절대 담지 않는다. */
 export type MyExamSummary = {
@@ -102,7 +103,10 @@ function shuffled<T>(items: readonly T[]): T[] {
  */
 @Injectable()
 export class StudentExamsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly writtenGrading: WrittenGradingService,
+  ) {}
 
   async listMyExams(actor: AuthenticatedUser): Promise<MyExamSummary[]> {
     const attempts = await this.prisma.examAttempt.findMany({
@@ -563,9 +567,9 @@ export class StudentExamsService {
     }
 
     const now = new Date();
-    await this.prisma.$transaction(async (tx) => {
-      await tx.examPartSubmission.update({
-        where: { id: submission.id },
+    const claimed = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.examPartSubmission.updateMany({
+        where: { id: submission.id, status: AttemptStatus.IN_PROGRESS },
         data: {
           status: AttemptStatus.SUBMITTED,
           submittedAt: now,
@@ -573,6 +577,9 @@ export class StudentExamsService {
           version: submission.version + 1,
         },
       });
+      if (updated.count === 0) {
+        return false;
+      }
 
       await tx.auditLog.create({
         data: {
@@ -585,7 +592,13 @@ export class StudentExamsService {
           result: 'SUCCESS',
         },
       });
+      return true;
     });
+
+    // 제출 직후 즉시 자동 채점한다. 배치와 경합해도 채점 쪽이 상태로 방어한다.
+    if (claimed) {
+      await this.writtenGrading.gradeWrittenSubmission(submission.id);
+    }
 
     return this.getWrittenQuestions(actor, examId);
   }
