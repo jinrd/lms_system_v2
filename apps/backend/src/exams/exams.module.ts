@@ -7,10 +7,12 @@ import { ExamScheduleValidationService } from './exam-schedule-validation.servic
 import { ExamTargetsService } from './exam-targets.service';
 import { ExamsController } from './exams.controller';
 import { ExamsService } from './exams.service';
+import { StudentExamsController } from './student-exams.controller';
+import { StudentExamsService } from './student-exams.service';
 
 @Module({
   imports: [QuestionsModule],
-  controllers: [ExamsController],
+  controllers: [ExamsController, StudentExamsController],
   providers: [
     ExamsService,
     ExamAccessService,
@@ -18,6 +20,7 @@ import { ExamsService } from './exams.service';
     ExamScheduleValidationService,
     ExamTargetsService,
     ExamMaintenanceService,
+    StudentExamsService,
   ],
   exports: [
     ExamsService,
