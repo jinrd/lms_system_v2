@@ -18,6 +18,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import type { PaginatedResult } from '../common/pagination';
 import { ExamPartType, UserRole } from '../generated/prisma/enums';
+import { AddExamTargetDto } from './dto/add-exam-target.dto';
 import { CancelExamDto } from './dto/cancel-exam.dto';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { ExamQueryDto } from './dto/exam-query.dto';
@@ -31,6 +32,10 @@ import {
   type ExamQuestionsResponse,
 } from './exam-composition.service';
 import type { ExamScheduleValidationResult } from './exam-schedule-validation.service';
+import {
+  type ExamTargetListResponse,
+  ExamTargetsService,
+} from './exam-targets.service';
 import { type ExamResponse, ExamsService } from './exams.service';
 
 @Controller('exams')
@@ -44,6 +49,7 @@ export class ExamsController {
   constructor(
     private readonly service: ExamsService,
     private readonly composition: ExamCompositionService,
+    private readonly targets: ExamTargetsService,
   ) {}
 
   @Get()
@@ -106,6 +112,52 @@ export class ExamsController {
     @Req() request: Request,
   ): Promise<ExamResponse> {
     return this.service.cancel(id, dto, actor, request.ip);
+  }
+
+  @Get(':id/targets')
+  listTargets(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<ExamTargetListResponse> {
+    return this.targets.list(id, actor);
+  }
+
+  @Post(':id/targets/rebuild')
+  rebuildTargets(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ExamTargetListResponse> {
+    return this.targets.rebuild(id, actor, request.ip);
+  }
+
+  @Post(':id/targets/lock')
+  lockTargets(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ExamTargetListResponse> {
+    return this.targets.lock(id, actor, request.ip);
+  }
+
+  @Post(':id/targets')
+  addTarget(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AddExamTargetDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ExamTargetListResponse> {
+    return this.targets.addManual(id, dto, actor, request.ip);
+  }
+
+  @Delete(':id/targets/:studentId')
+  removeTarget(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ExamTargetListResponse> {
+    return this.targets.remove(id, studentId, actor, request.ip);
   }
 
   @Get(':id/parts/WRITTEN/questions')
