@@ -137,10 +137,6 @@ async function seedQuestionBankAndExamTemplate(
 
   for (const item of questionSeeds) {
     const subjectId = subjectIds.get(item.subjectKey)!;
-    const existing = await prisma.questionBank.findFirst({
-      where: { subjectId, prompt: item.prompt },
-      select: { id: true },
-    });
 
     const data = {
       subjectId,
@@ -153,41 +149,52 @@ async function seedQuestionBankAndExamTemplate(
       createdById: adminId,
     };
 
-    let questionId: string;
-    if (existing) {
-      await prisma.questionOption.deleteMany({
-        where: { questionId: existing.id },
+    // 문제 본체 + 보기 + 허용 정답을 한 트랜잭션으로 만든다. 유형별 보기·정답
+    // 개수 지연 제약 트리거가 커밋 시점에 완성된 상태를 보게 하기 위함이다.
+    const questionId = await prisma.$transaction(async (tx) => {
+      const existing = await tx.questionBank.findFirst({
+        where: { subjectId, prompt: item.prompt },
+        select: { id: true },
       });
-      await prisma.questionAcceptedAnswer.deleteMany({
-        where: { questionId: existing.id },
-      });
-      await prisma.questionBank.update({ where: { id: existing.id }, data });
-      questionId = existing.id;
-    } else {
-      const created = await prisma.questionBank.create({ data });
-      questionId = created.id;
-    }
 
-    if (item.options) {
-      await prisma.questionOption.createMany({
-        data: item.options.map((option, index) => ({
-          questionId,
-          content: option.content,
-          displayOrder: index,
-          isCorrect: option.isCorrect,
-        })),
-      });
-    }
-    if (item.acceptedAnswers) {
-      await prisma.questionAcceptedAnswer.createMany({
-        data: item.acceptedAnswers.map((answer, index) => ({
-          questionId,
-          answerText: answer,
-          normalizedAnswer: normalizeAnswer(answer),
-          displayOrder: index,
-        })),
-      });
-    }
+      let id: string;
+      if (existing) {
+        await tx.questionOption.deleteMany({
+          where: { questionId: existing.id },
+        });
+        await tx.questionAcceptedAnswer.deleteMany({
+          where: { questionId: existing.id },
+        });
+        await tx.questionBank.update({ where: { id: existing.id }, data });
+        id = existing.id;
+      } else {
+        const created = await tx.questionBank.create({ data });
+        id = created.id;
+      }
+
+      if (item.options) {
+        await tx.questionOption.createMany({
+          data: item.options.map((option, index) => ({
+            questionId: id,
+            content: option.content,
+            displayOrder: index,
+            isCorrect: option.isCorrect,
+          })),
+        });
+      }
+      if (item.acceptedAnswers) {
+        await tx.questionAcceptedAnswer.createMany({
+          data: item.acceptedAnswers.map((answer, index) => ({
+            questionId: id,
+            answerText: answer,
+            normalizedAnswer: normalizeAnswer(answer),
+            displayOrder: index,
+          })),
+        });
+      }
+
+      return id;
+    });
 
     const list = questionIdsByKey.get(item.subjectKey) ?? [];
     list.push(questionId);
