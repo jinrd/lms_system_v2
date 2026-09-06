@@ -927,6 +927,10 @@ export class UsersService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // 담당 강사는 반이 아니라 교육과정에 배정된다(기획안 2026-09-01 개편,
+    // Part III D-03·D-19·D-21). class_instructor_assignments 는 이력 보존용
+    // 레거시라 쓰지 않고, 강사가 담당하는 보관되지 않은 교육과정에 이 학생이
+    // 현재 수강 중인지로 판정한다.
     const assignedStudent = await this.prisma.enrollment.findFirst({
       where: {
         studentId: targetUserId,
@@ -944,25 +948,9 @@ export class UsersService {
             },
           },
         ],
-        class: {
-          instructorAssignments: {
-            some: {
-              instructorId: actor.id,
-              assignedFrom: {
-                lte: today,
-              },
-              OR: [
-                {
-                  assignedTo: null,
-                },
-                {
-                  assignedTo: {
-                    gte: today,
-                  },
-                },
-              ],
-            },
-          },
+        courseOffering: {
+          instructorId: actor.id,
+          archivedAt: null,
         },
       },
       select: {
