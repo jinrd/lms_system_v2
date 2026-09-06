@@ -3,6 +3,7 @@ import { QuestionsModule } from '../questions/questions.module';
 import { ExamAccessService } from './exam-access.service';
 import { ExamCompositionService } from './exam-composition.service';
 import { ExamMaintenanceService } from './exam-maintenance.service';
+import { ExamResultsService } from './exam-results.service';
 import { ExamScheduleValidationService } from './exam-schedule-validation.service';
 import { ExamTargetsService } from './exam-targets.service';
 import { ExamsController } from './exams.controller';
@@ -21,6 +22,7 @@ import { WrittenGradingService } from './written-grading.service';
     ExamScheduleValidationService,
     ExamTargetsService,
     ExamMaintenanceService,
+    ExamResultsService,
     StudentExamsService,
     WrittenGradingService,
   ],

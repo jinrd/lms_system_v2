@@ -21,6 +21,7 @@ import { ExamPartType, UserRole } from '../generated/prisma/enums';
 import { AddExamTargetDto } from './dto/add-exam-target.dto';
 import { CancelExamDto } from './dto/cancel-exam.dto';
 import { CreateExamDto } from './dto/create-exam.dto';
+import { ReviseExamResultDto } from './dto/revise-exam-result.dto';
 import { ExamQueryDto } from './dto/exam-query.dto';
 import { ReplaceExamPracticalCriteriaDto } from './dto/replace-exam-practical-criteria.dto';
 import { ReplaceExamQuestionsDto } from './dto/replace-exam-questions.dto';
@@ -31,6 +32,10 @@ import {
   ExamCompositionService,
   type ExamQuestionsResponse,
 } from './exam-composition.service';
+import {
+  type AttemptDetailResponse,
+  ExamResultsService,
+} from './exam-results.service';
 import type { ExamScheduleValidationResult } from './exam-schedule-validation.service';
 import {
   type ExamTargetListResponse,
@@ -50,6 +55,7 @@ export class ExamsController {
     private readonly service: ExamsService,
     private readonly composition: ExamCompositionService,
     private readonly targets: ExamTargetsService,
+    private readonly results: ExamResultsService,
   ) {}
 
   @Get()
@@ -112,6 +118,44 @@ export class ExamsController {
     @Req() request: Request,
   ): Promise<ExamResponse> {
     return this.service.cancel(id, dto, actor, request.ip);
+  }
+
+  @Post(':id/results/review')
+  reviewResults(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<{ reviewedAt: string }> {
+    return this.results.review(id, actor, request.ip);
+  }
+
+  @Post(':id/results/publish')
+  publishResults(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<{ publishedAt: string }> {
+    return this.results.publish(id, actor, request.ip);
+  }
+
+  @Get(':id/attempts/:attemptId')
+  attemptDetail(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('attemptId', ParseUUIDPipe) attemptId: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<AttemptDetailResponse> {
+    return this.results.getAttemptDetail(id, attemptId, actor);
+  }
+
+  @Post(':id/attempts/:attemptId/revise')
+  reviseResult(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('attemptId', ParseUUIDPipe) attemptId: string,
+    @Body() dto: ReviseExamResultDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<AttemptDetailResponse> {
+    return this.results.revise(id, attemptId, dto, actor, request.ip);
   }
 
   @Get(':id/targets')

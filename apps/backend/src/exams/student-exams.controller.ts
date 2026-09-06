@@ -13,6 +13,10 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../generated/prisma/enums';
 import { SaveWrittenAnswerDto } from './dto/save-written-answer.dto';
 import {
+  type MyExamResultResponse,
+  ExamResultsService,
+} from './exam-results.service';
+import {
   type MyExamSummary,
   type MyWrittenQuestionsResponse,
   type SaveWrittenAnswerResponse,
@@ -22,7 +26,10 @@ import {
 @Roles(UserRole.STUDENT)
 @Controller('me/exams')
 export class StudentExamsController {
-  constructor(private readonly service: StudentExamsService) {}
+  constructor(
+    private readonly service: StudentExamsService,
+    private readonly results: ExamResultsService,
+  ) {}
 
   @Get()
   listMine(@CurrentUser() actor: AuthenticatedUser): Promise<MyExamSummary[]> {
@@ -35,6 +42,14 @@ export class StudentExamsController {
     @CurrentUser() actor: AuthenticatedUser,
   ): Promise<MyExamSummary> {
     return this.service.getMyExam(actor, examId);
+  }
+
+  @Get(':examId/result')
+  getMyResult(
+    @Param('examId', ParseUUIDPipe) examId: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ): Promise<MyExamResultResponse> {
+    return this.results.getMyResult(actor, examId);
   }
 
   @Post(':examId/parts/WRITTEN/start')
