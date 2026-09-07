@@ -21,6 +21,7 @@ import { ExamPartType, UserRole } from '../generated/prisma/enums';
 import { AddExamTargetDto } from './dto/add-exam-target.dto';
 import { CancelExamDto } from './dto/cancel-exam.dto';
 import { CreateExamDto } from './dto/create-exam.dto';
+import { RescheduleExamDto } from './dto/reschedule-exam.dto';
 import { ReviseExamResultDto } from './dto/revise-exam-result.dto';
 import { ExamQueryDto } from './dto/exam-query.dto';
 import { ReplaceExamPracticalCriteriaDto } from './dto/replace-exam-practical-criteria.dto';
@@ -118,6 +119,25 @@ export class ExamsController {
     @Req() request: Request,
   ): Promise<ExamResponse> {
     return this.service.cancel(id, dto, actor, request.ip);
+  }
+
+  @Post(':id/reschedule')
+  reschedule(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RescheduleExamDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ExamResponse> {
+    return this.service.reschedule(id, dto, actor, request.ip);
+  }
+
+  @Post(':id/duplicate')
+  duplicate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<ExamResponse> {
+    return this.service.duplicate(id, actor, request.ip);
   }
 
   @Post(':id/results/review')

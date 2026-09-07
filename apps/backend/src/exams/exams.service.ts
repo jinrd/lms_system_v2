@@ -22,6 +22,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CancelExamDto } from './dto/cancel-exam.dto';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { ExamQueryDto } from './dto/exam-query.dto';
+import { RescheduleExamDto } from './dto/reschedule-exam.dto';
 import {
   PRACTICAL_FILE_SIZE_BYTES,
   PRACTICAL_MAX_FILES,
@@ -648,6 +649,265 @@ export class ExamsService {
     });
 
     return this.getById(id, actor);
+  }
+
+  /**
+   * 예약된 시험의 파트 시각·제한 시간을 조정한다(기획안 §14.1·D-33).
+   *
+   * `SCHEDULED` 상태에서, 가장 이른 파트가 아직 시작되지 않았을 때만 허용한다.
+   * 시험 전체 응시 기간은 파트 봉투(최소 시작~최대 종료)에 맞춰 다시 계산한다.
+   */
+  async reschedule(
+    id: string,
+    dto: RescheduleExamDto,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<ExamResponse> {
+    const existing = await this.loadForManage(id, actor);
+    if (existing.status !== ExamStatus.SCHEDULED) {
+      throw new ConflictException(
+        '예약된 시험만 일정을 조정할 수 있습니다. 초안은 일반 수정을 사용하세요.',
+      );
+    }
+
+    const parts = await this.prisma.examPart.findMany({
+      where: { examId: id },
+      select: {
+        id: true,
+        type: true,
+        opensAt: true,
+        closesAt: true,
+        durationMinutes: true,
+      },
+    });
+    if (
+      parts.some((part) => new Date() >= part.opensAt) ||
+      existing.opensAt <= new Date()
+    ) {
+      throw new ConflictException(
+        '이미 시작된 시험은 일정을 변경할 수 없습니다.',
+      );
+    }
+
+    const byType = new Map(dto.parts.map((entry) => [entry.type, entry]));
+    for (const entry of dto.parts) {
+      if (!parts.some((part) => part.type === entry.type)) {
+        throw new BadRequestException(`시험에 없는 파트입니다: ${entry.type}`);
+      }
+    }
+
+    const resolved = parts.map((part) => {
+      const change = byType.get(part.type);
+      const opensAt = change?.opensAt ? new Date(change.opensAt) : part.opensAt;
+      const closesAt = change?.closesAt
+        ? new Date(change.closesAt)
+        : part.closesAt;
+      if (opensAt >= closesAt) {
+        throw new BadRequestException(
+          '파트 시작 시각은 종료 시각보다 앞서야 합니다.',
+        );
+      }
+      if (opensAt <= new Date()) {
+        throw new BadRequestException(
+          '파트 시작 시각은 현재보다 미래여야 합니다.',
+        );
+      }
+      let durationMinutes = part.durationMinutes;
+      if (change?.durationMinutes !== undefined) {
+        if (part.type !== ExamPartType.WRITTEN) {
+          throw new BadRequestException(
+            '제한 시간은 필기 파트에만 설정할 수 있습니다.',
+          );
+        }
+        durationMinutes = change.durationMinutes;
+      }
+      return { id: part.id, opensAt, closesAt, durationMinutes };
+    });
+
+    const opensAt = new Date(
+      Math.min(...resolved.map((part) => part.opensAt.getTime())),
+    );
+    const closesAt = new Date(
+      Math.max(...resolved.map((part) => part.closesAt.getTime())),
+    );
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const part of resolved) {
+        await tx.examPart.update({
+          where: { id: part.id },
+          data: {
+            opensAt: part.opensAt,
+            closesAt: part.closesAt,
+            durationMinutes: part.durationMinutes,
+          },
+        });
+      }
+      await tx.exam.update({
+        where: { id },
+        data: { opensAt, closesAt },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorRole: actor.role,
+          action: 'EXAM_RESCHEDULED',
+          resourceType: 'EXAM',
+          resourceId: id,
+          afterData: {
+            opensAt: opensAt.toISOString(),
+            closesAt: closesAt.toISOString(),
+          },
+          ipAddress,
+          result: 'SUCCESS',
+        },
+      });
+    });
+
+    return this.getById(id, actor);
+  }
+
+  /**
+   * 시험을 새 `DRAFT` 시험으로 복제한다(기획안 §14.1·D-32).
+   *
+   * 취소된 시험을 다시 열 때 쓴다. 과목·파트·문제·보기·정답·실기 기준을 스냅샷
+   * 으로 복사하고, 일정·대상 반·응시 기록·채점 결과·공개 상태는 복사하지 않는다.
+   * 복제 관계는 새 시험의 `source_exam_id`로 추적한다.
+   */
+  async duplicate(
+    id: string,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<ExamResponse> {
+    await this.loadForManage(id, actor);
+
+    const source = await this.prisma.exam.findUnique({
+      where: { id },
+      include: {
+        subjects: true,
+        parts: {
+          include: {
+            questions: {
+              orderBy: { displayOrder: 'asc' },
+              include: {
+                options: { orderBy: { displayOrder: 'asc' } },
+                acceptedAnswers: true,
+              },
+            },
+            practicalCriteria: { orderBy: { displayOrder: 'asc' } },
+          },
+        },
+      },
+    });
+    if (!source) {
+      throw new NotFoundException('시험을 찾을 수 없습니다.');
+    }
+
+    const newId = await this.prisma.$transaction(async (tx) => {
+      const copy = await tx.exam.create({
+        data: {
+          courseOfferingId: source.courseOfferingId,
+          sourceTemplateId: source.sourceTemplateId,
+          sourceExamId: source.id,
+          title: `${source.title} (재개설)`,
+          description: source.description,
+          scope: source.scope,
+          stage: source.stage,
+          status: ExamStatus.DRAFT,
+          opensAt: source.opensAt,
+          closesAt: source.closesAt,
+          createdById: actor.id,
+        },
+      });
+
+      if (source.subjects.length > 0) {
+        await tx.examSubject.createMany({
+          data: source.subjects.map((subject) => ({
+            examId: copy.id,
+            courseOfferingId: subject.courseOfferingId,
+            courseOfferingSubjectId: subject.courseOfferingSubjectId,
+          })),
+        });
+      }
+
+      for (const part of source.parts) {
+        const createdPart = await tx.examPart.create({
+          data: {
+            examId: copy.id,
+            type: part.type,
+            totalScore: part.totalScore,
+            passScore: part.passScore,
+            opensAt: part.opensAt,
+            closesAt: part.closesAt,
+            durationMinutes: part.durationMinutes,
+            minFiles: part.minFiles,
+            maxFiles: part.maxFiles,
+            maxFileSizeBytes: part.maxFileSizeBytes,
+            maxTotalSizeBytes: part.maxTotalSizeBytes,
+            instructions: part.instructions,
+          },
+        });
+
+        for (const question of part.questions) {
+          await tx.examQuestion.create({
+            data: {
+              examId: copy.id,
+              examPartId: createdPart.id,
+              courseOfferingSubjectId: question.courseOfferingSubjectId,
+              sourceQuestionId: question.sourceQuestionId,
+              type: question.type,
+              prompt: question.prompt,
+              explanation: question.explanation,
+              score: question.score,
+              displayOrder: question.displayOrder,
+              normalizationVersion: question.normalizationVersion,
+              options: {
+                create: question.options.map((option) => ({
+                  content: option.content,
+                  displayOrder: option.displayOrder,
+                  isCorrect: option.isCorrect,
+                })),
+              },
+              acceptedAnswers: {
+                create: question.acceptedAnswers.map((answer) => ({
+                  answerText: answer.answerText,
+                  normalizedAnswer: answer.normalizedAnswer,
+                })),
+              },
+            },
+          });
+        }
+
+        if (part.practicalCriteria.length > 0) {
+          await tx.examPracticalCriterion.createMany({
+            data: part.practicalCriteria.map((criterion) => ({
+              examPartId: createdPart.id,
+              name: criterion.name,
+              description: criterion.description,
+              maxScore: criterion.maxScore,
+              displayOrder: criterion.displayOrder,
+            })),
+          });
+        }
+      }
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorRole: actor.role,
+          action: 'EXAM_DUPLICATED',
+          resourceType: 'EXAM',
+          resourceId: copy.id,
+          afterData: { sourceExamId: source.id },
+          ipAddress,
+          result: 'SUCCESS',
+        },
+      });
+
+      return copy.id;
+    });
+
+    return this.getById(newId, actor);
   }
 
   /** 시험 존재·접근 권한(404로 숨김)을 확인하고 관리에 필요한 필드를 돌려준다. */

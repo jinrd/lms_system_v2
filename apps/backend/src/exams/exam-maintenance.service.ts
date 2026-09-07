@@ -150,6 +150,7 @@ export class ExamMaintenanceService implements OnModuleInit, OnModuleDestroy {
         status: AttemptStatus.IN_PROGRESS,
         deadlineAt: { lte: now },
         examPart: { type: ExamPartType.WRITTEN },
+        exam: { status: { not: ExamStatus.CANCELED } },
       },
       select: {
         id: true,

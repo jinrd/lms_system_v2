@@ -413,6 +413,7 @@ export class StudentExamsService {
     dto: SaveWrittenAnswerDto,
   ): Promise<SaveWrittenAnswerResponse> {
     const ctx = await this.loadAttemptContext(actor, examId);
+    this.assertNotCanceled(ctx);
 
     const submission = await this.prisma.examPartSubmission.findUnique({
       where: {
@@ -549,6 +550,7 @@ export class StudentExamsService {
     examId: string,
   ): Promise<MyWrittenQuestionsResponse> {
     const ctx = await this.loadAttemptContext(actor, examId);
+    this.assertNotCanceled(ctx);
 
     const submission = await this.prisma.examPartSubmission.findUnique({
       where: {
@@ -604,12 +606,17 @@ export class StudentExamsService {
   }
 
   private assertWrittenOpen(ctx: AttemptContext): void {
-    if (ctx.examStatus === ExamStatus.CANCELED) {
-      throw new ConflictException('취소된 시험입니다.');
-    }
+    this.assertNotCanceled(ctx);
     const now = new Date();
     if (now < ctx.writtenPart.opensAt || now > ctx.writtenPart.closesAt) {
       throw new ConflictException('필기 파트 응시 기간이 아닙니다.');
+    }
+  }
+
+  /** 취소된 시험은 응시 시작·자동 저장·최종 제출을 모두 차단한다(기획안 §14.1·D-31). */
+  private assertNotCanceled(ctx: AttemptContext): void {
+    if (ctx.examStatus === ExamStatus.CANCELED) {
+      throw new ConflictException('취소된 시험입니다.');
     }
   }
 

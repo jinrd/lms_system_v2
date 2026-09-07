@@ -187,6 +187,9 @@ export class ExamResultsService {
     ipAddress?: string,
   ): Promise<AttemptDetailResponse> {
     const exam = await this.loadManageableExam(examId, actor);
+    if (exam.status === ExamStatus.CANCELED) {
+      throw new ConflictException('취소된 시험의 결과는 정정할 수 없습니다.');
+    }
 
     if (!this.access.isPrivileged(actor.role)) {
       const limit = new Date(
@@ -210,10 +213,29 @@ export class ExamResultsService {
         practicalScore: true,
         practicalResult: true,
         finalResult: true,
+        partSubmissions: {
+          where: { examPart: { type: 'WRITTEN' } },
+          select: {
+            id: true,
+            examPart: { select: { totalScore: true } },
+          },
+        },
       },
     });
     if (!attempt) {
       throw new NotFoundException('응시 기록을 찾을 수 없습니다.');
+    }
+
+    const writtenSubmission = attempt.partSubmissions[0] ?? null;
+    if (
+      dto.writtenScore !== undefined &&
+      writtenSubmission &&
+      (dto.writtenScore < 0 ||
+        dto.writtenScore > Number(writtenSubmission.examPart.totalScore))
+    ) {
+      throw new BadRequestException(
+        '정정 점수는 0점 이상 필기 파트 총점 이하여야 합니다.',
+      );
     }
     if (
       attempt.status !== AttemptStatus.GRADED &&
@@ -267,11 +289,29 @@ export class ExamResultsService {
         },
       });
 
-      if (dto.writtenFeedback !== undefined) {
-        await tx.examPartSubmission.updateMany({
-          where: { examAttemptId: attempt.id, examPart: { type: 'WRITTEN' } },
-          data: { comment: dto.writtenFeedback.trim() || null },
-        });
+      // 정정 결과를 필기 파트 제출에도 반영해, 학생·강사 조회의 파트 점수와
+      // 응시 기록 점수가 어긋나지 않게 한다(기획안 §15.6 "즉시 반영").
+      if (writtenSubmission) {
+        const submissionUpdate: {
+          comment?: string | null;
+          score?: number;
+          result?: PassStatus;
+        } = {};
+        if (dto.writtenFeedback !== undefined) {
+          submissionUpdate.comment = dto.writtenFeedback.trim() || null;
+        }
+        if (dto.writtenScore !== undefined) {
+          submissionUpdate.score = next.writtenScore ?? undefined;
+        }
+        if (dto.writtenResult !== undefined) {
+          submissionUpdate.result = next.writtenResult;
+        }
+        if (Object.keys(submissionUpdate).length > 0) {
+          await tx.examPartSubmission.update({
+            where: { id: writtenSubmission.id },
+            data: submissionUpdate,
+          });
+        }
       }
 
       await tx.auditLog.create({
