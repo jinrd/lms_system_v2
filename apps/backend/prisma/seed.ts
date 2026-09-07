@@ -13,6 +13,10 @@ import {
   ExamScope,
   ExamStage,
   ExamStatus,
+  InquiryStatus,
+  InquiryType,
+  NoticeScope,
+  NoticeType,
   QuestionType,
   SubjectMode,
   UserRole,
@@ -766,6 +770,7 @@ async function seed(): Promise<void> {
 
   await seedQuestionBankAndExamTemplate(subjectIds, users.get('admin')!.id);
   await seedRealExam(subjectIds, users);
+  await seedNoticesAndInquiries(users);
 
   console.table(
     credentials.map(({ loginId, password, role }) => ({
@@ -774,6 +779,149 @@ async function seed(): Promise<void> {
       role,
     })),
   );
+}
+
+/**
+ * 예제 공지 3건(전체 학생 / 특정 반 / 강사)과 문의 2건(반 관련 / 일반)을 만든다.
+ *
+ * 첨부파일·인수인계는 파일 저장소 확정 전까지 범위 밖이라 시드하지 않는다.
+ * 재실행 안전: 제목으로 찾아 갱신하거나 새로 만든다.
+ */
+async function seedNoticesAndInquiries(
+  users: Map<string, { id: string }>,
+): Promise<void> {
+  const adminId = users.get('admin')!.id;
+  const skinClass = await prisma.class.findFirst({
+    where: { name: '피부 기초 1기', archivedAt: null },
+    select: { id: true },
+  });
+
+  const noticeSeeds = [
+    {
+      type: NoticeType.STUDENT,
+      scope: NoticeScope.ALL,
+      title: '수강생 이용 안내 (자동 시드)',
+      content: '출결과 시험 일정은 각 화면에서 확인해 주세요.',
+      important: true,
+      classIds: [] as string[],
+    },
+    {
+      type: NoticeType.STUDENT,
+      scope: NoticeScope.CLASSES,
+      title: '피부 기초 1기 보강 안내 (자동 시드)',
+      content: '이번 주 보강은 금요일 저녁 7시에 진행합니다.',
+      important: false,
+      classIds: skinClass ? [skinClass.id] : [],
+    },
+    {
+      type: NoticeType.INSTRUCTOR,
+      scope: NoticeScope.ALL,
+      title: '강사 정기 회의 공지 (자동 시드)',
+      content: '매월 첫째 주 월요일 오전 10시에 강사 회의를 진행합니다.',
+      important: false,
+      classIds: [] as string[],
+    },
+  ];
+
+  for (const seedRow of noticeSeeds) {
+    if (
+      seedRow.scope === NoticeScope.CLASSES &&
+      seedRow.classIds.length === 0
+    ) {
+      continue;
+    }
+    const existing = await prisma.notice.findFirst({
+      where: { title: seedRow.title },
+      select: { id: true },
+    });
+    const data = {
+      type: seedRow.type,
+      scope: seedRow.scope,
+      content: seedRow.content,
+      important: seedRow.important,
+      publishedFrom: null,
+      publishedUntil: null,
+    };
+    if (existing) {
+      await prisma.noticeClassTarget.deleteMany({
+        where: { noticeId: existing.id },
+      });
+      await prisma.notice.update({ where: { id: existing.id }, data });
+      if (seedRow.classIds.length > 0) {
+        await prisma.noticeClassTarget.createMany({
+          data: seedRow.classIds.map((classId) => ({
+            noticeId: existing.id,
+            classId,
+          })),
+        });
+      }
+    } else {
+      await prisma.notice.create({
+        data: {
+          ...data,
+          title: seedRow.title,
+          authorId: adminId,
+          classTargets:
+            seedRow.classIds.length > 0
+              ? {
+                  create: seedRow.classIds.map((classId) => ({ classId })),
+                }
+              : undefined,
+        },
+      });
+    }
+  }
+
+  const inquirySeeds = [
+    {
+      authorLoginId: 'student01',
+      type: InquiryType.CLASS,
+      classId: skinClass?.id ?? null,
+      title: '보강 일정 문의 (자동 시드)',
+      content: '이번 주 보강 시간에 참석이 어려운데 다른 반 청강이 가능한가요?',
+    },
+    {
+      authorLoginId: 'student02',
+      type: InquiryType.GENERAL,
+      classId: null as string | null,
+      title: '수강료 환불 문의 (자동 시드)',
+      content: '개인 사정으로 수강을 중단하려는데 환불 절차가 궁금합니다.',
+    },
+  ];
+
+  for (const seedRow of inquirySeeds) {
+    const author = users.get(seedRow.authorLoginId);
+    if (!author) {
+      continue;
+    }
+    if (seedRow.type === InquiryType.CLASS && !seedRow.classId) {
+      continue;
+    }
+    const existing = await prisma.inquiry.findFirst({
+      where: { title: seedRow.title },
+      select: { id: true },
+    });
+    const data = {
+      authorId: author.id,
+      type: seedRow.type,
+      classId: seedRow.type === InquiryType.CLASS ? seedRow.classId : null,
+      content: seedRow.content,
+      status: InquiryStatus.RECEIVED,
+      closedAt: null,
+    };
+    if (existing) {
+      await prisma.inquiryReply.deleteMany({
+        where: { inquiryId: existing.id },
+      });
+      await prisma.inquiry.update({ where: { id: existing.id }, data });
+    } else {
+      await prisma.inquiry.create({
+        data: { ...data, title: seedRow.title },
+      });
+    }
+  }
+
+  console.log('예제 공지 3건·문의 2건 준비 완료');
 }
 
 seed()
