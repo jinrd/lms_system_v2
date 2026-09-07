@@ -6,6 +6,8 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import type { AuthenticatedRequest } from './auth/auth.types';
+import { SystemLogsService } from './operations/system-logs.service';
 import type { RequestWithId } from './request-id.middleware';
 
 type ExceptionBody = {
@@ -23,9 +25,11 @@ type ErrorResponse = {
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
+  constructor(private readonly systemLogs: SystemLogsService) {}
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const context = host.switchToHttp();
-    const request = context.getRequest<RequestWithId>();
+    const request = context.getRequest<RequestWithId & AuthenticatedRequest>();
     const response = context.getResponse<Response>();
 
     const status =
@@ -39,11 +43,31 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         : {};
 
     const requestId = request.requestId ?? 'unknown';
+    const code = this.resolveCode(status, exceptionBody);
+
+    // 서버 오류(5xx)와 예상하지 못한 예외만 시스템 로그에 남긴다. 4xx는 정상적인
+    // 클라이언트 오류라 남기지 않는다. 요청 본문·헤더·쿼리는 민감값이 섞일 수
+    // 있어 기록하지 않고, 경로·메서드·추적 ID·오류 코드만 남긴다(기획안 §14.4).
+    if (status >= 500) {
+      void this.systemLogs.record({
+        level: 'ERROR',
+        message:
+          exception instanceof Error
+            ? `${exception.name}: ${exception.message}`
+            : String(exception),
+        errorCode: code,
+        stack: exception instanceof Error ? (exception.stack ?? null) : null,
+        userId: request.user?.id ?? null,
+        route: `${request.method} ${request.path}`,
+        requestId: request.requestId ?? null,
+        metadata: { statusCode: status },
+      });
+    }
 
     const body: ErrorResponse = {
       success: false,
       status,
-      code: this.resolveCode(status, exceptionBody),
+      code,
       message: this.resolveMessage(status, exceptionBody),
       request_id: requestId,
     };
