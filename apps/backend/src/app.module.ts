@@ -11,6 +11,7 @@ import { GlobalExceptionFilter } from './global-exception.filter';
 import { HealthController } from './health.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { RequestIdMiddleware } from './request-id.middleware';
+import { SettingsModule } from './settings/settings.module';
 import { AuthModule } from './auth/auth.module';
 import { TermsModule } from './terms/terms.module';
 import { UsersModule } from './users/users.module';
@@ -53,6 +54,7 @@ import { MaintenanceModule } from './maintenance/maintenance.module';
       },
     }),
     PrismaModule,
+    SettingsModule,
     MaintenanceModule,
     AuthModule,
     TermsModule,

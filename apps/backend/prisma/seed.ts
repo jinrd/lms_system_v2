@@ -6,6 +6,11 @@ import {
 } from '../src/common/answer-normalizer';
 import { PrismaClient } from '../src/generated/prisma/client';
 import {
+  SYSTEM_SETTING_DEFAULTS,
+  SYSTEM_SETTING_DESCRIPTIONS,
+  type SystemSettingKey,
+} from '../src/common/system-settings';
+import {
   DifficultyLevel,
   EnrollmentStatus,
   EnrollmentType,
@@ -615,7 +620,30 @@ async function seedRealExam(
   );
 }
 
+/**
+ * 운영 정책값을 `system_settings`에 채운다. 이미 있는 키는 값을 덮어쓰지 않아
+ * 운영자가 조정한 값이 재실행에도 유지된다. 설명만 최신으로 맞춘다.
+ */
+async function seedSystemSettings(): Promise<void> {
+  const keys = Object.keys(SYSTEM_SETTING_DEFAULTS) as SystemSettingKey[];
+  for (const key of keys) {
+    const description = SYSTEM_SETTING_DESCRIPTIONS[key] ?? null;
+    await prisma.systemSetting.upsert({
+      where: { key },
+      update: { description },
+      create: {
+        key,
+        value: SYSTEM_SETTING_DEFAULTS[key] as object,
+        description,
+      },
+    });
+  }
+  console.log(`시스템 설정 ${keys.length}개 확인 완료`);
+}
+
 async function seed(): Promise<void> {
+  await seedSystemSettings();
+
   const passwordHashes = new Map<string, string>();
   for (const password of new Set(credentials.map((item) => item.password))) {
     passwordHashes.set(
