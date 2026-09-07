@@ -7,8 +7,6 @@ import {
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import {
-  AttendanceMethod,
-  AttendanceStatus,
   AttendanceCodeStatus,
   SessionKind,
   SessionStatus,
