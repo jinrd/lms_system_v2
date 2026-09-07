@@ -559,7 +559,7 @@ export class StudentExamsService {
           examPartId: ctx.writtenPart.id,
         },
       },
-      select: { id: true, status: true, version: true },
+      select: { id: true, status: true, version: true, deadlineAt: true },
     });
     if (!submission) {
       throw new ConflictException('아직 시작하지 않은 필기 파트입니다.');
@@ -569,6 +569,13 @@ export class StudentExamsService {
     }
 
     const now = new Date();
+    // 개인 마감이 지난 뒤에는 수동 제출을 받지 않는다. 마지막으로 저장된 답안을
+    // 배치가 자동 제출·채점한다(기획안 §8.4·D-25).
+    if (submission.deadlineAt && now > submission.deadlineAt) {
+      throw new ConflictException(
+        '개인 마감 시각이 지났습니다. 마지막으로 저장된 답안이 자동 제출됩니다.',
+      );
+    }
     const claimed = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.examPartSubmission.updateMany({
         where: { id: submission.id, status: AttemptStatus.IN_PROGRESS },
