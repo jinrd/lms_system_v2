@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AuditLogsController } from './audit-logs.controller';
 import { AuditLogsService } from './audit-logs.service';
+import { BackupsController } from './backups.controller';
+import { BackupsService } from './backups.service';
 import { DataLifecycleController } from './data-lifecycle.controller';
 import { DataLifecycleService } from './data-lifecycle.service';
 import { SystemLogsController } from './system-logs.controller';
@@ -14,8 +16,19 @@ import { SystemLogsService } from './system-logs.service';
     AuditLogsController,
     SystemLogsController,
     DataLifecycleController,
+    BackupsController,
   ],
-  providers: [AuditLogsService, SystemLogsService, DataLifecycleService],
-  exports: [AuditLogsService, SystemLogsService, DataLifecycleService],
+  providers: [
+    AuditLogsService,
+    SystemLogsService,
+    DataLifecycleService,
+    BackupsService,
+  ],
+  exports: [
+    AuditLogsService,
+    SystemLogsService,
+    DataLifecycleService,
+    BackupsService,
+  ],
 })
 export class OperationsModule {}

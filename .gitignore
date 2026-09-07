@@ -55,5 +55,8 @@ Thumbs.db
 .eslintcache
 .temp/
 .tmp/
+.mcp.*
 
+# 로컬 DB 백업 (scripts/backup.ts 기본 출력 경로)
+apps/backend/backups/
 나중에_수정사항
