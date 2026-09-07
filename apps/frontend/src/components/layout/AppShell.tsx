@@ -3,12 +3,14 @@ import {
   Bell,
   BookOpen,
   CalendarDays,
-  ChevronDown,
+  ChevronRight,
   CircleHelp,
   ClipboardCheck,
+  ClipboardList,
   FileText,
   GraduationCap,
   LayoutDashboard,
+  ListChecks,
   LogOut,
   Menu,
   ScrollText,
@@ -17,10 +19,12 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import type { UserRole } from "../../auth/auth.types";
+
+import { useFocusContainment } from "../../hooks/useFocusContainment";
 
 type NavigationItem = {
   label: string;
@@ -114,7 +118,19 @@ const navigationGroups: NavigationGroup[] = [
         roles: ALL_ROLES,
       },
       {
-        label: "과제·시험",
+        label: "문제은행",
+        path: "/questions",
+        icon: ListChecks,
+        roles: STAFF_ROLES,
+      },
+      {
+        label: "시험 템플릿",
+        path: "/exam-templates",
+        icon: ClipboardList,
+        roles: STAFF_ROLES,
+      },
+      {
+        label: "시험",
         path: "/learning",
         icon: FileText,
         roles: ALL_ROLES,
@@ -167,8 +183,22 @@ const ROLE_LABELS: Record<UserRole, string> = {
 
 export function AppShell() {
   const { user, logout } = useAuth();
+  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 767px)").matches);
+  useFocusContainment(sidebarRef, mobileMenuOpen && isMobile);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const update = () => {
+      setIsMobile(media.matches);
+      if (!media.matches) setMobileMenuOpen(false);
+    };
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   useEffect(() => {
     if (!mobileMenuOpen) {
@@ -203,6 +233,16 @@ export function AppShell() {
       ),
     }))
     .filter((group) => group.items.length > 0);
+  const currentPageLabel =
+    navigationGroups
+      .flatMap((group) => group.items)
+      .find((item) => item.path === location.pathname)?.label ?? "업무 화면";
+  const todayLabel = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  }).format(new Date());
 
   const handleLogout = async (): Promise<void> => {
     setLoggingOut(true);
@@ -230,6 +270,12 @@ export function AppShell() {
       )}
 
       <aside
+        id="primary-navigation"
+        ref={sidebarRef}
+        tabIndex={-1}
+        inert={isMobile && !mobileMenuOpen}
+        role={isMobile && mobileMenuOpen ? "dialog" : undefined}
+        aria-modal={isMobile && mobileMenuOpen ? true : undefined}
         className={`sidebar ${mobileMenuOpen ? "sidebar--open" : ""}`}
         aria-label="주요 메뉴"
       >
@@ -301,18 +347,20 @@ export function AppShell() {
         </div>
       </aside>
 
-      <div className="app-main">
+      <div className="app-main" inert={isMobile && mobileMenuOpen}>
         <header className="mobile-header">
           <button
             type="button"
             className="icon-button"
             aria-label="메뉴 열기"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="primary-navigation"
             onClick={() => setMobileMenuOpen(true)}
           >
             <Menu size={23} />
           </button>
 
-          <strong>SKB 학원관리</strong>
+          <strong>{currentPageLabel}</strong>
 
           <span className="mobile-header__account" aria-label={user.name}>
             {user.name.slice(0, 1)}
@@ -320,13 +368,17 @@ export function AppShell() {
         </header>
 
         <header className="desktop-header">
-          <div className="desktop-header__location">
-            <span>교육 운영</span>
-            <ChevronDown size={15} aria-hidden="true" />
-            <strong>{ROLE_LABELS[user.role]} 화면</strong>
+          <div className="desktop-header__location" aria-label="현재 위치">
+            <span>SKB 운영실</span>
+            <ChevronRight size={14} aria-hidden="true" />
+            <strong>{currentPageLabel}</strong>
           </div>
 
           <div className="desktop-header__user">
+            <time className="desktop-header__date">
+              <CalendarDays size={15} aria-hidden="true" />
+              {todayLabel}
+            </time>
             <span className="desktop-header__avatar" aria-hidden="true">
               {user.name.slice(0, 1)}
             </span>

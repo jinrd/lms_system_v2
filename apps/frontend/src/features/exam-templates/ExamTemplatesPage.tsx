@@ -18,6 +18,7 @@ import {
   LoadingState,
 } from "../../components/ui/PageStates";
 import { TemplateEditor, PartEditor } from "./ExamTemplateForms";
+import { ExamTemplateComposition } from "./ExamTemplateComposition";
 import {
   createExamTemplate,
   deleteExamTemplatePart,
@@ -455,17 +456,34 @@ export function ExamTemplatesPage() {
               onRetry={() => void detail.refetch()}
             />
           ) : detail.data ? (
-            <TemplateDetail
-              template={detail.data}
-              onEdit={() => openEditor({ mode: "edit", template: detail.data })}
-              onPart={(type) =>
-                openEditor({ mode: "part", template: detail.data, type })
-              }
-              onDelete={(type) => {
-                save.reset();
-                setDeleting({ template: detail.data, type });
-              }}
-            />
+            <div className="template-detail">
+              <TemplateDetail
+                template={detail.data}
+                onEdit={() =>
+                  openEditor({ mode: "edit", template: detail.data })
+                }
+                onPart={(type) =>
+                  openEditor({ mode: "part", template: detail.data, type })
+                }
+                onDelete={(type) => {
+                  save.reset();
+                  setDeleting({ template: detail.data, type });
+                }}
+              />
+              <ExamTemplateComposition
+                template={detail.data}
+                onTemplateChange={(saved, message) => {
+                  client.setQueryData(["exam-template", saved.id], saved);
+                  setNotice(message);
+                }}
+                onDuplicate={(saved) => {
+                  client.setQueryData(["exam-template", saved.id], saved);
+                  setSelectedId(saved.id);
+                  setMobileOpen(true);
+                  setNotice(`복제본 “${saved.name}”을 만들었습니다.`);
+                }}
+              />
+            </div>
           ) : null}
         </div>
       </section>
@@ -576,7 +594,7 @@ export function TemplateDetail({
   onDelete: (type: ExamPartType) => void;
 }) {
   return (
-    <div className="template-detail">
+    <>
       <section className="surface-card">
         <header className="card-header">
           <div>
@@ -766,6 +784,6 @@ export function TemplateDetail({
           );
         })}
       </section>
-    </div>
+    </>
   );
 }

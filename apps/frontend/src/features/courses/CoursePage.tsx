@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, CirclePlus, Pencil } from "lucide-react";
+import { Archive, ArchiveRestore, ChevronLeft, CirclePlus, Pencil } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Modal } from "../../components/ui/Modal";
@@ -23,6 +23,7 @@ export function CoursesPage() {
   const client = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [editor, setEditor] = useState<Editor>(null);
 
   const programsQuery = useQuery({
@@ -67,6 +68,7 @@ export function CoursesPage() {
     mutationFn: (item: EducationProgram) => changeProgramArchive(item.id, !item.archived),
     onSuccess: async () => {
       setSelectedId(null);
+      setMobileDetailOpen(false);
       await refresh();
     },
   });
@@ -89,7 +91,11 @@ export function CoursesPage() {
   };
 
   return (
-    <div className="page-stack">
+    <div
+      className={`page-stack courses-page ${
+        mobileDetailOpen ? "page--mobile-detail-open" : ""
+      }`}
+    >
       <header className="page-header">
         <div><h1>교육과정</h1><p>반을 만들 때 선택할 교육과정과 실제 담당 강사를 관리합니다.</p></div>
         <button className="button button--primary" type="button" onClick={() => setEditor({ mode: "create" })}>
@@ -98,21 +104,21 @@ export function CoursesPage() {
       </header>
 
       <div className="segmented-control" aria-label="교육과정 목록 구분">
-        <button className={`segmented-control__button ${!showArchived ? "segmented-control__button--active" : ""}`} type="button" onClick={() => { setShowArchived(false); setSelectedId(null); }}>사용 중</button>
-        <button className={`segmented-control__button ${showArchived ? "segmented-control__button--active" : ""}`} type="button" onClick={() => { setShowArchived(true); setSelectedId(null); }}>보관됨</button>
+        <button className={`segmented-control__button ${!showArchived ? "segmented-control__button--active" : ""}`} type="button" onClick={() => { setShowArchived(false); setSelectedId(null); setMobileDetailOpen(false); }}>사용 중</button>
+        <button className={`segmented-control__button ${showArchived ? "segmented-control__button--active" : ""}`} type="button" onClick={() => { setShowArchived(true); setSelectedId(null); setMobileDetailOpen(false); }}>보관됨</button>
       </div>
 
       {programs.length === 0 ? (
         <EmptyState title={showArchived ? "보관된 교육과정이 없습니다." : "교육과정이 없습니다."} description="교육 분야와 과목을 준비한 뒤 교육과정을 추가해 주세요." />
       ) : (
-        <section className="master-detail-layout">
-          <div className="data-list card">
+        <section className="master-detail-layout workbench-layout">
+          <div className={`data-list card master-pane master-pane--list ${mobileDetailOpen ? "master-pane--mobile-hidden" : ""}`}>
             {programs.map((item) => (
               <button
                 className={`selection-card ${selected?.id === item.id ? "selection-card--active" : ""}`}
                 key={item.id}
                 type="button"
-                onClick={() => setSelectedId(item.id)}
+                onClick={() => { setSelectedId(item.id); setMobileDetailOpen(true); }}
               >
                 <span>
                   <strong>{item.name}</strong>
@@ -124,7 +130,10 @@ export function CoursesPage() {
           </div>
 
           {selected && (
-            <article className="card program-detail">
+            <article className={`card program-detail master-pane master-pane--detail ${mobileDetailOpen ? "" : "master-pane--mobile-hidden"}`}>
+              <button type="button" className="mobile-detail-back" onClick={() => setMobileDetailOpen(false)}>
+                <ChevronLeft size={18} /> 교육과정 목록
+              </button>
               <header className="card-header">
                 <div>
                   <h2>{selected.name}</h2>

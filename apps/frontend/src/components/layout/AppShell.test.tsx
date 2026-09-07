@@ -1,0 +1,24 @@
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, expect, it, vi } from "vitest";
+import { AppShell } from "./AppShell";
+vi.mock("../../auth/AuthProvider", () => ({useAuth: () => ({user:{name:"운영자",role:"ADMIN"},logout:vi.fn()})}));
+afterEach(cleanup);
+it("모바일 메뉴가 닫혔을 때 탐색을 제외하고 Escape로 포커스를 복원한다", () => {
+  window.matchMedia = vi.fn().mockReturnValue({matches:true,addEventListener:vi.fn(),removeEventListener:vi.fn()});
+  render(<MemoryRouter><AppShell /></MemoryRouter>);
+  const menu = document.getElementById("primary-navigation")!;
+  const open = screen.getByRole("button",{name:"메뉴 열기"});
+  expect(menu.hasAttribute("inert")).toBe(true);
+  open.focus();
+  fireEvent.click(open);
+  expect(screen.getByRole("dialog",{name:"주요 메뉴"})).toBe(menu);
+  expect(menu.hasAttribute("inert")).toBe(false);
+  expect(document.querySelector(".app-main")?.hasAttribute("inert")).toBe(true);
+  expect(document.activeElement).toBe(menu);
+  fireEvent.keyDown(menu,{key:"Escape"});
+  expect(menu.hasAttribute("inert")).toBe(true);
+  expect(document.querySelector(".app-main")?.hasAttribute("inert")).toBe(false);
+  expect(document.activeElement).toBe(open);
+  expect(document.body.style.overflow).not.toBe("hidden");
+});

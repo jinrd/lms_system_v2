@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  RefreshCw,
   BookOpenCheck,
   CalendarClock,
   ChevronRight,
@@ -95,7 +96,7 @@ function StudentDashboard() {
             <LoadingState message="오늘 수업을 불러오고 있습니다." />
           )}
           {sessionsQuery.isError && (
-            <ErrorState message="오늘 수업을 불러오지 못했습니다." />
+            <ErrorState message="오늘 수업을 불러오지 못했습니다." onRetry={() => void sessionsQuery.refetch()} />
           )}
           {sessionsQuery.isSuccess &&
             (sessions.length === 0 ? (
@@ -147,7 +148,7 @@ function StudentDashboard() {
             <LoadingState message="출석률을 계산하고 있습니다." />
           )}
           {summaryQuery.isError && (
-            <ErrorState message="출석률을 불러오지 못했습니다." />
+            <ErrorState message="출석률을 불러오지 못했습니다." onRetry={() => void summaryQuery.refetch()} />
           )}
           {summary &&
             (summary.attendanceRate === null ? (
@@ -221,7 +222,7 @@ function InstructorDashboard() {
             <LoadingState message="담당 반을 불러오고 있습니다." />
           )}
           {classesQuery.isError && (
-            <ErrorState message="담당 반을 불러오지 못했습니다." />
+            <ErrorState message="담당 반을 불러오지 못했습니다." onRetry={() => void classesQuery.refetch()} />
           )}
           {classesQuery.isSuccess &&
             (classCount === 0 ? (
@@ -292,7 +293,8 @@ function OperationDashboard() {
     {
       label: "승인 대기 학생",
       value: pendingQuery.data?.pagination.total,
-      detail: "확인이 필요합니다",
+      detail: pendingQuery.data?.pagination.total === 0 ? "대기 중인 학생이 없습니다" : "확인이 필요합니다",
+      query: pendingQuery,
       icon: UserCheck,
       to: "/users",
     },
@@ -300,13 +302,15 @@ function OperationDashboard() {
       label: "활성 학생",
       value: studentsQuery.data?.pagination.total,
       detail: "수강 가능한 학생",
+      query: studentsQuery,
       icon: Users,
       to: "/users",
     },
     {
       label: "운영 중 반",
-      value: operating,
+      value: classesQuery.isSuccess ? operating : undefined,
       detail: `전체 ${classes.length}개 반`,
+      query: classesQuery,
       icon: BookOpenCheck,
       to: "/classes",
     },
@@ -314,19 +318,52 @@ function OperationDashboard() {
       label: "교육과정",
       value: programsQuery.data?.pagination.total,
       detail: "보관 제외",
+      query: programsQuery,
       icon: ClipboardList,
       to: "/courses",
     },
   ];
 
+  const quickActions = [
+    {
+      label: "학생·직원 관리",
+      description: "가입 승인과 계정 상태를 확인합니다.",
+      icon: Users,
+      to: "/users",
+    },
+    {
+      label: "반 운영 관리",
+      description: "교육과정, 기간과 수강생을 관리합니다.",
+      icon: BookOpenCheck,
+      to: "/classes",
+    },
+    {
+      label: "오늘 수업 일정",
+      description: "수업 시작과 출석 처리 상태를 확인합니다.",
+      icon: CalendarClock,
+      to: "/schedule",
+    },
+  ];
+
   return (
-    <>
+    <div className="page-stack dashboard-page">
       <section className="page-header">
         <div>
           <h1>운영 대시보드</h1>
-          <p>학원 운영 현황을 확인합니다.</p>
+          <p>확인이 필요한 운영 현황과 자주 쓰는 업무를 한곳에서 봅니다.</p>
         </div>
       </section>
+
+      {pendingQuery.isSuccess && pendingQuery.data.pagination.total > 0 && (
+        <section className="dashboard-priority" aria-labelledby="pending-heading">
+          <UserCheck size={24} aria-hidden="true" />
+          <div>
+            <h2 id="pending-heading">가입 승인 대기 학생이 {pendingQuery.data.pagination.total}명 있습니다</h2>
+            <p>학생 정보를 확인하고 가입 승인을 처리하세요.</p>
+          </div>
+          <Link className="button button--primary" to="/users">학생 확인 <ArrowRight size={16} aria-hidden="true" /></Link>
+        </section>
+      )}
 
       <section className="surface-card operation-overview">
         <header className="card-header">
@@ -346,23 +383,58 @@ function OperationDashboard() {
 
         <div className="summary-grid">
           {cards.map((card) => (
-            <Link className="summary-card" key={card.label} to={card.to}>
-              <div className="summary-card__icon">
-                <card.icon size={20} />
-              </div>
-
-              <div>
-                <p>{card.label}</p>
-                <strong>{card.value ?? "—"}</strong>
-                <span>{card.detail}</span>
-              </div>
-
-              <ChevronRight size={17} aria-hidden="true" />
-            </Link>
+            <div className="summary-cell" key={card.label}>
+              <Link className="summary-card" to={card.to} aria-busy={card.query.isPending}>
+                <div className="summary-card__icon" aria-hidden="true">
+                  <card.icon size={20} />
+                </div>
+                <div>
+                  <p>{card.label}</p>
+                  <strong className={card.query.isPending || card.query.isError ? "summary-card__state" : undefined}>
+                    {card.query.isPending ? "불러오는 중" : card.query.isError ? "조회 실패" : (card.value ?? "—")}
+                  </strong>
+                  <span>{card.query.isError ? "잠시 후 다시 시도해 주세요" : card.query.isPending ? "현황을 확인하고 있습니다" : card.detail}</span>
+                </div>
+                <ChevronRight size={17} aria-hidden="true" />
+              </Link>
+              {card.query.isError && (
+                <button type="button" className="button button--ghost summary-cell__retry"
+                  disabled={card.query.isFetching}
+                  aria-label={`${card.label} 다시 시도`}
+                  onClick={() => void card.query.refetch()}>
+                  <RefreshCw size={14} aria-hidden="true" />
+                  {card.query.isFetching ? "재시도 중" : "다시 시도"}
+                </button>
+              )}
+            </div>
           ))}
         </div>
       </section>
-    </>
+
+      <section className="surface-card dashboard-quick-actions">
+        <header className="card-header">
+          <div>
+            <h2>빠른 업무</h2>
+            <p>매일 자주 사용하는 관리 화면으로 이동합니다.</p>
+          </div>
+        </header>
+
+        <nav className="dashboard-action-list" aria-label="빠른 업무">
+          {quickActions.map((action) => (
+            <Link className="dashboard-action" key={action.to} to={action.to}>
+              <span className="dashboard-action__icon" aria-hidden="true">
+                <action.icon size={19} />
+              </span>
+              <span className="dashboard-action__body">
+                <strong>{action.label}</strong>
+                <small>{action.description}</small>
+              </span>
+              <ChevronRight size={17} aria-hidden="true" />
+            </Link>
+          ))}
+        </nav>
+      </section>
+    </div>
   );
 }
 

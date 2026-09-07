@@ -1,0 +1,25 @@
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+import { Modal } from "./Modal";
+afterEach(cleanup);
+it("팝업에서 포커스를 순환시키고 다시 렌더링해도 입력 포커스를 유지한다", () => {
+  vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue([{ width: 10, height: 10 }] as unknown as DOMRectList);
+  const trigger = document.createElement("button");
+  document.body.append(trigger);
+  trigger.focus();
+  const view = render(<Modal title="수정" onClose={() => {}}><input aria-label="이름" /><button>저장</button></Modal>);
+  const close = screen.getByRole("button", { name: "닫기" });
+  const save = screen.getByRole("button", { name: "저장" });
+  save.focus();
+  fireEvent.keyDown(save, { key: "Tab" });
+  expect(document.activeElement).toBe(close);
+  fireEvent.keyDown(close, { key: "Tab", shiftKey: true });
+  expect(document.activeElement).toBe(save);
+  const input = screen.getByLabelText("이름");
+  input.focus();
+  view.rerender(<Modal title="수정" onClose={() => {}}><input aria-label="이름" /><button>저장</button></Modal>);
+  expect(document.activeElement).toBe(input);
+  view.unmount();
+  expect(document.activeElement).toBe(trigger);
+  trigger.remove();
+});

@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  ChevronLeft,
   ChevronRight,
   CirclePlus,
   Pencil,
@@ -52,6 +53,7 @@ function getErrorMessage(error: unknown): string {
 export function EducationPage() {
   const queryClient = useQueryClient();
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [editor, setEditor] = useState<EditorState>(null);
 
   const fieldsQuery = useQuery({
@@ -98,6 +100,7 @@ export function EducationPage() {
     },
     onSuccess: async (saved) => {
       setSelectedFieldId(saved.id);
+      setMobileDetailOpen(true);
       setEditor(null);
       await refreshFields();
     },
@@ -203,7 +206,11 @@ export function EducationPage() {
   }
 
   return (
-    <div className="page-stack education-page">
+    <div
+      className={`page-stack education-page ${
+        mobileDetailOpen ? "page--mobile-detail-open" : ""
+      }`}
+    >
       <section className="page-header">
         <div>
           <h1>교육 분야·세부 과목</h1>
@@ -220,8 +227,12 @@ export function EducationPage() {
         </button>
       </section>
 
-      <section className="management-split">
-        <article className="surface-card">
+      <section className="management-split workbench-layout">
+        <article
+          className={`surface-card master-pane master-pane--list ${
+            mobileDetailOpen ? "master-pane--mobile-hidden" : ""
+          }`}
+        >
           <header className="card-header">
             <div>
               <h2>교육 분야</h2>
@@ -243,7 +254,10 @@ export function EducationPage() {
                   className={`record-item ${
                     field.id === effectiveFieldId ? "record-item--selected" : ""
                   }`}
-                  onClick={() => setSelectedFieldId(field.id)}
+                  onClick={() => {
+                    setSelectedFieldId(field.id);
+                    setMobileDetailOpen(true);
+                  }}
                 >
                   <span className="record-item__icon">
                     <BookOpen size={19} />
@@ -271,7 +285,18 @@ export function EducationPage() {
           )}
         </article>
 
-        <article className="surface-card">
+        <article
+          className={`surface-card master-pane master-pane--detail ${
+            mobileDetailOpen ? "" : "master-pane--mobile-hidden"
+          }`}
+        >
+          <button
+            type="button"
+            className="mobile-detail-back"
+            onClick={() => setMobileDetailOpen(false)}
+          >
+            <ChevronLeft size={18} /> 교육 분야 목록
+          </button>
           <header className="card-header">
             <div>
               <h2>{selectedField?.name ?? "세부 과목"}</h2>

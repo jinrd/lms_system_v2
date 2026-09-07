@@ -1,4 +1,4 @@
-import { CirclePlus, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, CirclePlus, Pencil, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Modal } from "../../components/ui/Modal";
@@ -27,6 +27,7 @@ const STATUS = {
 } as const;
 
 type Editor = { item?: ManagedClass } | null;
+type ClassDetailTab = "overview" | "schedule" | "students";
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "요청을 처리하지 못했습니다.";
 }
@@ -35,6 +36,8 @@ export function ClassesPage() {
   const client = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+  const [detailTab, setDetailTab] = useState<ClassDetailTab>("overview");
   const [editor, setEditor] = useState<Editor>(null);
   const classesQuery = useQuery({
     queryKey: ["managed-classes", "list", showArchived],
@@ -75,6 +78,8 @@ export function ClassesPage() {
     onSuccess: async (saved) => {
       setEditor(null);
       setSelectedId(saved.id);
+      setMobileDetailOpen(true);
+      setDetailTab("overview");
       await refresh();
     },
   });
@@ -82,6 +87,7 @@ export function ClassesPage() {
     mutationFn: removeManagedClass,
     onSuccess: async (_result, removedId) => {
       setSelectedId(null);
+      setMobileDetailOpen(false);
       client.setQueryData<ManagedClassPage>(
         ["managed-classes", "list", showArchived],
         (current) =>
@@ -122,7 +128,11 @@ export function ClassesPage() {
     items.find((item) => item.id === selectedId) ?? items[0] ?? null;
 
   return (
-    <div className="page-stack">
+    <div
+      className={`page-stack classes-page ${
+        mobileDetailOpen ? "page--mobile-detail-open" : ""
+      }`}
+    >
       <header className="page-header">
         <div>
           <h1>반 관리</h1>
@@ -143,6 +153,7 @@ export function ClassesPage() {
           onClick={() => {
             setShowArchived(false);
             setSelectedId(null);
+            setMobileDetailOpen(false);
           }}
         >
           기본 목록
@@ -153,6 +164,7 @@ export function ClassesPage() {
           onClick={() => {
             setShowArchived(true);
             setSelectedId(null);
+            setMobileDetailOpen(false);
           }}
         >
           보관된 반
@@ -167,14 +179,22 @@ export function ClassesPage() {
           description="교육과정을 준비한 뒤 실제 운영할 반을 추가해 주세요."
         />
       ) : (
-        <div className="master-detail-layout">
-          <section className="data-list">
+        <div className="master-detail-layout workbench-layout">
+          <section
+            className={`data-list master-pane master-pane--list ${
+              mobileDetailOpen ? "master-pane--mobile-hidden" : ""
+            }`}
+          >
             {items.map((item) => (
               <button
                 className={`selection-card ${selected?.id === item.id ? "selection-card--active" : ""}`}
                 type="button"
                 key={item.id}
-                onClick={() => setSelectedId(item.id)}
+                onClick={() => {
+                  setSelectedId(item.id);
+                  setMobileDetailOpen(true);
+                  setDetailTab("overview");
+                }}
               >
                 <span>
                   <strong>{item.name}</strong>
@@ -191,8 +211,53 @@ export function ClassesPage() {
             ))}
           </section>
           {selected && (
-            <div className="page-stack">
-              <section className="card">
+            <div
+              className={`page-stack master-pane master-pane--detail class-workbench-detail ${
+                mobileDetailOpen ? "" : "master-pane--mobile-hidden"
+              }`}
+            >
+              <button
+                type="button"
+                className="mobile-detail-back"
+                onClick={() => setMobileDetailOpen(false)}
+              >
+                <ChevronLeft size={18} /> 반 목록
+              </button>
+
+              {!selected.archived && (
+                <div className="tabs detail-tabs" role="tablist" aria-label="반 상세 메뉴">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={detailTab === "overview"}
+                    className={`tab ${detailTab === "overview" ? "tab--active" : ""}`}
+                    onClick={() => setDetailTab("overview")}
+                  >
+                    기본 정보
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={detailTab === "schedule"}
+                    className={`tab ${detailTab === "schedule" ? "tab--active" : ""}`}
+                    onClick={() => setDetailTab("schedule")}
+                  >
+                    시간표·수업
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={detailTab === "students"}
+                    className={`tab ${detailTab === "students" ? "tab--active" : ""}`}
+                    onClick={() => setDetailTab("students")}
+                  >
+                    수강생
+                  </button>
+                </div>
+              )}
+
+              {(detailTab === "overview" || selected.archived) && (
+                <section className="card">
                 <div className="card-header">
                   <div>
                     <h2>{selected.name}</h2>
@@ -253,7 +318,10 @@ export function ClassesPage() {
                           <button
                             key={subject.id}
                             type="button"
-                            className={`button ${subject.active ? "button--primary" : "button--secondary"}`}
+                            className={`subject-toggle ${
+                              subject.active ? "subject-toggle--active" : ""
+                            }`}
+                            aria-pressed={subject.active}
                             disabled={
                               selected.derivedStatus !== "UPCOMING" ||
                               subjectMutation.isPending
@@ -274,11 +342,12 @@ export function ClassesPage() {
                     </div>
                   ))}
                 </div>
-              </section>
-              {!selected.archived && (
+                </section>
+              )}
+              {!selected.archived && detailTab === "schedule" && (
                 <ClassSchedulePanel classItem={selected} />
               )}
-              {!selected.archived && (
+              {!selected.archived && detailTab === "students" && (
                 <ClassEnrollmentsPanel
                   classItem={selected}
                   onChanged={async () => {

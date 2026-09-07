@@ -1,5 +1,7 @@
 import { X } from "lucide-react";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useId, useRef, type ReactNode } from "react";
+
+import { useFocusContainment } from "../../hooks/useFocusContainment";
 
 type ModalProps = {
   title: string;
@@ -13,16 +15,17 @@ export function Modal({ title, description, children, onClose }: ModalProps) {
   const descriptionId = useId();
   const dialogRef = useRef<HTMLElement>(null);
 
+  useFocusContainment(dialogRef, true);
+  const close = useEffectEvent(onClose);
+
   useEffect(() => {
-    const previouslyFocused = document.activeElement;
     const previousOverflow = document.body.style.overflow;
 
-    dialogRef.current?.focus();
     document.body.style.overflow = "hidden";
 
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.key === "Escape") {
-        onClose();
+        close();
       }
     };
 
@@ -32,11 +35,8 @@ export function Modal({ title, description, children, onClose }: ModalProps) {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
 
-      if (previouslyFocused instanceof HTMLElement) {
-        previouslyFocused.focus();
-      }
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div

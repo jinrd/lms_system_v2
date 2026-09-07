@@ -13,7 +13,7 @@ import {
   PracticalCriteriaPanel,
   ValidationIssues,
   WrittenQuestionsPanel,
-} from "./ExamTemplateComposerPage";
+} from "./ExamTemplateComposition";
 import type { ExamTemplate } from "./exam-templates.api";
 
 const api = vi.hoisted(() => ({
@@ -185,16 +185,15 @@ afterEach(cleanup);
 describe("시험 템플릿 구성 테스트 페이지", () => {
   it("필기 파트의 담긴 점수 합계와 총점 대비 차이를 보여준다", async () => {
     provider(<WrittenQuestionsPanel template={template} />);
-    const summary = await screen.findByText(/총점 30점 \/ 담긴 점수 20점/);
-    expect(summary.textContent).toContain("차이 -10점");
-    expect(summary.textContent).toContain("서버 기준 20점, 차이 -10점");
+    expect(await screen.findByText("20 / 30점")).toBeTruthy();
+    expect(screen.getByText("10점 부족")).toBeTruthy();
   });
 
   it("문제를 추가하면 합계가 갱신되고 저장 시 전체 목록을 PUT 한다", async () => {
     provider(<WrittenQuestionsPanel template={template} />);
     fireEvent.click(await screen.findByRole("button", { name: "추가" }));
     // 20 + 10(defaultScore) = 30
-    expect(screen.getByText(/담긴 점수 30점/)).toBeTruthy();
+    expect(screen.getByText("30 / 30점")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "문제 구성 저장" }));
     await waitFor(() => expect(api.putWritten).toHaveBeenCalledTimes(1));
@@ -208,24 +207,23 @@ describe("시험 템플릿 구성 테스트 페이지", () => {
     provider(<PracticalCriteriaPanel template={template} />);
     await screen.findByDisplayValue("위생");
     fireEvent.click(screen.getByRole("button", { name: "평가 항목 추가" }));
+    fireEvent.change(screen.getByLabelText("2번 평가 항목명"), {
+      target: { value: "정확도" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "평가 항목 저장" }));
     await waitFor(() => expect(api.putCriteria).toHaveBeenCalledTimes(1));
     expect(api.putCriteria).toHaveBeenCalledWith("t1", [
       { name: "위생", description: undefined, maxScore: 20 },
-      { name: "", description: undefined, maxScore: 10 },
+      { name: "정확도", description: undefined, maxScore: 10 },
     ]);
   });
 
-  it("활성 템플릿에서는 구성 저장 버튼이 비활성화된다", async () => {
+  it("활성 템플릿에서는 구성 저장 도구를 숨긴다", async () => {
     provider(
       <WrittenQuestionsPanel template={{ ...template, active: true }} />,
     );
-    expect(
-      await screen.findByText(/활성 템플릿의 구성은 변경할 수 없습니다/),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "문제 구성 저장" }),
-    ).toHaveProperty("disabled", true);
+    expect(await screen.findByText("표피의 최외곽층은?")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "문제 구성 저장" })).toBeNull();
   });
 
   it("활성화 실패 시 서버가 준 사유 문자열을 노출한다", async () => {
@@ -266,8 +264,8 @@ describe("시험 템플릿 구성 테스트 페이지", () => {
         }}
       />,
     );
-    expect(screen.getByText(/검증 실패 \(2건\)/)).toBeTruthy();
-    expect(screen.getByText(/WRITTEN_SCORE_MISMATCH/)).toBeTruthy();
-    expect(screen.getByText(/QUESTION_INACTIVE/)).toBeTruthy();
+    expect(screen.getByText(/활성화 전에 2개 항목/)).toBeTruthy();
+    expect(screen.getByText(/필기 파트 배점 합계/)).toBeTruthy();
+    expect(screen.getByText(/문제가 비활성 상태/)).toBeTruthy();
   });
 });

@@ -6,7 +6,7 @@ import {
 import { AuthProvider, GuestOnly, RequireAuth } from "./auth/AuthProvider";
 import { AppShell } from "./components/layout/AppShell";
 import { ErrorState } from "./components/ui/PageStates";
-import { ChangePasswordPage, LoginPage } from "./pages/AuthPages";
+import { ChangePasswordPage, LoginPage, SignupPage } from "./pages/AuthPages";
 import { DashboardPage, PlaceholderPage } from "./pages";
 import { RequireRole } from "./auth/RequireRole";
 import { EducationPage } from "./features/education/EducationPage";
@@ -16,6 +16,10 @@ import { UsersPage } from "./features/users/UsersPage";
 import { TermsPage } from "./features/terms/TermsPage";
 import { InstructorSchedulePage } from "./features/instructor/InstructorSchedulePage";
 import { AttendancePage } from "./features/attendance/AttendancePage";
+import { QuestionsPage } from "./features/questions/QuestionsPage";
+
+import { ExamTemplatesPage } from "./features/exam-templates/ExamTemplatesPage";
+import { ExamWorkspacePage } from "./features/exams/ExamWorkspacePage";
 
 type PlaceholderRoute = {
   path: string;
@@ -35,11 +39,6 @@ const placeholderRoutes: PlaceholderRoute[] = [
     description: "학생 문의와 담당자 답변을 관리합니다.",
   },
   {
-    path: "learning",
-    title: "과제·시험",
-    description: "과제와 시험 운영 현황을 관리합니다.",
-  },
-  {
     path: "analytics",
     title: "운영 통계",
     description: "출석, 시험, 수강 현황을 분석합니다.",
@@ -57,6 +56,14 @@ const router = createBrowserRouter([
     element: (
       <GuestOnly>
         <LoginPage />
+      </GuestOnly>
+    ),
+  },
+  {
+    path: "/signup",
+    element: (
+      <GuestOnly>
+        <SignupPage />
       </GuestOnly>
     ),
   },
@@ -124,6 +131,26 @@ const router = createBrowserRouter([
       {
         path: "attendance",
         element: <AttendancePage />,
+      },
+      {
+        path: "questions",
+        element: (
+          <RequireRole roles={["INSTRUCTOR", "MANAGER", "PRINCIPAL", "ADMIN"]}>
+            <QuestionsPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: "exam-templates",
+        element: (
+          <RequireRole roles={["INSTRUCTOR", "MANAGER", "PRINCIPAL", "ADMIN"]}>
+            <ExamTemplatesPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: "learning",
+        element: <ExamWorkspacePage />,
       },
       {
         path: "users",

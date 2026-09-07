@@ -50,6 +50,10 @@ export function getTermsVersions(): Promise<TermsDocument[]> {
   return apiRequest<TermsDocument[]>("/terms/versions");
 }
 
+export function getCurrentTerms(): Promise<TermsDocument[]> {
+  return apiRequest<TermsDocument[]>("/terms/current", { skipAuth: true });
+}
+
 export function createTermsVersion(
   input: CreateTermsDocumentInput,
 ): Promise<TermsDocument> {

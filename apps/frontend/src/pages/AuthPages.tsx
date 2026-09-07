@@ -1,6 +1,6 @@
 import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { ApiError } from "../lib/api-client";
 
@@ -144,11 +144,17 @@ export function LoginPage() {
           <p className="auth-help">
             계정 또는 비밀번호 문의는 학원 관리자에게 요청하세요.
           </p>
+          <div className="auth-signup-link">
+            <span>처음 이용하는 학생인가요?</span>
+            <Link to="/signup">학생 회원가입</Link>
+          </div>
         </form>
       </section>
     </main>
   );
 }
+
+export { SignupPage } from "./SignupPage";
 
 export function ChangePasswordPage() {
   const { changePassword } = useAuth();

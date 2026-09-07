@@ -1,6 +1,7 @@
 import {
   CalendarClock,
   CheckCircle2,
+  ChevronLeft,
   CirclePlus,
   FileText,
   Pencil,
@@ -61,6 +62,7 @@ export function TermsPage() {
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
     null,
   );
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editingDocument, setEditingDocument] =
     useState<TermsDocument | null>(null);
@@ -93,6 +95,7 @@ export function TermsPage() {
     onSuccess: async (created) => {
       setSelectedType(created.type);
       setSelectedDocumentId(created.id);
+      setMobileDetailOpen(true);
       setCreateOpen(false);
       await refresh();
     },
@@ -103,6 +106,7 @@ export function TermsPage() {
     onSuccess: async (activated) => {
       setSelectedType(activated.type);
       setSelectedDocumentId(activated.id);
+      setMobileDetailOpen(true);
       await refresh();
     },
   });
@@ -116,6 +120,7 @@ export function TermsPage() {
     onSuccess: async (updated) => {
       setSelectedType(updated.type);
       setSelectedDocumentId(updated.id);
+      setMobileDetailOpen(true);
       setEditingDocument(null);
       await refresh();
     },
@@ -171,7 +176,11 @@ export function TermsPage() {
   }
 
   return (
-    <div className="page-stack terms-page">
+    <div
+      className={`page-stack terms-page ${
+        mobileDetailOpen ? "page--mobile-detail-open" : ""
+      }`}
+    >
       <section className="page-header">
         <div>
           <h1>약관 관리</h1>
@@ -195,6 +204,7 @@ export function TermsPage() {
             onChange={(event) => {
               setSelectedType(event.target.value);
               setSelectedDocumentId(null);
+              setMobileDetailOpen(false);
             }}
           >
             <option value="">전체 약관 유형</option>
@@ -208,8 +218,12 @@ export function TermsPage() {
         </label>
       </section>
 
-      <section className="management-split">
-        <article className="surface-card">
+      <section className="management-split workbench-layout">
+        <article
+          className={`surface-card master-pane master-pane--list ${
+            mobileDetailOpen ? "master-pane--mobile-hidden" : ""
+          }`}
+        >
           <header className="card-header">
             <div>
               <h2>약관 버전</h2>
@@ -228,7 +242,10 @@ export function TermsPage() {
                       ? "record-item--selected"
                       : ""
                   }`}
-                  onClick={() => setSelectedDocumentId(document.id)}
+                  onClick={() => {
+                    setSelectedDocumentId(document.id);
+                    setMobileDetailOpen(true);
+                  }}
                 >
                   <span className="record-item__icon">
                     <FileText size={19} />
@@ -261,7 +278,18 @@ export function TermsPage() {
           )}
         </article>
 
-        <article className="surface-card">
+        <article
+          className={`surface-card master-pane master-pane--detail ${
+            mobileDetailOpen ? "" : "master-pane--mobile-hidden"
+          }`}
+        >
+          <button
+            type="button"
+            className="mobile-detail-back"
+            onClick={() => setMobileDetailOpen(false)}
+          >
+            <ChevronLeft size={18} /> 약관 목록
+          </button>
           {selectedDocument ? (
             <>
               <header className="card-header">
