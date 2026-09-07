@@ -136,3 +136,49 @@ DROP FUNCTION IF EXISTS check_exam_template_part_totals(UUID);
 
 실기 파트의 파일당 최대 크기를 5MiB로 고정하는 CHECK 제약 교체. 검증·롤백은
 해당 `migration.sql` 파일 하단 주석에 있다.
+
+## 20260907010000_add_notice_inquiry_checks
+
+공지·문의 테이블의 유형별 배타 조건·값 범위 CHECK 6개. 검증·롤백은 해당
+`migration.sql` 하단 주석에 있다.
+
+## 20260907030000_add_enrollment_active_unique_indexes
+
+활성 수강 등록의 중복을 막는 부분 유니크 인덱스 2개(§24). 검증·롤백은 해당
+`migration.sql` 하단 주석에 있다.
+
+## 20260907040000_add_remaining_integrity_guards
+
+10단계 감사에서 확인된 잔여 방어선: `attendance_records(student_id, created_at)`
+인덱스(§25), 원수업당 취소되지 않은 보강 최대 1개 부분 유니크(§32), 문의 원문·
+답글 불변 보호 트리거(§19.2). 검증·롤백은 해당 `migration.sql` 하단 주석에 있다.
+
+---
+
+# 스키마 무결성 검증 스크립트
+
+`prisma/verify.sql` 은 §24 유니크·§25 인덱스·§32 트리거·§18/§19 CHECK가 모두
+존재하는지, 데이터가 업무 유니크 규칙을 위반하고 있지 않은지 한 번에 확인한다.
+
+```bash
+psql "$DATABASE_URL_WITHOUT_PRISMA_PARAMS" -f prisma/verify.sql
+# 한 줄도 출력되지 않아야 한다. 출력되는 이름이 곧 빠진 제약이다.
+```
+
+빈 DB에 전체 마이그레이션을 한 번에 적용하고 seed를 두 번 돌린 뒤 이 스크립트가
+깨끗하면 신규 DB 초기화 완료 조건(기획안 §33-1~4, §33-7)을 만족한다.
+
+# §32 중 적용하지 않은 항목 (의도된 범위 제외)
+
+애플리케이션 서비스 계층이 이미 같은 규칙을 검증하며, 아래는 직접 SQL·동시성에
+대한 추가 방어선이라 "복잡하지 않게" 기준으로 이번 범위에서 제외했다.
+
+- **`updated_at` 자동 갱신 트리거**: Prisma `@updatedAt` 이 애플리케이션에서 항상
+  채운다. 모든 가변 테이블에 트리거를 다는 대신 ORM에 맡긴다.
+- **나머지 이력 테이블(`user_status_histories`, `attendance_change_histories`,
+  `class_session_journal_histories`) 수정 차단 트리거**: 서비스가 append-only로만
+  쓴다. `exam_result_revisions`·`inquiry_replies`·`inquiries` 는 트리거로 보호한다.
+- **파일의 연결 테이블 간 중복 소유 차단 트리거**: 파일 업로드·연결 서비스가
+  단일 소유로 만든다. 스토리지 연동(7단계)이 확정될 때 함께 검토한다.
+- **역할 전용 FK 트리거**(예: `enrollments.student_id` 가 STUDENT 인지): 각
+  서비스가 대상 사용자의 역할·상태를 조회해 검증한다.

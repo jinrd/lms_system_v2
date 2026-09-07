@@ -925,26 +925,23 @@ async function seedNoticesAndInquiries(
     if (seedRow.type === InquiryType.CLASS && !seedRow.classId) {
       continue;
     }
+    // 문의 원문과 답글은 불변이다(기획안 §19.2, DB 트리거로도 강제). 재실행 시
+    // 같은 제목의 예제 문의가 이미 있으면 그대로 둔다.
     const existing = await prisma.inquiry.findFirst({
       where: { title: seedRow.title },
       select: { id: true },
     });
-    const data = {
-      authorId: author.id,
-      type: seedRow.type,
-      classId: seedRow.type === InquiryType.CLASS ? seedRow.classId : null,
-      content: seedRow.content,
-      status: InquiryStatus.RECEIVED,
-      closedAt: null,
-    };
-    if (existing) {
-      await prisma.inquiryReply.deleteMany({
-        where: { inquiryId: existing.id },
-      });
-      await prisma.inquiry.update({ where: { id: existing.id }, data });
-    } else {
+    if (!existing) {
       await prisma.inquiry.create({
-        data: { ...data, title: seedRow.title },
+        data: {
+          authorId: author.id,
+          type: seedRow.type,
+          classId: seedRow.type === InquiryType.CLASS ? seedRow.classId : null,
+          title: seedRow.title,
+          content: seedRow.content,
+          status: InquiryStatus.RECEIVED,
+          closedAt: null,
+        },
       });
     }
   }
