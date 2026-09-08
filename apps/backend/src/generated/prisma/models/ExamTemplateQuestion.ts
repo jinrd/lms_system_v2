@@ -28,12 +28,10 @@ export type AggregateExamTemplateQuestion = {
 
 export type ExamTemplateQuestionAvgAggregateOutputType = {
   displayOrder: number | null
-  score: runtime.Decimal | null
 }
 
 export type ExamTemplateQuestionSumAggregateOutputType = {
   displayOrder: number | null
-  score: runtime.Decimal | null
 }
 
 export type ExamTemplateQuestionMinAggregateOutputType = {
@@ -41,7 +39,6 @@ export type ExamTemplateQuestionMinAggregateOutputType = {
   examTemplatePartId: string | null
   questionId: string | null
   displayOrder: number | null
-  score: runtime.Decimal | null
 }
 
 export type ExamTemplateQuestionMaxAggregateOutputType = {
@@ -49,7 +46,6 @@ export type ExamTemplateQuestionMaxAggregateOutputType = {
   examTemplatePartId: string | null
   questionId: string | null
   displayOrder: number | null
-  score: runtime.Decimal | null
 }
 
 export type ExamTemplateQuestionCountAggregateOutputType = {
@@ -57,19 +53,16 @@ export type ExamTemplateQuestionCountAggregateOutputType = {
   examTemplatePartId: number
   questionId: number
   displayOrder: number
-  score: number
   _all: number
 }
 
 
 export type ExamTemplateQuestionAvgAggregateInputType = {
   displayOrder?: true
-  score?: true
 }
 
 export type ExamTemplateQuestionSumAggregateInputType = {
   displayOrder?: true
-  score?: true
 }
 
 export type ExamTemplateQuestionMinAggregateInputType = {
@@ -77,7 +70,6 @@ export type ExamTemplateQuestionMinAggregateInputType = {
   examTemplatePartId?: true
   questionId?: true
   displayOrder?: true
-  score?: true
 }
 
 export type ExamTemplateQuestionMaxAggregateInputType = {
@@ -85,7 +77,6 @@ export type ExamTemplateQuestionMaxAggregateInputType = {
   examTemplatePartId?: true
   questionId?: true
   displayOrder?: true
-  score?: true
 }
 
 export type ExamTemplateQuestionCountAggregateInputType = {
@@ -93,7 +84,6 @@ export type ExamTemplateQuestionCountAggregateInputType = {
   examTemplatePartId?: true
   questionId?: true
   displayOrder?: true
-  score?: true
   _all?: true
 }
 
@@ -188,7 +178,6 @@ export type ExamTemplateQuestionGroupByOutputType = {
   examTemplatePartId: string
   questionId: string
   displayOrder: number
-  score: runtime.Decimal
   _count: ExamTemplateQuestionCountAggregateOutputType | null
   _avg: ExamTemplateQuestionAvgAggregateOutputType | null
   _sum: ExamTemplateQuestionSumAggregateOutputType | null
@@ -219,7 +208,6 @@ export type ExamTemplateQuestionWhereInput = {
   examTemplatePartId?: Prisma.UuidFilter<"ExamTemplateQuestion"> | string
   questionId?: Prisma.UuidFilter<"ExamTemplateQuestion"> | string
   displayOrder?: Prisma.IntFilter<"ExamTemplateQuestion"> | number
-  score?: Prisma.DecimalFilter<"ExamTemplateQuestion"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   examTemplatePart?: Prisma.XOR<Prisma.ExamTemplatePartScalarRelationFilter, Prisma.ExamTemplatePartWhereInput>
   question?: Prisma.XOR<Prisma.QuestionBankScalarRelationFilter, Prisma.QuestionBankWhereInput>
 }
@@ -229,7 +217,6 @@ export type ExamTemplateQuestionOrderByWithRelationInput = {
   examTemplatePartId?: Prisma.SortOrder
   questionId?: Prisma.SortOrder
   displayOrder?: Prisma.SortOrder
-  score?: Prisma.SortOrder
   examTemplatePart?: Prisma.ExamTemplatePartOrderByWithRelationInput
   question?: Prisma.QuestionBankOrderByWithRelationInput
 }
@@ -244,7 +231,6 @@ export type ExamTemplateQuestionWhereUniqueInput = Prisma.AtLeast<{
   examTemplatePartId?: Prisma.UuidFilter<"ExamTemplateQuestion"> | string
   questionId?: Prisma.UuidFilter<"ExamTemplateQuestion"> | string
   displayOrder?: Prisma.IntFilter<"ExamTemplateQuestion"> | number
-  score?: Prisma.DecimalFilter<"ExamTemplateQuestion"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   examTemplatePart?: Prisma.XOR<Prisma.ExamTemplatePartScalarRelationFilter, Prisma.ExamTemplatePartWhereInput>
   question?: Prisma.XOR<Prisma.QuestionBankScalarRelationFilter, Prisma.QuestionBankWhereInput>
 }, "id" | "examTemplatePartId_questionId" | "examTemplatePartId_displayOrder">
@@ -254,7 +240,6 @@ export type ExamTemplateQuestionOrderByWithAggregationInput = {
   examTemplatePartId?: Prisma.SortOrder
   questionId?: Prisma.SortOrder
   displayOrder?: Prisma.SortOrder
-  score?: Prisma.SortOrder
   _count?: Prisma.ExamTemplateQuestionCountOrderByAggregateInput
   _avg?: Prisma.ExamTemplateQuestionAvgOrderByAggregateInput
   _max?: Prisma.ExamTemplateQuestionMaxOrderByAggregateInput
@@ -270,13 +255,11 @@ export type ExamTemplateQuestionScalarWhereWithAggregatesInput = {
   examTemplatePartId?: Prisma.UuidWithAggregatesFilter<"ExamTemplateQuestion"> | string
   questionId?: Prisma.UuidWithAggregatesFilter<"ExamTemplateQuestion"> | string
   displayOrder?: Prisma.IntWithAggregatesFilter<"ExamTemplateQuestion"> | number
-  score?: Prisma.DecimalWithAggregatesFilter<"ExamTemplateQuestion"> | runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 export type ExamTemplateQuestionCreateInput = {
   id?: string
   displayOrder: number
-  score: runtime.Decimal | runtime.DecimalJsLike | number | string
   examTemplatePart: Prisma.ExamTemplatePartCreateNestedOneWithoutQuestionsInput
   question: Prisma.QuestionBankCreateNestedOneWithoutTemplateQuestionsInput
 }
@@ -286,13 +269,11 @@ export type ExamTemplateQuestionUncheckedCreateInput = {
   examTemplatePartId: string
   questionId: string
   displayOrder: number
-  score: runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 export type ExamTemplateQuestionUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
-  score?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   examTemplatePart?: Prisma.ExamTemplatePartUpdateOneRequiredWithoutQuestionsNestedInput
   question?: Prisma.QuestionBankUpdateOneRequiredWithoutTemplateQuestionsNestedInput
 }
@@ -302,7 +283,6 @@ export type ExamTemplateQuestionUncheckedUpdateInput = {
   examTemplatePartId?: Prisma.StringFieldUpdateOperationsInput | string
   questionId?: Prisma.StringFieldUpdateOperationsInput | string
   displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
-  score?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 export type ExamTemplateQuestionCreateManyInput = {
@@ -310,13 +290,11 @@ export type ExamTemplateQuestionCreateManyInput = {
   examTemplatePartId: string
   questionId: string
   displayOrder: number
-  score: runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 export type ExamTemplateQuestionUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
-  score?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 export type ExamTemplateQuestionUncheckedUpdateManyInput = {
@@ -324,7 +302,6 @@ export type ExamTemplateQuestionUncheckedUpdateManyInput = {
   examTemplatePartId?: Prisma.StringFieldUpdateOperationsInput | string
   questionId?: Prisma.StringFieldUpdateOperationsInput | string
   displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
-  score?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 export type ExamTemplateQuestionListRelationFilter = {
@@ -352,12 +329,10 @@ export type ExamTemplateQuestionCountOrderByAggregateInput = {
   examTemplatePartId?: Prisma.SortOrder
   questionId?: Prisma.SortOrder
   displayOrder?: Prisma.SortOrder
-  score?: Prisma.SortOrder
 }
 
 export type ExamTemplateQuestionAvgOrderByAggregateInput = {
   displayOrder?: Prisma.SortOrder
-  score?: Prisma.SortOrder
 }
 
 export type ExamTemplateQuestionMaxOrderByAggregateInput = {
@@ -365,7 +340,6 @@ export type ExamTemplateQuestionMaxOrderByAggregateInput = {
   examTemplatePartId?: Prisma.SortOrder
   questionId?: Prisma.SortOrder
   displayOrder?: Prisma.SortOrder
-  score?: Prisma.SortOrder
 }
 
 export type ExamTemplateQuestionMinOrderByAggregateInput = {
@@ -373,12 +347,10 @@ export type ExamTemplateQuestionMinOrderByAggregateInput = {
   examTemplatePartId?: Prisma.SortOrder
   questionId?: Prisma.SortOrder
   displayOrder?: Prisma.SortOrder
-  score?: Prisma.SortOrder
 }
 
 export type ExamTemplateQuestionSumOrderByAggregateInput = {
   displayOrder?: Prisma.SortOrder
-  score?: Prisma.SortOrder
 }
 
 export type ExamTemplateQuestionCreateNestedManyWithoutQuestionInput = {
@@ -468,7 +440,6 @@ export type ExamTemplateQuestionUncheckedUpdateManyWithoutExamTemplatePartNested
 export type ExamTemplateQuestionCreateWithoutQuestionInput = {
   id?: string
   displayOrder: number
-  score: runtime.Decimal | runtime.DecimalJsLike | number | string
   examTemplatePart: Prisma.ExamTemplatePartCreateNestedOneWithoutQuestionsInput
 }
 
@@ -476,7 +447,6 @@ export type ExamTemplateQuestionUncheckedCreateWithoutQuestionInput = {
   id?: string
   examTemplatePartId: string
   displayOrder: number
-  score: runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 export type ExamTemplateQuestionCreateOrConnectWithoutQuestionInput = {
@@ -513,13 +483,11 @@ export type ExamTemplateQuestionScalarWhereInput = {
   examTemplatePartId?: Prisma.UuidFilter<"ExamTemplateQuestion"> | string
   questionId?: Prisma.UuidFilter<"ExamTemplateQuestion"> | string
   displayOrder?: Prisma.IntFilter<"ExamTemplateQuestion"> | number
-  score?: Prisma.DecimalFilter<"ExamTemplateQuestion"> | runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 export type ExamTemplateQuestionCreateWithoutExamTemplatePartInput = {
   id?: string
   displayOrder: number
-  score: runtime.Decimal | runtime.DecimalJsLike | number | string
   question: Prisma.QuestionBankCreateNestedOneWithoutTemplateQuestionsInput
 }
 
@@ -527,7 +495,6 @@ export type ExamTemplateQuestionUncheckedCreateWithoutExamTemplatePartInput = {
   id?: string
   questionId: string
   displayOrder: number
-  score: runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 export type ExamTemplateQuestionCreateOrConnectWithoutExamTemplatePartInput = {
@@ -560,13 +527,11 @@ export type ExamTemplateQuestionCreateManyQuestionInput = {
   id?: string
   examTemplatePartId: string
   displayOrder: number
-  score: runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 export type ExamTemplateQuestionUpdateWithoutQuestionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
-  score?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   examTemplatePart?: Prisma.ExamTemplatePartUpdateOneRequiredWithoutQuestionsNestedInput
 }
 
@@ -574,27 +539,23 @@ export type ExamTemplateQuestionUncheckedUpdateWithoutQuestionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   examTemplatePartId?: Prisma.StringFieldUpdateOperationsInput | string
   displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
-  score?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 export type ExamTemplateQuestionUncheckedUpdateManyWithoutQuestionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   examTemplatePartId?: Prisma.StringFieldUpdateOperationsInput | string
   displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
-  score?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 export type ExamTemplateQuestionCreateManyExamTemplatePartInput = {
   id?: string
   questionId: string
   displayOrder: number
-  score: runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 export type ExamTemplateQuestionUpdateWithoutExamTemplatePartInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
-  score?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   question?: Prisma.QuestionBankUpdateOneRequiredWithoutTemplateQuestionsNestedInput
 }
 
@@ -602,14 +563,12 @@ export type ExamTemplateQuestionUncheckedUpdateWithoutExamTemplatePartInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   questionId?: Prisma.StringFieldUpdateOperationsInput | string
   displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
-  score?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 export type ExamTemplateQuestionUncheckedUpdateManyWithoutExamTemplatePartInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   questionId?: Prisma.StringFieldUpdateOperationsInput | string
   displayOrder?: Prisma.IntFieldUpdateOperationsInput | number
-  score?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 
@@ -619,7 +578,6 @@ export type ExamTemplateQuestionSelect<ExtArgs extends runtime.Types.Extensions.
   examTemplatePartId?: boolean
   questionId?: boolean
   displayOrder?: boolean
-  score?: boolean
   examTemplatePart?: boolean | Prisma.ExamTemplatePartDefaultArgs<ExtArgs>
   question?: boolean | Prisma.QuestionBankDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["examTemplateQuestion"]>
@@ -629,7 +587,6 @@ export type ExamTemplateQuestionSelectCreateManyAndReturn<ExtArgs extends runtim
   examTemplatePartId?: boolean
   questionId?: boolean
   displayOrder?: boolean
-  score?: boolean
   examTemplatePart?: boolean | Prisma.ExamTemplatePartDefaultArgs<ExtArgs>
   question?: boolean | Prisma.QuestionBankDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["examTemplateQuestion"]>
@@ -639,7 +596,6 @@ export type ExamTemplateQuestionSelectUpdateManyAndReturn<ExtArgs extends runtim
   examTemplatePartId?: boolean
   questionId?: boolean
   displayOrder?: boolean
-  score?: boolean
   examTemplatePart?: boolean | Prisma.ExamTemplatePartDefaultArgs<ExtArgs>
   question?: boolean | Prisma.QuestionBankDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["examTemplateQuestion"]>
@@ -649,10 +605,9 @@ export type ExamTemplateQuestionSelectScalar = {
   examTemplatePartId?: boolean
   questionId?: boolean
   displayOrder?: boolean
-  score?: boolean
 }
 
-export type ExamTemplateQuestionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "examTemplatePartId" | "questionId" | "displayOrder" | "score", ExtArgs["result"]["examTemplateQuestion"]>
+export type ExamTemplateQuestionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "examTemplatePartId" | "questionId" | "displayOrder", ExtArgs["result"]["examTemplateQuestion"]>
 export type ExamTemplateQuestionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   examTemplatePart?: boolean | Prisma.ExamTemplatePartDefaultArgs<ExtArgs>
   question?: boolean | Prisma.QuestionBankDefaultArgs<ExtArgs>
@@ -689,10 +644,6 @@ export type $ExamTemplateQuestionPayload<ExtArgs extends runtime.Types.Extension
      * 표시 순서입니다.
      */
     displayOrder: number
-    /**
-     * 문제 배점입니다.
-     */
-    score: runtime.Decimal
   }, ExtArgs["result"]["examTemplateQuestion"]>
   composites: {}
 }
@@ -1122,7 +1073,6 @@ export interface ExamTemplateQuestionFieldRefs {
   readonly examTemplatePartId: Prisma.FieldRef<"ExamTemplateQuestion", 'String'>
   readonly questionId: Prisma.FieldRef<"ExamTemplateQuestion", 'String'>
   readonly displayOrder: Prisma.FieldRef<"ExamTemplateQuestion", 'Int'>
-  readonly score: Prisma.FieldRef<"ExamTemplateQuestion", 'Decimal'>
 }
     
 

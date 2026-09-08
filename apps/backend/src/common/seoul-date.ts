@@ -32,3 +32,12 @@ export function toUtcDateOnly(value: string): Date {
 export function todaySeoulDateOnly(): Date {
   return toUtcDateOnly(todaySeoulDateString());
 }
+
+/**
+ * 주어진 시각이 속한 Asia/Seoul 날짜의 마지막 순간(23:59:59.999 KST)을 UTC `Date`로
+ * 반환한다. 강사의 출석 수정 마감처럼 "그 수업이 진행된 날의 당일 자정 직전"까지를
+ * 판정할 때 사용한다.
+ */
+export function toSeoulEndOfDay(value: Date): Date {
+  return new Date(`${toSeoulDateString(value)}T23:59:59.999+09:00`);
+}

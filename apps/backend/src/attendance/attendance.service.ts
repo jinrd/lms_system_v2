@@ -20,8 +20,10 @@ import {
   UserRole,
   UserStatus,
 } from '../generated/prisma/enums';
+import { toSeoulEndOfDay } from '../common/seoul-date';
 import { SessionMaintenanceService } from '../maintenance/session-maintenance.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 import { SubmitAttendanceCodeDto } from './dto/submit-attendance-code.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 
@@ -85,6 +87,7 @@ export class AttendanceService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly sessionMaintenance: SessionMaintenanceService,
+    private readonly settings: SettingsService,
   ) {
     this.attendanceCodeSecret = this.configService.getOrThrow<string>(
       'ATTENDANCE_CODE_SECRET',
@@ -455,7 +458,7 @@ export class AttendanceService {
     const record = await this.prisma.attendanceRecord.findFirst({
       where: { id: attendanceRecordId, classSessionId: sessionId },
       include: {
-        classSession: { select: { instructorId: true } },
+        classSession: { select: { instructorId: true, startsAt: true } },
         student: { select: { id: true, loginId: true, name: true } },
       },
     });
@@ -463,6 +466,17 @@ export class AttendanceService {
       throw new NotFoundException('출석 기록을 찾을 수 없습니다.');
     }
     this.assertAttendanceManager(record.classSession.instructorId, actor);
+
+    // 강사는 수업이 진행된 날의 23:59:59(KST)까지만 수정할 수 있다.
+    // 실장·원장·관리자는 기간 제한이 없다(기획안 §11.3 / D-04).
+    if (
+      actor.role === UserRole.INSTRUCTOR &&
+      new Date() > toSeoulEndOfDay(record.classSession.startsAt)
+    ) {
+      throw new ForbiddenException(
+        '강사는 수업이 진행된 날의 자정 전까지만 출석을 수정할 수 있습니다. 이후에는 실장·원장·관리자에게 요청하세요.',
+      );
+    }
 
     const arrivalRequired =
       dto.status === AttendanceStatus.PRESENT ||
@@ -600,6 +614,10 @@ export class AttendanceService {
   ): Promise<AttendanceCodeGenerationResponse> {
     const now = new Date();
     const code = randomInt(0, 10_000).toString().padStart(4, '0');
+    // 코드 유효 시간은 운영 중 조정 가능한 정책값이다(기획안 §22).
+    const codeValidMinutes = await this.settings.getNumber(
+      'attendance.code_valid_minutes',
+    );
 
     const generated = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`
@@ -656,7 +674,10 @@ export class AttendanceService {
       }
 
       const expiresAt = new Date(
-        Math.min(now.getTime() + 5 * 60 * 1000, session.endsAt.getTime()),
+        Math.min(
+          now.getTime() + codeValidMinutes * 60 * 1000,
+          session.endsAt.getTime(),
+        ),
       );
 
       await tx.attendanceCode.updateMany({

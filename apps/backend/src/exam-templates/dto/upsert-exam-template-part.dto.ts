@@ -1,6 +1,6 @@
 import {
   IsInt,
-  IsNumber,
+  IsISO8601,
   IsOptional,
   IsString,
   Max,
@@ -28,17 +28,14 @@ export const PRACTICAL_FILE_SIZE_BYTES = 5_242_880;
  * 파일 장수·전체 크기는 생략하면 기본 정책 값이 들어가고, 값을 넣더라도 상한을
  * 넘길 수 없다(완화 거부, 더 엄격한 값만 허용). 파일당 최대 크기는 예외로
  * 5MiB 고정이라 무엇을 보내든 무시된다.
+ *
+ * 배점·총점·합격점은 템플릿에 두지 않는다. 실제 시험을 만들 때 정하고
+ * §14.9에서 합계를 확인한다.
  */
 export class UpsertExamTemplatePartDto {
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0.01)
-  @Max(9999.99)
-  totalScore!: number;
-
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  @Max(9999.99)
-  passScore!: number;
+  /** 동시 편집 방지. 마지막으로 읽은 템플릿의 updatedAt(ISO). */
+  @IsISO8601()
+  expectedUpdatedAt!: string;
 
   @IsInt()
   @Min(0)

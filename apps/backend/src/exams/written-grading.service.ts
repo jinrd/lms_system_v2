@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { matchesAcceptedAnswer } from '../common/answer-normalizer';
+import {
+  matchesAcceptedAnswer,
+  ANSWER_NORMALIZATION_VERSION,
+} from '../common/answer-normalizer';
 import type { Prisma } from '../generated/prisma/client';
 import {
   AttemptStatus,
@@ -27,13 +30,12 @@ function sameSet(a: readonly string[], b: readonly string[]): boolean {
  *
  * - 객관식: 학생이 고른 보기 집합과 정답 보기 집합이 완전히 일치할 때만 배점
  *   전량을 주고, 아니면 0점이다. 부분 점수는 없다.
- * - 단답형: 정규화한 학생 답안이 허용 정답 중 하나와 완전히 일치하면 정답이다.
- *   부분 문자열 포함은 인정하지 않는다.
+ * - 단답형: 저장 당시 동결된 `exam_answers.normalized_text`를 스냅샷된 허용 정답의
+ *   정규화 값과 완전 일치 비교한다. 동결값이 없는 예전 답안만 문항의
+ *   `normalization_version` 규칙으로 다시 정규화한다. 정규화 규칙이 나중에 바뀌어도
+ *   이미 치른 시험을 재채점하면 같은 결과가 나오도록 하기 위함이다.
  *
- * 채점은 화면 표시 순서가 아니라 문제·보기 UUID를 기준으로 한다. 문항별 정오답과
- * 획득 점수를 `exam_answers`에 기록하고, 파트 점수·합격 여부를
- * `exam_part_submissions`에 확정한 뒤, 실기 파트가 없거나 이미 채점된 시험이면
- * 응시 기록의 최종 결과까지 굳힌다.
+ * 채점은 화면 표시 순서가 아니라 문제·보기 UUID를 기준으로 한다.
  */
 @Injectable()
 export class WrittenGradingService {
@@ -44,7 +46,21 @@ export class WrittenGradingService {
    * 아무 일도 하지 않는다(배치가 여러 번 불러도 안전하다).
    */
   async gradeWrittenSubmission(submissionId: string): Promise<void> {
-    const submission = await this.prisma.examPartSubmission.findUnique({
+    await this.prisma.$transaction((tx) =>
+      this.gradeWrittenSubmissionTx(tx, submissionId),
+    );
+  }
+
+  /**
+   * 채점 본체를 외부 트랜잭션 안에서 실행한다. 학생의 최종 제출과 채점을
+   * 한 트랜잭션으로 묶어, 제출은 됐는데 채점 호출이 유실되는 창을 없앤다
+   * (기획안 §26 "시험 답안 최종 제출과 자동 채점").
+   */
+  async gradeWrittenSubmissionTx(
+    tx: Prisma.TransactionClient,
+    submissionId: string,
+  ): Promise<void> {
+    const submission = await tx.examPartSubmission.findUnique({
       where: { id: submissionId },
       select: {
         id: true,
@@ -68,27 +84,27 @@ export class WrittenGradingService {
       return;
     }
 
-    const [questions, answers] = await Promise.all([
-      this.prisma.examQuestion.findMany({
-        where: { examPartId: submission.examPart.id },
-        select: {
-          id: true,
-          type: true,
-          score: true,
-          options: { select: { id: true, isCorrect: true } },
-          acceptedAnswers: { select: { normalizedAnswer: true } },
-        },
-      }),
-      this.prisma.examAnswer.findMany({
-        where: { examPartSubmissionId: submission.id },
-        select: {
-          id: true,
-          examQuestionId: true,
-          subjectiveText: true,
-          selectedOptions: { select: { examQuestionOptionId: true } },
-        },
-      }),
-    ]);
+    const questions = await tx.examQuestion.findMany({
+      where: { examPartId: submission.examPart.id },
+      select: {
+        id: true,
+        type: true,
+        score: true,
+        normalizationVersion: true,
+        options: { select: { id: true, isCorrect: true } },
+        acceptedAnswers: { select: { normalizedAnswer: true } },
+      },
+    });
+    const answers = await tx.examAnswer.findMany({
+      where: { examPartSubmissionId: submission.id },
+      select: {
+        id: true,
+        examQuestionId: true,
+        subjectiveText: true,
+        normalizedText: true,
+        selectedOptions: { select: { examQuestionOptionId: true } },
+      },
+    });
     const answerByQuestion = new Map(
       answers.map((answer) => [answer.examQuestionId, answer]),
     );
@@ -99,13 +115,23 @@ export class WrittenGradingService {
       let isCorrect: boolean;
 
       if (question.type === QuestionType.SHORT_ANSWER) {
-        const text = answer?.subjectiveText ?? '';
-        isCorrect =
-          text.length > 0 &&
-          matchesAcceptedAnswer(
-            text,
-            question.acceptedAnswers.map((a) => a.normalizedAnswer),
-          );
+        const accepted = question.acceptedAnswers.map(
+          (a) => a.normalizedAnswer,
+        );
+        if (answer?.normalizedText != null) {
+          // 저장 당시 동결된 정규화 값을 그대로 비교한다.
+          isCorrect =
+            answer.normalizedText.length > 0 &&
+            accepted.includes(answer.normalizedText);
+        } else {
+          // 동결값이 없는 예전 답안: 문항 스냅샷의 정규화 버전으로 다시 정규화한다.
+          const text = answer?.subjectiveText ?? '';
+          const version = question.normalizationVersion
+            ? Number(question.normalizationVersion)
+            : ANSWER_NORMALIZATION_VERSION;
+          isCorrect =
+            text.length > 0 && matchesAcceptedAnswer(text, accepted, version);
+        }
       } else {
         const correctIds = question.options
           .filter((option) => option.isCorrect)
@@ -131,36 +157,34 @@ export class WrittenGradingService {
       partScore >= passScore ? PassStatus.PASS : PassStatus.FAIL;
     const now = new Date();
 
-    await this.prisma.$transaction(async (tx) => {
-      // 답이 있는 문항만 정오답·획득 점수를 기록한다. 미응답 문항은 0점으로 합산됐다.
-      for (const entry of graded) {
-        if (entry.answerId === null) {
-          continue;
-        }
-        await tx.examAnswer.update({
-          where: { id: entry.answerId },
-          data: {
-            isCorrect: entry.isCorrect,
-            awardedScore: entry.awardedScore,
-          },
-        });
+    // 답이 있는 문항만 정오답·획득 점수를 기록한다. 미응답 문항은 0점으로 합산됐다.
+    for (const entry of graded) {
+      if (entry.answerId === null) {
+        continue;
       }
-
-      const claimed = await tx.examPartSubmission.updateMany({
-        where: { id: submission.id, status: AttemptStatus.SUBMITTED },
+      await tx.examAnswer.update({
+        where: { id: entry.answerId },
         data: {
-          status: AttemptStatus.GRADED,
-          score: partScore,
-          result: partResult,
-          gradedAt: now,
+          isCorrect: entry.isCorrect,
+          awardedScore: entry.awardedScore,
         },
       });
-      if (claimed.count === 0) {
-        return; // 다른 경로가 이미 채점했다.
-      }
+    }
 
-      await this.rollUpAttempt(tx, submission.examAttemptId);
+    const claimed = await tx.examPartSubmission.updateMany({
+      where: { id: submission.id, status: AttemptStatus.SUBMITTED },
+      data: {
+        status: AttemptStatus.GRADED,
+        score: partScore,
+        result: partResult,
+        gradedAt: now,
+      },
     });
+    if (claimed.count === 0) {
+      return; // 다른 경로가 이미 채점했다.
+    }
+
+    await this.rollUpAttempt(tx, submission.examAttemptId);
   }
 
   /**

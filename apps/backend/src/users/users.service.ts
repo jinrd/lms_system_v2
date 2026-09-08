@@ -15,6 +15,7 @@ import {
 } from '../generated/prisma/enums';
 import { todaySeoulDateOnly } from '../common/seoul-date';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 import { PendingUsersQueryDto } from './dto/pending-users-query.dto';
 import { randomBytes } from 'crypto';
 import { CreateStaffDto, CreateStaffResponse } from './dto/create-staff.dto';
@@ -79,7 +80,13 @@ export type UsersPageResponse = {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly settings: SettingsService,
+  ) {}
+
+  /** 하루를 밀리초로. 보관 기한 계산에 쓴다. */
+  private static readonly DAY_MS = 24 * 60 * 60 * 1000;
 
   async findPendingStudents(
     query: PendingUsersQueryDto,
@@ -240,8 +247,12 @@ export class UsersService {
     ipAddress?: string,
   ): Promise<UserStatusChangeResponse> {
     const changedAt = new Date();
+    // 보관 기한은 운영 중 조정 가능한 정책값이다(기획안 §22).
+    const rejectedRetentionDays = await this.settings.getNumber(
+      'student.rejected_signup_retention_days',
+    );
     const scheduledDeletionAt = new Date(
-      changedAt.getTime() + 30 * 24 * 60 * 60 * 1000,
+      changedAt.getTime() + rejectedRetentionDays * UsersService.DAY_MS,
     );
     const normalizedReason = reason.trim();
 
@@ -656,6 +667,10 @@ export class UsersService {
 
     const changedAt = new Date();
     const normalizedReason = reason.trim();
+    // 비활성 후 개인정보 익명화까지의 유예 일수는 운영 중 조정 가능하다(기획안 §22).
+    const inactiveRetentionDays = await this.settings.getNumber(
+      'student.inactive_retention_days',
+    );
 
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`
@@ -714,7 +729,9 @@ export class UsersService {
 
       const scheduledDeletionAt =
         user.role === UserRole.STUDENT
-          ? new Date(changedAt.getTime() + 365 * 24 * 60 * 60 * 1000)
+          ? new Date(
+              changedAt.getTime() + inactiveRetentionDays * UsersService.DAY_MS,
+            )
           : null;
 
       await tx.user.update({

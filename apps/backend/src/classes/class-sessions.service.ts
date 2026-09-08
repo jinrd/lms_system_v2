@@ -771,6 +771,7 @@ export class ClassSessionsService {
     actor: AuthenticatedUser,
     ipAddress?: string,
   ): Promise<ClassSessionResponse> {
+    this.assertCancellationRole(actor);
     const reason = dto.reason.trim();
 
     await this.prisma.$transaction(async (tx) => {
@@ -863,6 +864,7 @@ export class ClassSessionsService {
     actor: AuthenticatedUser,
     ipAddress?: string,
   ): Promise<ClassSessionResponse> {
+    this.assertCancellationRole(actor);
     const startsAt = new Date(dto.startsAt);
     const endsAt = new Date(dto.endsAt);
     const reason = dto.reason.trim();
@@ -1133,6 +1135,19 @@ export class ClassSessionsService {
     if (actor.role === UserRole.INSTRUCTOR && instructorId !== actor.id) {
       throw new ForbiddenException(
         '본인이 담당하는 수업만 관리할 수 있습니다.',
+      );
+    }
+  }
+
+  /**
+   * 수업 취소와 보강 생성은 실장·원장만 할 수 있다. 관리자도 직접 수행할 수
+   * 없는 명시적 권한 예외다(기획안 §9.7 / D-38). 컨트롤러 `@Roles`에 더해
+   * 서비스에서도 한 번 더 막는다.
+   */
+  private assertCancellationRole(actor: AuthenticatedUser): void {
+    if (actor.role !== UserRole.MANAGER && actor.role !== UserRole.PRINCIPAL) {
+      throw new ForbiddenException(
+        '수업 취소와 보강 수업 생성은 실장·원장만 할 수 있습니다.',
       );
     }
   }

@@ -13,11 +13,14 @@ import type {
   AuthenticatedUser,
   AuthResponse,
   CurrentUserResponse,
+  PendingConsentResponse,
 } from './auth.types';
 import { LoginDto } from './dto/login.dto';
+import { ConsentDto } from './dto/consent.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { Public } from './decorators/public.decorator';
 import { AllowPasswordChange } from './decorators/allow-password-change.decorator';
+import { AllowPendingConsent } from './decorators/allow-pending-consent.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { SignupDto, SignupResponse } from './dto/signup.dto';
@@ -29,8 +32,29 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  login(@Body() dto: LoginDto, @Req() request: Request): Promise<AuthResponse> {
+  login(
+    @Body() dto: LoginDto,
+    @Req() request: Request,
+  ): Promise<AuthResponse | PendingConsentResponse> {
     return this.authService.login(dto, {
+      ipAddress: request.ip,
+      userAgent: request.get('user-agent'),
+    });
+  }
+
+  /**
+   * 필수 약관 미동의로 제한 인증 상태인 사용자가 약관에 동의하고 정식 세션을
+   * 발급받는다(기획안 §7.2 / D-43). 제한 토큰으로만 호출한다.
+   */
+  @AllowPendingConsent()
+  @Post('consent')
+  @HttpCode(HttpStatus.OK)
+  consent(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ConsentDto,
+    @Req() request: Request,
+  ): Promise<AuthResponse> {
+    return this.authService.consent(user, dto, {
       ipAddress: request.ip,
       userAgent: request.get('user-agent'),
     });

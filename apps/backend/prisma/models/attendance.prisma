@@ -92,6 +92,7 @@ model AttendanceRecord {
   @@index([studentId, classSessionId])
   @@index([classSessionId, status])
   @@index([studentId, status])
+  @@index([studentId, createdAt], map: "idx_attendance_records_student_created_at")
   @@map("attendance_records")
 }
 

@@ -24,10 +24,6 @@ import {
   UpsertExamTemplatePartDto,
 } from './dto/upsert-exam-template-part.dto';
 import { ExamTemplateAccessService } from './exam-template-access.service';
-import {
-  type ExamTemplateValidationResult,
-  ExamTemplateValidationService,
-} from './exam-template-validation.service';
 
 export type ExamTemplateSubjectResponse = {
   subjectId: string;
@@ -38,8 +34,6 @@ export type ExamTemplateSubjectResponse = {
 export type ExamTemplatePartResponse = {
   id: string;
   type: ExamPartType;
-  totalScore: number;
-  passScore: number;
   durationMinutes: number | null;
   defaultOpenOffsetDays: number;
   defaultOpenDays: number;
@@ -57,7 +51,6 @@ export type ExamTemplateResponse = {
   scope: ExamScope;
   stage: ExamStage;
   defaultOpenDays: number | null;
-  active: boolean;
   createdById: string | null;
   createdAt: string;
   updatedAt: string;
@@ -81,8 +74,6 @@ type TemplateWithRelations = Prisma.ExamTemplateGetPayload<{
 
 /** 파트 유형에 따라 확정된 파트 열 값이다. 반대쪽 유형의 열은 항상 null이다. */
 type PartWriteData = {
-  totalScore: number;
-  passScore: number;
   defaultOpenOffsetDays: number;
   defaultOpenDays: number;
   instructions: string | null;
@@ -98,8 +89,27 @@ export class ExamTemplatesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: ExamTemplateAccessService,
-    private readonly validation: ExamTemplateValidationService,
   ) {}
+
+  /**
+   * 동시 편집을 막는다. 마지막으로 읽은 `updatedAt`과 현재 값이 다르면
+   * 다른 사용자가 먼저 저장한 것이므로 409로 거부한다.
+   */
+  private assertFresh(current: Date, expected: string): void {
+    if (current.getTime() !== new Date(expected).getTime()) {
+      throw new ConflictException(
+        '다른 곳에서 먼저 저장되었습니다. 템플릿을 다시 불러온 뒤 편집하세요.',
+      );
+    }
+  }
+
+  /** 자식 테이블만 바뀌어도 템플릿 updatedAt을 올려 낙관적 락 기준을 갱신한다. */
+  private touch(tx: Prisma.TransactionClient, id: string): Promise<unknown> {
+    return tx.examTemplate.update({
+      where: { id },
+      data: { updatedAt: new Date() },
+    });
+  }
 
   async list(
     query: ExamTemplateQueryDto,
@@ -112,9 +122,6 @@ export class ExamTemplatesService {
     }
     if (query.stage) {
       where.stage = query.stage;
-    }
-    if (query.active !== undefined) {
-      where.active = query.active;
     }
 
     const keyword = query.keyword?.trim();
@@ -204,7 +211,6 @@ export class ExamTemplatesService {
           scope: dto.scope,
           stage: dto.stage,
           defaultOpenDays: dto.defaultOpenDays ?? null,
-          active: false,
           createdById: actor.id,
           subjects: {
             create: subjectIds.map((subjectId) => ({ subjectId })),
@@ -262,11 +268,7 @@ export class ExamTemplatesService {
       throw new NotFoundException('시험 템플릿을 찾을 수 없습니다.');
     }
 
-    if (existing.active) {
-      throw new ConflictException(
-        '활성 템플릿은 수정할 수 없습니다. 복제 후 편집하세요.',
-      );
-    }
+    this.assertFresh(existing.updatedAt, dto.expectedUpdatedAt);
 
     const nextScope = dto.scope ?? existing.scope;
     const nextSubjectIds = dto.subjectIds
@@ -376,7 +378,8 @@ export class ExamTemplatesService {
     actor: AuthenticatedUser,
     ipAddress?: string,
   ): Promise<ExamTemplateResponse> {
-    await this.loadDraftForPartWrite(id, actor);
+    const template = await this.loadForPartWrite(id, actor);
+    this.assertFresh(template.updatedAt, dto.expectedUpdatedAt);
     const data = this.buildPartData(type, dto);
 
     await this.prisma.$transaction(async (tx) => {
@@ -385,6 +388,7 @@ export class ExamTemplatesService {
         create: { examTemplateId: id, type, ...data },
         update: data,
       });
+      await this.touch(tx, id);
 
       await tx.auditLog.create({
         data: {
@@ -393,7 +397,7 @@ export class ExamTemplatesService {
           action: 'EXAM_TEMPLATE_PART_UPSERTED',
           resourceType: 'EXAM_TEMPLATE',
           resourceId: id,
-          afterData: { type, totalScore: data.totalScore },
+          afterData: { type },
           ipAddress,
           result: 'SUCCESS',
         },
@@ -406,10 +410,12 @@ export class ExamTemplatesService {
   async deletePart(
     id: string,
     type: ExamPartType,
+    expectedUpdatedAt: string,
     actor: AuthenticatedUser,
     ipAddress?: string,
   ): Promise<ExamTemplateResponse> {
-    await this.loadDraftForPartWrite(id, actor);
+    const template = await this.loadForPartWrite(id, actor);
+    this.assertFresh(template.updatedAt, expectedUpdatedAt);
 
     const part = await this.prisma.examTemplatePart.findUnique({
       where: { examTemplateId_type: { examTemplateId: id, type } },
@@ -421,6 +427,7 @@ export class ExamTemplatesService {
 
     await this.prisma.$transaction(async (tx) => {
       await tx.examTemplatePart.delete({ where: { id: part.id } });
+      await this.touch(tx, id);
 
       await tx.auditLog.create({
         data: {
@@ -440,105 +447,39 @@ export class ExamTemplatesService {
   }
 
   /**
-   * 활성화하지 않고 검증 결과만 돌려준다.
-   *
-   * 접근 권한을 먼저 확인한다. 조회 불가는 404로 숨긴다.
+   * 템플릿을 물리 삭제한다(기획안 §23). 실제 시험은 문제를 스냅샷으로 복사해
+   * 두므로 템플릿이 없어져도 시험에는 영향이 없다(`exams.source_template_id`는
+   * SET NULL). 자식(과목·파트·문제·실기 항목)은 FK CASCADE로 함께 삭제된다.
    */
-  async validate(
+  async delete(
     id: string,
     actor: AuthenticatedUser,
-  ): Promise<ExamTemplateValidationResult> {
+    ipAddress?: string,
+  ): Promise<void> {
     await this.loadForStateChange(id, actor);
-    return this.validation.validate(id);
-  }
-
-  /**
-   * 검증을 통과하면 템플릿을 활성화한다.
-   *
-   * 검증 실패 시 400과 함께 모든 결함 사유를 내려준다. 이미 활성이면 409다.
-   */
-  async activate(
-    id: string,
-    actor: AuthenticatedUser,
-    ipAddress?: string,
-  ): Promise<ExamTemplateResponse> {
-    const entity = await this.loadForStateChange(id, actor);
-    if (entity.active) {
-      throw new ConflictException('이미 활성 상태인 템플릿입니다.');
-    }
-
-    const result = await this.validation.validate(id);
-    if (!result.valid) {
-      throw new BadRequestException(
-        result.issues.map((issue) => issue.message),
-      );
-    }
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.examTemplate.update({
-        where: { id },
-        data: { active: true },
-      });
-
+      await tx.examTemplate.delete({ where: { id } });
       await tx.auditLog.create({
         data: {
           actorId: actor.id,
           actorRole: actor.role,
-          action: 'EXAM_TEMPLATE_ACTIVATED',
+          action: 'EXAM_TEMPLATE_DELETED',
           resourceType: 'EXAM_TEMPLATE',
           resourceId: id,
-          afterData: { active: true },
           ipAddress,
           result: 'SUCCESS',
         },
       });
     });
-
-    return this.getById(id, actor);
   }
 
   /**
-   * 템플릿을 비활성화한다(기획안 §23). 검증 없이 허용한다. 이미 비활성이면 409다.
-   */
-  async deactivate(
-    id: string,
-    actor: AuthenticatedUser,
-    ipAddress?: string,
-  ): Promise<ExamTemplateResponse> {
-    const entity = await this.loadForStateChange(id, actor);
-    if (!entity.active) {
-      throw new ConflictException('이미 비활성 상태인 템플릿입니다.');
-    }
-
-    await this.prisma.$transaction(async (tx) => {
-      await tx.examTemplate.update({
-        where: { id },
-        data: { active: false },
-      });
-
-      await tx.auditLog.create({
-        data: {
-          actorId: actor.id,
-          actorRole: actor.role,
-          action: 'EXAM_TEMPLATE_DEACTIVATED',
-          resourceType: 'EXAM_TEMPLATE',
-          resourceId: id,
-          afterData: { active: false },
-          ipAddress,
-          result: 'SUCCESS',
-        },
-      });
-    });
-
-    return this.getById(id, actor);
-  }
-
-  /**
-   * 템플릿의 전체 구성을 복제해 새 초안을 만든다.
+   * 템플릿의 전체 구성을 복제해 새 템플릿을 만든다.
    *
    * 템플릿 + 과목 + 파트 + 파트별 문제 + 실기 평가 항목을 한 트랜잭션에 복사하고,
-   * 이름에 접미사를 붙이며 `active = false`, `created_by = 실행자`로 만든다.
-   * 원본과 사본은 이후 독립적으로 편집된다.
+   * 이름에 접미사를 붙이며 `created_by = 실행자`로 만든다. 원본과 사본은 이후
+   * 독립적으로 편집된다.
    */
   async duplicate(
     id: string,
@@ -558,7 +499,6 @@ export class ExamTemplatesService {
               select: {
                 questionId: true,
                 displayOrder: true,
-                score: true,
               },
             },
             practicalCriteria: {
@@ -586,7 +526,6 @@ export class ExamTemplatesService {
           scope: source.scope,
           stage: source.stage,
           defaultOpenDays: source.defaultOpenDays,
-          active: false,
           createdById: actor.id,
           subjects: {
             create: source.subjects.map((link) => ({
@@ -601,8 +540,6 @@ export class ExamTemplatesService {
           data: {
             examTemplateId: copy.id,
             type: part.type,
-            totalScore: part.totalScore,
-            passScore: part.passScore,
             durationMinutes: part.durationMinutes,
             defaultOpenOffsetDays: part.defaultOpenOffsetDays,
             defaultOpenDays: part.defaultOpenDays,
@@ -615,7 +552,6 @@ export class ExamTemplatesService {
               create: part.questions.map((entry) => ({
                 questionId: entry.questionId,
                 displayOrder: entry.displayOrder,
-                score: entry.score,
               })),
             },
             practicalCriteria: {
@@ -649,48 +585,24 @@ export class ExamTemplatesService {
     return this.getById(newId, actor);
   }
 
-  /**
-   * 상태 전환·복제 전 공통 확인: 존재와 접근 권한(조회 불가는 404로 숨김).
-   *
-   * 활성 여부는 각 메서드가 판단하므로 여기서 막지 않는다.
-   */
+  /** 복제·삭제 전 공통 확인: 존재와 접근 권한(조회 불가는 404로 숨김). */
   private async loadForStateChange(
     id: string,
     actor: AuthenticatedUser,
-  ): Promise<{ active: boolean; createdById: string | null }> {
-    const entity = await this.prisma.examTemplate.findUnique({
-      where: { id },
-      select: {
-        active: true,
-        createdById: true,
-        subjects: { select: { subjectId: true } },
-      },
-    });
-    if (!entity) {
-      throw new NotFoundException('시험 템플릿을 찾을 수 없습니다.');
-    }
-
-    const canAccess = await this.access.canAccessTemplate(actor, {
-      createdById: entity.createdById,
-      subjectIds: entity.subjects.map((subject) => subject.subjectId),
-    });
-    if (!canAccess) {
-      throw new NotFoundException('시험 템플릿을 찾을 수 없습니다.');
-    }
-
-    return { active: entity.active, createdById: entity.createdById };
+  ): Promise<{ createdById: string | null }> {
+    return this.loadForPartWrite(id, actor);
   }
 
-  /** 파트 쓰기 전 공통 확인: 존재·접근 권한(404로 숨김)·초안 상태(활성이면 409). */
-  private async loadDraftForPartWrite(
+  /** 템플릿 쓰기 전 공통 확인: 존재·접근 권한(404로 숨김). updatedAt을 함께 돌려준다. */
+  private async loadForPartWrite(
     id: string,
     actor: AuthenticatedUser,
-  ): Promise<void> {
+  ): Promise<{ createdById: string | null; updatedAt: Date }> {
     const entity = await this.prisma.examTemplate.findUnique({
       where: { id },
       select: {
-        active: true,
         createdById: true,
+        updatedAt: true,
         subjects: { select: { subjectId: true } },
       },
     });
@@ -706,11 +618,7 @@ export class ExamTemplatesService {
       throw new NotFoundException('시험 템플릿을 찾을 수 없습니다.');
     }
 
-    if (entity.active) {
-      throw new ConflictException(
-        '활성 템플릿의 파트는 변경할 수 없습니다. 복제 후 편집하세요.',
-      );
-    }
+    return { createdById: entity.createdById, updatedAt: entity.updatedAt };
   }
 
   private assertScopeSubjectCount(scope: ExamScope, count: number): void {
@@ -753,13 +661,7 @@ export class ExamTemplatesService {
     type: ExamPartType,
     dto: UpsertExamTemplatePartDto,
   ): PartWriteData {
-    if (dto.passScore > dto.totalScore) {
-      throw new BadRequestException('합격 점수는 총점보다 클 수 없습니다.');
-    }
-
     const common = {
-      totalScore: dto.totalScore,
-      passScore: dto.passScore,
       defaultOpenOffsetDays: dto.defaultOpenOffsetDays,
       defaultOpenDays: dto.defaultOpenDays,
       instructions: dto.instructions?.trim() || null,
@@ -838,7 +740,6 @@ export class ExamTemplatesService {
       scope: entity.scope,
       stage: entity.stage,
       defaultOpenDays: entity.defaultOpenDays,
-      active: entity.active,
       createdById: entity.createdById,
       createdAt: entity.createdAt.toISOString(),
       updatedAt: entity.updatedAt.toISOString(),
@@ -850,8 +751,6 @@ export class ExamTemplatesService {
       parts: entity.parts.map((part) => ({
         id: part.id,
         type: part.type,
-        totalScore: Number(part.totalScore),
-        passScore: Number(part.passScore),
         durationMinutes: part.durationMinutes,
         defaultOpenOffsetDays: part.defaultOpenOffsetDays,
         defaultOpenDays: part.defaultOpenDays,

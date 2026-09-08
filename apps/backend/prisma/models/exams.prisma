@@ -184,6 +184,7 @@ model ExamQuestion {
 
   @@unique([examPartId, displayOrder])
   @@unique([id, examPartId])
+  @@index([sourceQuestionId])
   @@map("exam_questions")
 }
 

@@ -27,8 +27,6 @@ export type AggregateExamTemplatePart = {
 }
 
 export type ExamTemplatePartAvgAggregateOutputType = {
-  totalScore: runtime.Decimal | null
-  passScore: runtime.Decimal | null
   durationMinutes: number | null
   defaultOpenOffsetDays: number | null
   defaultOpenDays: number | null
@@ -39,8 +37,6 @@ export type ExamTemplatePartAvgAggregateOutputType = {
 }
 
 export type ExamTemplatePartSumAggregateOutputType = {
-  totalScore: runtime.Decimal | null
-  passScore: runtime.Decimal | null
   durationMinutes: number | null
   defaultOpenOffsetDays: number | null
   defaultOpenDays: number | null
@@ -54,8 +50,6 @@ export type ExamTemplatePartMinAggregateOutputType = {
   id: string | null
   examTemplateId: string | null
   type: $Enums.ExamPartType | null
-  totalScore: runtime.Decimal | null
-  passScore: runtime.Decimal | null
   durationMinutes: number | null
   defaultOpenOffsetDays: number | null
   defaultOpenDays: number | null
@@ -70,8 +64,6 @@ export type ExamTemplatePartMaxAggregateOutputType = {
   id: string | null
   examTemplateId: string | null
   type: $Enums.ExamPartType | null
-  totalScore: runtime.Decimal | null
-  passScore: runtime.Decimal | null
   durationMinutes: number | null
   defaultOpenOffsetDays: number | null
   defaultOpenDays: number | null
@@ -86,8 +78,6 @@ export type ExamTemplatePartCountAggregateOutputType = {
   id: number
   examTemplateId: number
   type: number
-  totalScore: number
-  passScore: number
   durationMinutes: number
   defaultOpenOffsetDays: number
   defaultOpenDays: number
@@ -101,8 +91,6 @@ export type ExamTemplatePartCountAggregateOutputType = {
 
 
 export type ExamTemplatePartAvgAggregateInputType = {
-  totalScore?: true
-  passScore?: true
   durationMinutes?: true
   defaultOpenOffsetDays?: true
   defaultOpenDays?: true
@@ -113,8 +101,6 @@ export type ExamTemplatePartAvgAggregateInputType = {
 }
 
 export type ExamTemplatePartSumAggregateInputType = {
-  totalScore?: true
-  passScore?: true
   durationMinutes?: true
   defaultOpenOffsetDays?: true
   defaultOpenDays?: true
@@ -128,8 +114,6 @@ export type ExamTemplatePartMinAggregateInputType = {
   id?: true
   examTemplateId?: true
   type?: true
-  totalScore?: true
-  passScore?: true
   durationMinutes?: true
   defaultOpenOffsetDays?: true
   defaultOpenDays?: true
@@ -144,8 +128,6 @@ export type ExamTemplatePartMaxAggregateInputType = {
   id?: true
   examTemplateId?: true
   type?: true
-  totalScore?: true
-  passScore?: true
   durationMinutes?: true
   defaultOpenOffsetDays?: true
   defaultOpenDays?: true
@@ -160,8 +142,6 @@ export type ExamTemplatePartCountAggregateInputType = {
   id?: true
   examTemplateId?: true
   type?: true
-  totalScore?: true
-  passScore?: true
   durationMinutes?: true
   defaultOpenOffsetDays?: true
   defaultOpenDays?: true
@@ -263,8 +243,6 @@ export type ExamTemplatePartGroupByOutputType = {
   id: string
   examTemplateId: string
   type: $Enums.ExamPartType
-  totalScore: runtime.Decimal
-  passScore: runtime.Decimal
   durationMinutes: number | null
   defaultOpenOffsetDays: number
   defaultOpenDays: number
@@ -302,8 +280,6 @@ export type ExamTemplatePartWhereInput = {
   id?: Prisma.UuidFilter<"ExamTemplatePart"> | string
   examTemplateId?: Prisma.UuidFilter<"ExamTemplatePart"> | string
   type?: Prisma.EnumExamPartTypeFilter<"ExamTemplatePart"> | $Enums.ExamPartType
-  totalScore?: Prisma.DecimalFilter<"ExamTemplatePart"> | runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore?: Prisma.DecimalFilter<"ExamTemplatePart"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: Prisma.IntNullableFilter<"ExamTemplatePart"> | number | null
   defaultOpenOffsetDays?: Prisma.IntFilter<"ExamTemplatePart"> | number
   defaultOpenDays?: Prisma.IntFilter<"ExamTemplatePart"> | number
@@ -321,8 +297,6 @@ export type ExamTemplatePartOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   examTemplateId?: Prisma.SortOrder
   type?: Prisma.SortOrder
-  totalScore?: Prisma.SortOrder
-  passScore?: Prisma.SortOrder
   durationMinutes?: Prisma.SortOrderInput | Prisma.SortOrder
   defaultOpenOffsetDays?: Prisma.SortOrder
   defaultOpenDays?: Prisma.SortOrder
@@ -344,8 +318,6 @@ export type ExamTemplatePartWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.ExamTemplatePartWhereInput | Prisma.ExamTemplatePartWhereInput[]
   examTemplateId?: Prisma.UuidFilter<"ExamTemplatePart"> | string
   type?: Prisma.EnumExamPartTypeFilter<"ExamTemplatePart"> | $Enums.ExamPartType
-  totalScore?: Prisma.DecimalFilter<"ExamTemplatePart"> | runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore?: Prisma.DecimalFilter<"ExamTemplatePart"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: Prisma.IntNullableFilter<"ExamTemplatePart"> | number | null
   defaultOpenOffsetDays?: Prisma.IntFilter<"ExamTemplatePart"> | number
   defaultOpenDays?: Prisma.IntFilter<"ExamTemplatePart"> | number
@@ -363,8 +335,6 @@ export type ExamTemplatePartOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   examTemplateId?: Prisma.SortOrder
   type?: Prisma.SortOrder
-  totalScore?: Prisma.SortOrder
-  passScore?: Prisma.SortOrder
   durationMinutes?: Prisma.SortOrderInput | Prisma.SortOrder
   defaultOpenOffsetDays?: Prisma.SortOrder
   defaultOpenDays?: Prisma.SortOrder
@@ -387,8 +357,6 @@ export type ExamTemplatePartScalarWhereWithAggregatesInput = {
   id?: Prisma.UuidWithAggregatesFilter<"ExamTemplatePart"> | string
   examTemplateId?: Prisma.UuidWithAggregatesFilter<"ExamTemplatePart"> | string
   type?: Prisma.EnumExamPartTypeWithAggregatesFilter<"ExamTemplatePart"> | $Enums.ExamPartType
-  totalScore?: Prisma.DecimalWithAggregatesFilter<"ExamTemplatePart"> | runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore?: Prisma.DecimalWithAggregatesFilter<"ExamTemplatePart"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: Prisma.IntNullableWithAggregatesFilter<"ExamTemplatePart"> | number | null
   defaultOpenOffsetDays?: Prisma.IntWithAggregatesFilter<"ExamTemplatePart"> | number
   defaultOpenDays?: Prisma.IntWithAggregatesFilter<"ExamTemplatePart"> | number
@@ -402,8 +370,6 @@ export type ExamTemplatePartScalarWhereWithAggregatesInput = {
 export type ExamTemplatePartCreateInput = {
   id?: string
   type: $Enums.ExamPartType
-  totalScore: runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore: runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: number | null
   defaultOpenOffsetDays: number
   defaultOpenDays: number
@@ -421,8 +387,6 @@ export type ExamTemplatePartUncheckedCreateInput = {
   id?: string
   examTemplateId: string
   type: $Enums.ExamPartType
-  totalScore: runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore: runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: number | null
   defaultOpenOffsetDays: number
   defaultOpenDays: number
@@ -438,8 +402,6 @@ export type ExamTemplatePartUncheckedCreateInput = {
 export type ExamTemplatePartUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumExamPartTypeFieldUpdateOperationsInput | $Enums.ExamPartType
-  totalScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   defaultOpenOffsetDays?: Prisma.IntFieldUpdateOperationsInput | number
   defaultOpenDays?: Prisma.IntFieldUpdateOperationsInput | number
@@ -457,8 +419,6 @@ export type ExamTemplatePartUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   examTemplateId?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumExamPartTypeFieldUpdateOperationsInput | $Enums.ExamPartType
-  totalScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   defaultOpenOffsetDays?: Prisma.IntFieldUpdateOperationsInput | number
   defaultOpenDays?: Prisma.IntFieldUpdateOperationsInput | number
@@ -475,8 +435,6 @@ export type ExamTemplatePartCreateManyInput = {
   id?: string
   examTemplateId: string
   type: $Enums.ExamPartType
-  totalScore: runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore: runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: number | null
   defaultOpenOffsetDays: number
   defaultOpenDays: number
@@ -490,8 +448,6 @@ export type ExamTemplatePartCreateManyInput = {
 export type ExamTemplatePartUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumExamPartTypeFieldUpdateOperationsInput | $Enums.ExamPartType
-  totalScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   defaultOpenOffsetDays?: Prisma.IntFieldUpdateOperationsInput | number
   defaultOpenDays?: Prisma.IntFieldUpdateOperationsInput | number
@@ -506,8 +462,6 @@ export type ExamTemplatePartUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   examTemplateId?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumExamPartTypeFieldUpdateOperationsInput | $Enums.ExamPartType
-  totalScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   defaultOpenOffsetDays?: Prisma.IntFieldUpdateOperationsInput | number
   defaultOpenDays?: Prisma.IntFieldUpdateOperationsInput | number
@@ -537,8 +491,6 @@ export type ExamTemplatePartCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   examTemplateId?: Prisma.SortOrder
   type?: Prisma.SortOrder
-  totalScore?: Prisma.SortOrder
-  passScore?: Prisma.SortOrder
   durationMinutes?: Prisma.SortOrder
   defaultOpenOffsetDays?: Prisma.SortOrder
   defaultOpenDays?: Prisma.SortOrder
@@ -550,8 +502,6 @@ export type ExamTemplatePartCountOrderByAggregateInput = {
 }
 
 export type ExamTemplatePartAvgOrderByAggregateInput = {
-  totalScore?: Prisma.SortOrder
-  passScore?: Prisma.SortOrder
   durationMinutes?: Prisma.SortOrder
   defaultOpenOffsetDays?: Prisma.SortOrder
   defaultOpenDays?: Prisma.SortOrder
@@ -565,8 +515,6 @@ export type ExamTemplatePartMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   examTemplateId?: Prisma.SortOrder
   type?: Prisma.SortOrder
-  totalScore?: Prisma.SortOrder
-  passScore?: Prisma.SortOrder
   durationMinutes?: Prisma.SortOrder
   defaultOpenOffsetDays?: Prisma.SortOrder
   defaultOpenDays?: Prisma.SortOrder
@@ -581,8 +529,6 @@ export type ExamTemplatePartMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   examTemplateId?: Prisma.SortOrder
   type?: Prisma.SortOrder
-  totalScore?: Prisma.SortOrder
-  passScore?: Prisma.SortOrder
   durationMinutes?: Prisma.SortOrder
   defaultOpenOffsetDays?: Prisma.SortOrder
   defaultOpenDays?: Prisma.SortOrder
@@ -594,8 +540,6 @@ export type ExamTemplatePartMinOrderByAggregateInput = {
 }
 
 export type ExamTemplatePartSumOrderByAggregateInput = {
-  totalScore?: Prisma.SortOrder
-  passScore?: Prisma.SortOrder
   durationMinutes?: Prisma.SortOrder
   defaultOpenOffsetDays?: Prisma.SortOrder
   defaultOpenDays?: Prisma.SortOrder
@@ -683,8 +627,6 @@ export type ExamTemplatePartUpdateOneRequiredWithoutPracticalCriteriaNestedInput
 export type ExamTemplatePartCreateWithoutExamTemplateInput = {
   id?: string
   type: $Enums.ExamPartType
-  totalScore: runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore: runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: number | null
   defaultOpenOffsetDays: number
   defaultOpenDays: number
@@ -700,8 +642,6 @@ export type ExamTemplatePartCreateWithoutExamTemplateInput = {
 export type ExamTemplatePartUncheckedCreateWithoutExamTemplateInput = {
   id?: string
   type: $Enums.ExamPartType
-  totalScore: runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore: runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: number | null
   defaultOpenOffsetDays: number
   defaultOpenDays: number
@@ -747,8 +687,6 @@ export type ExamTemplatePartScalarWhereInput = {
   id?: Prisma.UuidFilter<"ExamTemplatePart"> | string
   examTemplateId?: Prisma.UuidFilter<"ExamTemplatePart"> | string
   type?: Prisma.EnumExamPartTypeFilter<"ExamTemplatePart"> | $Enums.ExamPartType
-  totalScore?: Prisma.DecimalFilter<"ExamTemplatePart"> | runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore?: Prisma.DecimalFilter<"ExamTemplatePart"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: Prisma.IntNullableFilter<"ExamTemplatePart"> | number | null
   defaultOpenOffsetDays?: Prisma.IntFilter<"ExamTemplatePart"> | number
   defaultOpenDays?: Prisma.IntFilter<"ExamTemplatePart"> | number
@@ -762,8 +700,6 @@ export type ExamTemplatePartScalarWhereInput = {
 export type ExamTemplatePartCreateWithoutQuestionsInput = {
   id?: string
   type: $Enums.ExamPartType
-  totalScore: runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore: runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: number | null
   defaultOpenOffsetDays: number
   defaultOpenDays: number
@@ -780,8 +716,6 @@ export type ExamTemplatePartUncheckedCreateWithoutQuestionsInput = {
   id?: string
   examTemplateId: string
   type: $Enums.ExamPartType
-  totalScore: runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore: runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: number | null
   defaultOpenOffsetDays: number
   defaultOpenDays: number
@@ -812,8 +746,6 @@ export type ExamTemplatePartUpdateToOneWithWhereWithoutQuestionsInput = {
 export type ExamTemplatePartUpdateWithoutQuestionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumExamPartTypeFieldUpdateOperationsInput | $Enums.ExamPartType
-  totalScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   defaultOpenOffsetDays?: Prisma.IntFieldUpdateOperationsInput | number
   defaultOpenDays?: Prisma.IntFieldUpdateOperationsInput | number
@@ -830,8 +762,6 @@ export type ExamTemplatePartUncheckedUpdateWithoutQuestionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   examTemplateId?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumExamPartTypeFieldUpdateOperationsInput | $Enums.ExamPartType
-  totalScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   defaultOpenOffsetDays?: Prisma.IntFieldUpdateOperationsInput | number
   defaultOpenDays?: Prisma.IntFieldUpdateOperationsInput | number
@@ -846,8 +776,6 @@ export type ExamTemplatePartUncheckedUpdateWithoutQuestionsInput = {
 export type ExamTemplatePartCreateWithoutPracticalCriteriaInput = {
   id?: string
   type: $Enums.ExamPartType
-  totalScore: runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore: runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: number | null
   defaultOpenOffsetDays: number
   defaultOpenDays: number
@@ -864,8 +792,6 @@ export type ExamTemplatePartUncheckedCreateWithoutPracticalCriteriaInput = {
   id?: string
   examTemplateId: string
   type: $Enums.ExamPartType
-  totalScore: runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore: runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: number | null
   defaultOpenOffsetDays: number
   defaultOpenDays: number
@@ -896,8 +822,6 @@ export type ExamTemplatePartUpdateToOneWithWhereWithoutPracticalCriteriaInput = 
 export type ExamTemplatePartUpdateWithoutPracticalCriteriaInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumExamPartTypeFieldUpdateOperationsInput | $Enums.ExamPartType
-  totalScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   defaultOpenOffsetDays?: Prisma.IntFieldUpdateOperationsInput | number
   defaultOpenDays?: Prisma.IntFieldUpdateOperationsInput | number
@@ -914,8 +838,6 @@ export type ExamTemplatePartUncheckedUpdateWithoutPracticalCriteriaInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   examTemplateId?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumExamPartTypeFieldUpdateOperationsInput | $Enums.ExamPartType
-  totalScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   defaultOpenOffsetDays?: Prisma.IntFieldUpdateOperationsInput | number
   defaultOpenDays?: Prisma.IntFieldUpdateOperationsInput | number
@@ -930,8 +852,6 @@ export type ExamTemplatePartUncheckedUpdateWithoutPracticalCriteriaInput = {
 export type ExamTemplatePartCreateManyExamTemplateInput = {
   id?: string
   type: $Enums.ExamPartType
-  totalScore: runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore: runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: number | null
   defaultOpenOffsetDays: number
   defaultOpenDays: number
@@ -945,8 +865,6 @@ export type ExamTemplatePartCreateManyExamTemplateInput = {
 export type ExamTemplatePartUpdateWithoutExamTemplateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumExamPartTypeFieldUpdateOperationsInput | $Enums.ExamPartType
-  totalScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   defaultOpenOffsetDays?: Prisma.IntFieldUpdateOperationsInput | number
   defaultOpenDays?: Prisma.IntFieldUpdateOperationsInput | number
@@ -962,8 +880,6 @@ export type ExamTemplatePartUpdateWithoutExamTemplateInput = {
 export type ExamTemplatePartUncheckedUpdateWithoutExamTemplateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumExamPartTypeFieldUpdateOperationsInput | $Enums.ExamPartType
-  totalScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   defaultOpenOffsetDays?: Prisma.IntFieldUpdateOperationsInput | number
   defaultOpenDays?: Prisma.IntFieldUpdateOperationsInput | number
@@ -979,8 +895,6 @@ export type ExamTemplatePartUncheckedUpdateWithoutExamTemplateInput = {
 export type ExamTemplatePartUncheckedUpdateManyWithoutExamTemplateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumExamPartTypeFieldUpdateOperationsInput | $Enums.ExamPartType
-  totalScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  passScore?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   durationMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   defaultOpenOffsetDays?: Prisma.IntFieldUpdateOperationsInput | number
   defaultOpenDays?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1035,8 +949,6 @@ export type ExamTemplatePartSelect<ExtArgs extends runtime.Types.Extensions.Inte
   id?: boolean
   examTemplateId?: boolean
   type?: boolean
-  totalScore?: boolean
-  passScore?: boolean
   durationMinutes?: boolean
   defaultOpenOffsetDays?: boolean
   defaultOpenDays?: boolean
@@ -1055,8 +967,6 @@ export type ExamTemplatePartSelectCreateManyAndReturn<ExtArgs extends runtime.Ty
   id?: boolean
   examTemplateId?: boolean
   type?: boolean
-  totalScore?: boolean
-  passScore?: boolean
   durationMinutes?: boolean
   defaultOpenOffsetDays?: boolean
   defaultOpenDays?: boolean
@@ -1072,8 +982,6 @@ export type ExamTemplatePartSelectUpdateManyAndReturn<ExtArgs extends runtime.Ty
   id?: boolean
   examTemplateId?: boolean
   type?: boolean
-  totalScore?: boolean
-  passScore?: boolean
   durationMinutes?: boolean
   defaultOpenOffsetDays?: boolean
   defaultOpenDays?: boolean
@@ -1089,8 +997,6 @@ export type ExamTemplatePartSelectScalar = {
   id?: boolean
   examTemplateId?: boolean
   type?: boolean
-  totalScore?: boolean
-  passScore?: boolean
   durationMinutes?: boolean
   defaultOpenOffsetDays?: boolean
   defaultOpenDays?: boolean
@@ -1101,7 +1007,7 @@ export type ExamTemplatePartSelectScalar = {
   instructions?: boolean
 }
 
-export type ExamTemplatePartOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "examTemplateId" | "type" | "totalScore" | "passScore" | "durationMinutes" | "defaultOpenOffsetDays" | "defaultOpenDays" | "minFiles" | "maxFiles" | "maxFileSizeBytes" | "maxTotalSizeBytes" | "instructions", ExtArgs["result"]["examTemplatePart"]>
+export type ExamTemplatePartOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "examTemplateId" | "type" | "durationMinutes" | "defaultOpenOffsetDays" | "defaultOpenDays" | "minFiles" | "maxFiles" | "maxFileSizeBytes" | "maxTotalSizeBytes" | "instructions", ExtArgs["result"]["examTemplatePart"]>
 export type ExamTemplatePartInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   examTemplate?: boolean | Prisma.ExamTemplateDefaultArgs<ExtArgs>
   questions?: boolean | Prisma.ExamTemplatePart$questionsArgs<ExtArgs>
@@ -1135,14 +1041,6 @@ export type $ExamTemplatePartPayload<ExtArgs extends runtime.Types.Extensions.In
      * 파트 유형입니다.
      */
     type: $Enums.ExamPartType
-    /**
-     * 총점입니다.
-     */
-    totalScore: runtime.Decimal
-    /**
-     * 합격 점수입니다.
-     */
-    passScore: runtime.Decimal
     /**
      * 필기 제한 시간입니다.
      */
@@ -1604,8 +1502,6 @@ export interface ExamTemplatePartFieldRefs {
   readonly id: Prisma.FieldRef<"ExamTemplatePart", 'String'>
   readonly examTemplateId: Prisma.FieldRef<"ExamTemplatePart", 'String'>
   readonly type: Prisma.FieldRef<"ExamTemplatePart", 'ExamPartType'>
-  readonly totalScore: Prisma.FieldRef<"ExamTemplatePart", 'Decimal'>
-  readonly passScore: Prisma.FieldRef<"ExamTemplatePart", 'Decimal'>
   readonly durationMinutes: Prisma.FieldRef<"ExamTemplatePart", 'Int'>
   readonly defaultOpenOffsetDays: Prisma.FieldRef<"ExamTemplatePart", 'Int'>
   readonly defaultOpenDays: Prisma.FieldRef<"ExamTemplatePart", 'Int'>

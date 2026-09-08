@@ -1,11 +1,4 @@
-import { Transform } from 'class-transformer';
-import {
-  IsBoolean,
-  IsEnum,
-  IsOptional,
-  IsString,
-  MaxLength,
-} from 'class-validator';
+import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { PaginationQueryDto } from '../../common/pagination';
 import { ExamScope, ExamStage } from '../../generated/prisma/enums';
 
@@ -18,11 +11,6 @@ export class ExamTemplateQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(ExamStage)
   stage?: ExamStage;
-
-  @IsOptional()
-  @Transform(({ value }: { value: unknown }) => value === 'true')
-  @IsBoolean()
-  active?: boolean;
 
   @IsOptional()
   @IsString()

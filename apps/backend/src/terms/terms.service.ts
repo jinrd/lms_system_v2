@@ -233,9 +233,20 @@ export class TermsService {
           throw new NotFoundException('약관 문서를 찾을 수 없습니다.');
         }
 
-        if (target.active && effectiveAt > new Date()) {
-          throw new BadRequestException(
-            '활성 약관의 시행 시각을 미래로 변경할 수 없습니다.',
+        // 이미 활성화됐거나 동의 기록이 있는 문서는 문구를 in-place 로 바꾸지
+        // 않는다. 변경은 항상 새 버전(POST /terms/versions)으로만 하고, 활성화
+        // 전 draft 만 자유 수정한다(기획안 §7.2 / Part II line 1451).
+        if (target.active) {
+          throw new ConflictException(
+            '활성화된 약관 문서는 수정할 수 없습니다. 새 버전을 만들어 활성화하세요.',
+          );
+        }
+        const consentCount = await tx.termsConsent.count({
+          where: { termsDocumentId: id },
+        });
+        if (consentCount > 0) {
+          throw new ConflictException(
+            '이미 동의 기록이 있는 약관 문서는 수정할 수 없습니다. 문구를 바꾸려면 새 버전을 만드세요.',
           );
         }
 

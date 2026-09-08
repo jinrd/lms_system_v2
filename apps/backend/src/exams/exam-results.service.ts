@@ -227,15 +227,26 @@ export class ExamResultsService {
     }
 
     const writtenSubmission = attempt.partSubmissions[0] ?? null;
-    if (
-      dto.writtenScore !== undefined &&
-      writtenSubmission &&
-      (dto.writtenScore < 0 ||
-        dto.writtenScore > Number(writtenSubmission.examPart.totalScore))
-    ) {
-      throw new BadRequestException(
-        '정정 점수는 0점 이상 필기 파트 총점 이하여야 합니다.',
-      );
+    if (dto.writtenScore !== undefined) {
+      // 상한은 필기 파트 총점에서 직접 조회한다. 파트 제출 행이 없는
+      // NOT_ATTENDED 응시도 상한 검증을 건너뛰지 않도록 한다.
+      const writtenPart = await this.prisma.examPart.findFirst({
+        where: { examId, type: 'WRITTEN' },
+        select: { totalScore: true },
+      });
+      if (!writtenPart) {
+        throw new BadRequestException(
+          '필기 파트가 없는 시험은 필기 점수를 정정할 수 없습니다.',
+        );
+      }
+      if (
+        dto.writtenScore < 0 ||
+        dto.writtenScore > Number(writtenPart.totalScore)
+      ) {
+        throw new BadRequestException(
+          '정정 점수는 0점 이상 필기 파트 총점 이하여야 합니다.',
+        );
+      }
     }
     if (
       attempt.status !== AttemptStatus.GRADED &&

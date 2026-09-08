@@ -41,6 +41,8 @@ type ExamForTargets = {
   scope: string;
   courseOfferingId: string;
   targetLockedAt: Date | null;
+  /** 가장 이른 파트 시작 시각. 이 시각이 지나면 자동 잠금 배치 전이라도 편집을 막는다. */
+  earliestPartOpensAt: Date | null;
   courseOfferingSubjectIds: string[];
   classTargetIds: string[];
 };
@@ -449,6 +451,16 @@ export class ExamTargetsService {
         '대상 명단이 잠겨 있어 추가·제외할 수 없습니다.',
       );
     }
+    // 자동 잠금은 1분 배치가 건다. 배치 실행 전이라도 가장 이른 파트 시작 시각이
+    // 지났으면 편집을 거부해, 곧 응시할 학생의 명단이 흔들리지 않게 한다(D-30).
+    if (
+      exam.earliestPartOpensAt !== null &&
+      new Date() >= exam.earliestPartOpensAt
+    ) {
+      throw new ConflictException(
+        '가장 이른 시험 파트 시작 시각이 지나 대상 명단을 편집할 수 없습니다.',
+      );
+    }
     if (
       exam.status !== ExamStatus.DRAFT &&
       exam.status !== ExamStatus.SCHEDULED
@@ -473,6 +485,7 @@ export class ExamTargetsService {
         targetLockedAt: true,
         createdById: true,
         courseOffering: { select: { instructorId: true } },
+        parts: { select: { opensAt: true } },
         subjects: {
           select: {
             courseOfferingSubjectId: true,
@@ -503,6 +516,12 @@ export class ExamTargetsService {
       scope: exam.scope,
       courseOfferingId: exam.courseOfferingId,
       targetLockedAt: exam.targetLockedAt,
+      earliestPartOpensAt:
+        exam.parts.length > 0
+          ? new Date(
+              Math.min(...exam.parts.map((part) => part.opensAt.getTime())),
+            )
+          : null,
       courseOfferingSubjectIds: exam.subjects.map(
         (link) => link.courseOfferingSubjectId,
       ),

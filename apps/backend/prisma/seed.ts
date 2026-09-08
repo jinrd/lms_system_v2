@@ -175,20 +175,14 @@ async function seedQuestionBankAndExamTemplate(
         select: { id: true },
       });
 
-      let id: string;
+      // 이미 있으면 그대로 둔다. 진행 중인 시험에 출제된 문제는 편집 잠금
+      // 트리거가 막으므로 재실행 시 덮어쓰지 않는 것이 안전하고 멱등하다.
       if (existing) {
-        await tx.questionOption.deleteMany({
-          where: { questionId: existing.id },
-        });
-        await tx.questionAcceptedAnswer.deleteMany({
-          where: { questionId: existing.id },
-        });
-        await tx.questionBank.update({ where: { id: existing.id }, data });
-        id = existing.id;
-      } else {
-        const created = await tx.questionBank.create({ data });
-        id = created.id;
+        return existing.id;
       }
+
+      const created = await tx.questionBank.create({ data });
+      const id = created.id;
 
       if (item.options) {
         await tx.questionOption.createMany({
@@ -219,7 +213,7 @@ async function seedQuestionBankAndExamTemplate(
     questionIdsByKey.set(item.subjectKey, list);
   }
 
-  // 활성 시험 템플릿 1개: 피부 이론 필기(30점) + 실기(20점).
+  // 시험 템플릿 1개: 피부 이론 필기. 템플릿은 배점을 갖지 않는다(실제 시험 생성 시 결정).
   const templateName = '피부 이론 정기 시험 (예제)';
   const theoryQuestionIds = questionIdsByKey.get('피부:피부 이론')!;
 
@@ -228,12 +222,7 @@ async function seedQuestionBankAndExamTemplate(
     select: { id: true },
   });
 
-  // 재실행 시: 구성 트리거를 건드리지 않도록 먼저 비활성화한다.
   if (existingTemplate) {
-    await prisma.examTemplate.update({
-      where: { id: existingTemplate.id },
-      data: { active: false },
-    });
     await prisma.examTemplatePart.deleteMany({
       where: { examTemplateId: existingTemplate.id },
     });
@@ -244,11 +233,10 @@ async function seedQuestionBankAndExamTemplate(
 
   const templateData = {
     name: templateName,
-    description: '문제은행 예제 문제로 구성한 활성 템플릿 샘플이다.',
+    description: '문제은행 예제 문제로 구성한 템플릿 샘플이다.',
     scope: ExamScope.SUBJECT,
     stage: ExamStage.REGULAR,
     defaultOpenDays: 7,
-    active: false,
     createdById: adminId,
   };
   const template = existingTemplate
@@ -269,8 +257,6 @@ async function seedQuestionBankAndExamTemplate(
     data: {
       examTemplateId: template.id,
       type: ExamPartType.WRITTEN,
-      totalScore: 30,
-      passScore: 18,
       durationMinutes: 60,
       defaultOpenOffsetDays: 0,
       defaultOpenDays: 7,
@@ -282,52 +268,11 @@ async function seedQuestionBankAndExamTemplate(
       examTemplatePartId: writtenPart.id,
       questionId,
       displayOrder: index,
-      score: 10,
     })),
   });
 
-  const practicalPart = await prisma.examTemplatePart.create({
-    data: {
-      examTemplateId: template.id,
-      type: ExamPartType.PRACTICAL,
-      totalScore: 20,
-      passScore: 12,
-      defaultOpenOffsetDays: 1,
-      defaultOpenDays: 3,
-      minFiles: 1,
-      maxFiles: 3,
-      maxFileSizeBytes: 5_242_880,
-      maxTotalSizeBytes: 31_457_280,
-      instructions: '시술 전후 사진을 제출한다.',
-    },
-  });
-  await prisma.examTemplatePracticalCriterion.createMany({
-    data: [
-      {
-        examTemplatePartId: practicalPart.id,
-        name: '준비와 위생',
-        description: '도구 소독과 준비 상태를 평가한다.',
-        maxScore: 10,
-        displayOrder: 0,
-      },
-      {
-        examTemplatePartId: practicalPart.id,
-        name: '시술 정확도',
-        description: '각질 제거 범위와 강도를 평가한다.',
-        maxScore: 10,
-        displayOrder: 1,
-      },
-    ],
-  });
-
-  // 합계(필기 30 = 30, 실기 20 = 20)가 맞으므로 활성화 트리거를 통과한다.
-  await prisma.examTemplate.update({
-    where: { id: template.id },
-    data: { active: true },
-  });
-
   console.log(
-    `문제은행 ${questionSeeds.length}개, 활성 시험 템플릿 "${templateName}" 준비 완료`,
+    `문제은행 ${questionSeeds.length}개, 시험 템플릿 "${templateName}" 준비 완료`,
   );
 }
 
@@ -354,7 +299,7 @@ async function seedRealExam(
     select: { id: true },
   });
   const template = await prisma.examTemplate.findFirst({
-    where: { name: '피부 이론 정기 시험 (예제)', active: true },
+    where: { name: '피부 이론 정기 시험 (예제)' },
     include: {
       subjects: { select: { subjectId: true } },
       parts: {
@@ -540,12 +485,21 @@ async function seedRealExam(
       minOpens = Math.min(minOpens, opensAt.getTime());
       maxCloses = Math.max(maxCloses, closesAt.getTime());
 
+      // 템플릿은 배점을 갖지 않는다. 문제 배점은 문제은행 기본 배점으로 채우고
+      // 실제 시험 파트 총점은 그 합계로 맞춘다(§14.9 합계 검증 통과용).
+      const writtenSum = part.questions.reduce(
+        (sum, tq) => sum + Number(tq.question.defaultScore),
+        0,
+      );
+      const partTotalScore = part.type === ExamPartType.WRITTEN ? writtenSum : 100;
+      const partPassScore = Math.ceil(partTotalScore * 0.6);
+
       const createdPart = await tx.examPart.create({
         data: {
           examId: exam.id,
           type: part.type,
-          totalScore: part.totalScore,
-          passScore: part.passScore,
+          totalScore: partTotalScore,
+          passScore: partPassScore,
           opensAt,
           closesAt,
           durationMinutes: part.durationMinutes,
@@ -569,7 +523,7 @@ async function seedRealExam(
               type: bank.type,
               prompt: bank.prompt,
               explanation: bank.explanation,
-              score: templateQuestion.score,
+              score: bank.defaultScore,
               displayOrder: index,
               normalizationVersion:
                 bank.type === QuestionType.SHORT_ANSWER

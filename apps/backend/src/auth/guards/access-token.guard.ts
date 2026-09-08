@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ALLOW_PASSWORD_CHANGE_KEY } from '../decorators/allow-password-change.decorator';
+import { ALLOW_PENDING_CONSENT_KEY } from '../decorators/allow-pending-consent.decorator';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
@@ -56,6 +57,51 @@ export class AccessTokenGuard implements CanActivate {
     }
 
     const now = new Date();
+
+    // 제한 토큰(필수 약관 미동의): 세션이 없다. 약관 조회·동의·로그아웃만 허용한다.
+    if (payload.pendingConsent) {
+      const allowPendingConsent = this.reflector.getAllAndOverride<boolean>(
+        ALLOW_PENDING_CONSENT_KEY,
+        [context.getHandler(), context.getClass()],
+      );
+      if (!allowPendingConsent) {
+        throw new ForbiddenException(
+          '필수 약관에 동의한 후 이용할 수 있습니다.',
+        );
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+      });
+      if (
+        !user ||
+        !user.loginId ||
+        user.status !== UserStatus.ACTIVE ||
+        payload.tokenVersion !== user.tokenVersion
+      ) {
+        throw new UnauthorizedException(
+          '유효하지 않거나 만료된 인증입니다. 다시 로그인해 주세요.',
+        );
+      }
+
+      request.user = {
+        id: user.id,
+        sessionId: '',
+        loginId: user.loginId,
+        name: user.name,
+        role: user.role,
+        tokenVersion: user.tokenVersion,
+        mustChangePassword: user.mustChangePassword,
+        pendingConsent: true,
+      };
+      return true;
+    }
+
+    if (!payload.sid) {
+      throw new UnauthorizedException(
+        '유효하지 않거나 만료된 Access Token입니다.',
+      );
+    }
 
     const session = await this.prisma.authSession.findUnique({
       where: {

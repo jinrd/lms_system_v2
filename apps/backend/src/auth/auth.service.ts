@@ -18,9 +18,13 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import {
   AccessTokenPayload,
   AuthResponse,
+  PendingConsentResponse,
   RequestMetadata,
 } from './auth.types';
+import { ConsentDto } from './dto/consent.dto';
 import { SignupDto, SignupResponse } from './dto/signup.dto';
+
+type PendingTerm = PendingConsentResponse['pendingTerms'][number];
 
 const ACCESS_TOKEN_SECONDS = 15 * 60;
 const SESSION_DURATION_MS = 24 * 60 * 60 * 1000;
@@ -35,7 +39,10 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async login(dto: LoginDto, metadata: RequestMetadata): Promise<AuthResponse> {
+  async login(
+    dto: LoginDto,
+    metadata: RequestMetadata,
+  ): Promise<AuthResponse | PendingConsentResponse> {
     const now = new Date();
 
     const user = await this.prisma.user.findFirst({
@@ -87,7 +94,61 @@ export class AuthService {
       throw new UnauthorizedException('임시 비밀번호가 만료되었습니다.');
     }
 
-    const deviceIdentifierHash = this.hashValue(dto.deviceIdentifier);
+    // 필수 약관에 미동의분이 있으면 정식 세션 대신 제한 인증 상태를 반환한다
+    // (기획안 §7.2 / D-43). 비밀번호는 맞았으므로 실패 카운터는 초기화한다.
+    const pendingTerms = await this.findPendingRequiredTerms(user.id, now);
+    if (pendingTerms.length > 0) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: now },
+      });
+      const consentToken = await this.issueAccessToken({
+        sub: user.id,
+        role: user.role,
+        tokenVersion: user.tokenVersion,
+        mustChangePassword: user.mustChangePassword,
+        pendingConsent: true,
+      });
+      return {
+        pendingConsent: true,
+        consentToken,
+        expiresIn: ACCESS_TOKEN_SECONDS,
+        pendingTerms,
+      };
+    }
+
+    return this.establishSession(
+      user,
+      dto.deviceIdentifier,
+      dto.deviceName,
+      metadata,
+      now,
+    );
+  }
+
+  /**
+   * 기기 세션을 만들고 정식 토큰을 발급한다. 정상 로그인과 약관 동의 완료 후
+   * 두 경로가 공유한다. 동일 기기 재로그인 교체와 역할별 기기 수 한도를 지킨다.
+   */
+  private async establishSession(
+    user: {
+      id: string;
+      loginId: string | null;
+      name: string;
+      role: UserRole;
+      tokenVersion: number;
+      mustChangePassword: boolean;
+    },
+    deviceIdentifier: string,
+    deviceName: string | undefined,
+    metadata: RequestMetadata,
+    now: Date,
+  ): Promise<AuthResponse> {
+    if (!user.loginId) {
+      throw new UnauthorizedException('로그인할 수 없는 계정입니다.');
+    }
+
+    const deviceIdentifierHash = this.hashValue(deviceIdentifier);
     const refreshToken = this.createRefreshToken();
     const refreshTokenHash = this.hashValue(refreshToken);
     const sessionExpiresAt = new Date(now.getTime() + SESSION_DURATION_MS);
@@ -153,7 +214,7 @@ export class AuthService {
         create: {
           userId: user.id,
           deviceIdentifierHash,
-          deviceName: dto.deviceName,
+          deviceName,
           refreshTokenHash,
           tokenVersion: user.tokenVersion,
           ipAddress: metadata.ipAddress,
@@ -162,7 +223,7 @@ export class AuthService {
           expiresAt: sessionExpiresAt,
         },
         update: {
-          deviceName: dto.deviceName,
+          deviceName,
           refreshTokenHash,
           tokenVersion: user.tokenVersion,
           ipAddress: metadata.ipAddress,
@@ -401,13 +462,17 @@ export class AuthService {
       );
     }
 
-    if (dto.isMinorAtSignup && (!dto.guardianName || !dto.guardianPhone)) {
+    // 미성년 여부는 클라이언트가 준 플래그를 믿지 않고 생년월일로 서버가 판정한다
+    // (기획안 §3 / Part II line 1343).
+    const isMinor = this.isMinorOn(new Date(dto.birthDate), new Date());
+
+    if (isMinor && (!dto.guardianName || !dto.guardianPhone)) {
       throw new BadRequestException(
         '미성년자는 보호자 이름과 전화번호가 필요합니다.',
       );
     }
 
-    if (!dto.isMinorAtSignup && (dto.guardianName || dto.guardianPhone)) {
+    if (!isMinor && (dto.guardianName || dto.guardianPhone)) {
       throw new BadRequestException(
         '성인 가입자는 보호자 정보를 입력할 수 없습니다.',
       );
@@ -505,11 +570,9 @@ export class AuthService {
             passwordChangedAt: agreedAt,
             studentProfile: {
               create: {
-                isMinorAtSignup: dto.isMinorAtSignup,
-                guardianName: dto.isMinorAtSignup
-                  ? dto.guardianName?.trim()
-                  : null,
-                guardianPhone: dto.isMinorAtSignup
+                isMinorAtSignup: isMinor,
+                guardianName: isMinor ? dto.guardianName?.trim() : null,
+                guardianPhone: isMinor
                   ? dto.guardianPhone?.replace(/[^0-9]/g, '')
                   : null,
               },
@@ -538,6 +601,123 @@ export class AuthService {
 
       throw error;
     }
+  }
+
+  /**
+   * 지금 시행 중인 필수 약관 중 이 사용자가 아직 동의하지 않은 것을 돌려준다
+   * (기획안 §7.2). 시행 시각이 지난 `active` 필수 버전만 대상이다.
+   */
+  private async findPendingRequiredTerms(
+    userId: string,
+    now: Date,
+  ): Promise<PendingTerm[]> {
+    const required = await this.prisma.termsDocument.findMany({
+      where: { required: true, active: true, effectiveAt: { lte: now } },
+      select: { id: true, type: true, version: true, title: true },
+    });
+    if (required.length === 0) {
+      return [];
+    }
+
+    const consents = await this.prisma.termsConsent.findMany({
+      where: {
+        userId,
+        agreed: true,
+        termsDocumentId: { in: required.map((term) => term.id) },
+      },
+      select: { termsDocumentId: true },
+    });
+    const agreed = new Set(consents.map((row) => row.termsDocumentId));
+
+    return required.filter((term) => !agreed.has(term.id));
+  }
+
+  /**
+   * 제한 인증 상태에서 필수 약관에 동의하고 정식 로그인 세션을 발급한다
+   * (기획안 §7.2 / D-43). 동의 저장과 세션 생성을 한 흐름으로 처리한다.
+   */
+  async consent(
+    actor: AuthenticatedUser,
+    dto: ConsentDto,
+    metadata: RequestMetadata,
+  ): Promise<AuthResponse> {
+    if (!actor.pendingConsent) {
+      throw new BadRequestException('이미 필수 약관에 동의한 계정입니다.');
+    }
+
+    const now = new Date();
+    const user = await this.prisma.user.findUnique({
+      where: { id: actor.id },
+    });
+    if (
+      !user ||
+      !user.loginId ||
+      user.status !== UserStatus.ACTIVE ||
+      user.tokenVersion !== actor.tokenVersion
+    ) {
+      throw new UnauthorizedException(
+        '유효하지 않은 인증입니다. 다시 로그인해 주세요.',
+      );
+    }
+
+    const pending = await this.findPendingRequiredTerms(user.id, now);
+    const agreedIds = new Set(dto.agreedTermsDocumentIds);
+    const covers = pending.every((term) => agreedIds.has(term.id));
+    if (!covers) {
+      throw new BadRequestException('현재 필수 약관에 모두 동의해야 합니다.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const active = await tx.termsDocument.findMany({
+        where: {
+          id: { in: dto.agreedTermsDocumentIds },
+          active: true,
+          effectiveAt: { lte: now },
+        },
+        select: { id: true },
+      });
+      if (active.length !== dto.agreedTermsDocumentIds.length) {
+        throw new BadRequestException(
+          '약관 정보가 변경되었습니다. 다시 확인해 주세요.',
+        );
+      }
+
+      for (const termsDocumentId of dto.agreedTermsDocumentIds) {
+        await tx.termsConsent.upsert({
+          where: {
+            userId_termsDocumentId: {
+              userId: user.id,
+              termsDocumentId,
+            },
+          },
+          create: {
+            userId: user.id,
+            termsDocumentId,
+            agreed: true,
+            agreedAt: now,
+            ipAddress: metadata.ipAddress,
+          },
+          update: {
+            agreed: true,
+            agreedAt: now,
+            ipAddress: metadata.ipAddress,
+          },
+        });
+      }
+    });
+
+    const stillPending = await this.findPendingRequiredTerms(user.id, now);
+    if (stillPending.length > 0) {
+      throw new BadRequestException('현재 필수 약관에 모두 동의해야 합니다.');
+    }
+
+    return this.establishSession(
+      user,
+      dto.deviceIdentifier,
+      dto.deviceName,
+      metadata,
+      now,
+    );
   }
 
   private async recordLoginFailure(
@@ -579,6 +759,16 @@ export class AuthService {
 
   private hashValue(value: string): string {
     return createHash('sha256').update(value).digest('hex');
+  }
+
+  /**
+   * 기준일에 만 19세 미만이면 미성년으로 본다. 생년월일이
+   * (기준일 - 19년)보다 뒤면 아직 만 19세가 되지 않은 것이다.
+   */
+  private isMinorOn(birthDate: Date, at: Date): boolean {
+    const cutoff = new Date(at);
+    cutoff.setFullYear(cutoff.getFullYear() - 19);
+    return birthDate > cutoff;
   }
 
   private isUniqueConstraintError(error: unknown): boolean {

@@ -104,7 +104,11 @@ export class ExamCompositionService {
   ) {}
 
   /**
-   * 활성 템플릿의 과목·파트·문제·실기 기준을 새 시험의 스냅샷으로 복사한다.
+   * 템플릿의 과목·필기 파트 구성·문제를 새 시험의 스냅샷으로 복사한다.
+   *
+   * 템플릿은 배점을 갖지 않는다. 필기 파트의 총점·합격점은 `params`에서 받고,
+   * 각 문제 배점은 문제은행 기본 배점으로 채운다. 최종 합계 일치는 예약 전
+   * 검증(§14.9)에서 확인한다. 실기 파트는 이번 범위 밖이라 스냅샷하지 않는다.
    *
    * 호출자(`ExamsService.create`)의 트랜잭션 안에서 실행한다. 파트의 실제
    * 시작·종료 시각은 템플릿의 상대 오프셋 일수를 시험 시작 시각에 더해 만든다.
@@ -116,6 +120,8 @@ export class ExamCompositionService {
       courseOfferingId: string;
       templateId: string;
       examOpensAt: Date;
+      writtenTotalScore: number;
+      writtenPassScore: number;
     },
   ): Promise<void> {
     const template = await tx.examTemplate.findUnique({
@@ -135,7 +141,6 @@ export class ExamCompositionService {
                 },
               },
             },
-            practicalCriteria: { orderBy: { displayOrder: 'asc' } },
           },
         },
       },
@@ -143,10 +148,19 @@ export class ExamCompositionService {
     if (!template) {
       throw new NotFoundException('시험 템플릿을 찾을 수 없습니다.');
     }
-    if (!template.active) {
-      throw new BadRequestException(
-        '활성 템플릿만 실제 시험으로 만들 수 있습니다.',
-      );
+
+    const writtenPart = template.parts.find(
+      (part) => part.type === ExamPartType.WRITTEN,
+    );
+    if (writtenPart) {
+      if (
+        params.writtenPassScore < 0 ||
+        params.writtenPassScore > params.writtenTotalScore
+      ) {
+        throw new BadRequestException(
+          '필기 합격 점수는 0점 이상 총점 이하여야 합니다.',
+        );
+      }
     }
 
     const subjectIds = template.subjects.map((link) => link.subjectId);
@@ -174,77 +188,66 @@ export class ExamCompositionService {
       })),
     });
 
-    for (const part of template.parts) {
-      const opensAt = addDays(params.examOpensAt, part.defaultOpenOffsetDays);
-      const closesAt = addDays(opensAt, part.defaultOpenDays);
+    if (writtenPart) {
+      const opensAt = addDays(
+        params.examOpensAt,
+        writtenPart.defaultOpenOffsetDays,
+      );
+      const closesAt = addDays(opensAt, writtenPart.defaultOpenDays);
 
       const createdPart = await tx.examPart.create({
         data: {
           examId: params.examId,
-          type: part.type,
-          totalScore: part.totalScore,
-          passScore: part.passScore,
+          type: ExamPartType.WRITTEN,
+          totalScore: params.writtenTotalScore,
+          passScore: params.writtenPassScore,
           opensAt,
           closesAt,
-          durationMinutes: part.durationMinutes,
-          minFiles: part.minFiles,
-          maxFiles: part.maxFiles,
-          maxFileSizeBytes: part.maxFileSizeBytes,
-          maxTotalSizeBytes: part.maxTotalSizeBytes,
-          instructions: part.instructions,
+          durationMinutes: writtenPart.durationMinutes,
+          instructions: writtenPart.instructions,
         },
       });
 
-      if (part.type === ExamPartType.WRITTEN) {
-        for (const [index, templateQuestion] of part.questions.entries()) {
-          const bank = templateQuestion.question;
-          const cosId = cosBySubject.get(bank.subjectId);
-          if (!cosId) {
-            throw new BadRequestException(
-              '문제의 과목이 시험 과목에 포함되지 않았습니다.',
-            );
-          }
-
-          await tx.examQuestion.create({
-            data: {
-              examId: params.examId,
-              examPartId: createdPart.id,
-              courseOfferingSubjectId: cosId,
-              sourceQuestionId: bank.id,
-              type: bank.type,
-              prompt: bank.prompt,
-              explanation: bank.explanation,
-              score: templateQuestion.score,
-              displayOrder: index,
-              normalizationVersion:
-                bank.type === QuestionType.SHORT_ANSWER
-                  ? String(ANSWER_NORMALIZATION_VERSION)
-                  : null,
-              options: {
-                create: bank.options.map((option, optionIndex) => ({
-                  content: option.content,
-                  displayOrder: optionIndex,
-                  isCorrect: option.isCorrect,
-                })),
-              },
-              acceptedAnswers: {
-                create: bank.acceptedAnswers.map((answer) => ({
-                  answerText: answer.answerText,
-                  normalizedAnswer: answer.normalizedAnswer,
-                })),
-              },
-            },
-          });
+      for (const [index, templateQuestion] of writtenPart.questions.entries()) {
+        const bank = templateQuestion.question;
+        const cosId = cosBySubject.get(bank.subjectId);
+        if (!cosId) {
+          throw new BadRequestException(
+            '문제의 과목이 시험 과목에 포함되지 않았습니다.',
+          );
         }
-      } else {
-        await tx.examPracticalCriterion.createMany({
-          data: part.practicalCriteria.map((criterion, index) => ({
+
+        await tx.examQuestion.create({
+          data: {
+            examId: params.examId,
             examPartId: createdPart.id,
-            name: criterion.name,
-            description: criterion.description,
-            maxScore: criterion.maxScore,
+            courseOfferingSubjectId: cosId,
+            sourceQuestionId: bank.id,
+            type: bank.type,
+            prompt: bank.prompt,
+            explanation: bank.explanation,
+            // 템플릿은 배점을 갖지 않으므로 문제은행 기본 배점으로 채운다.
+            // 출제자가 예약 전에 조정할 수 있고, 합계 일치는 §14.9에서 확인한다.
+            score: bank.defaultScore,
             displayOrder: index,
-          })),
+            normalizationVersion:
+              bank.type === QuestionType.SHORT_ANSWER
+                ? String(ANSWER_NORMALIZATION_VERSION)
+                : null,
+            options: {
+              create: bank.options.map((option, optionIndex) => ({
+                content: option.content,
+                displayOrder: optionIndex,
+                isCorrect: option.isCorrect,
+              })),
+            },
+            acceptedAnswers: {
+              create: bank.acceptedAnswers.map((answer) => ({
+                answerText: answer.answerText,
+                normalizedAnswer: answer.normalizedAnswer,
+              })),
+            },
+          },
         });
       }
     }

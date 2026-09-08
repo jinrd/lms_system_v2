@@ -1090,7 +1090,6 @@ export const ExamTemplateScalarFieldEnum = {
   scope: 'scope',
   stage: 'stage',
   defaultOpenDays: 'defaultOpenDays',
-  active: 'active',
   createdById: 'createdById',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -1111,8 +1110,6 @@ export const ExamTemplatePartScalarFieldEnum = {
   id: 'id',
   examTemplateId: 'examTemplateId',
   type: 'type',
-  totalScore: 'totalScore',
-  passScore: 'passScore',
   durationMinutes: 'durationMinutes',
   defaultOpenOffsetDays: 'defaultOpenOffsetDays',
   defaultOpenDays: 'defaultOpenDays',
@@ -1130,8 +1127,7 @@ export const ExamTemplateQuestionScalarFieldEnum = {
   id: 'id',
   examTemplatePartId: 'examTemplatePartId',
   questionId: 'questionId',
-  displayOrder: 'displayOrder',
-  score: 'score'
+  displayOrder: 'displayOrder'
 } as const
 
 export type ExamTemplateQuestionScalarFieldEnum = (typeof ExamTemplateQuestionScalarFieldEnum)[keyof typeof ExamTemplateQuestionScalarFieldEnum]

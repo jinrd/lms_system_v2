@@ -67,6 +67,11 @@ export class AuditLogsService {
         ...(query.from ? { gte: new Date(query.from) } : {}),
         ...(query.to ? { lte: new Date(query.to) } : {}),
       };
+    } else {
+      // 대량 조회를 막기 위해 기간을 지정하지 않으면 최근 30일로 강제한다(기획안 §14.1).
+      where.createdAt = {
+        gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      };
     }
 
     const { skip, take } = toSkipTake(query);

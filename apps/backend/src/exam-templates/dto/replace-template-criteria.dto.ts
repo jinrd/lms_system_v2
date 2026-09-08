@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsISO8601,
   IsNumber,
   IsOptional,
   IsString,
@@ -35,6 +36,10 @@ export class TemplateCriterionInput {
  * 문제 목록과 같은 이유로 전량 교체한다. 빈 배열이면 항목을 모두 비운다.
  */
 export class ReplaceTemplateCriteriaDto {
+  /** 동시 편집 방지. 마지막으로 읽은 템플릿의 updatedAt(ISO). */
+  @IsISO8601()
+  expectedUpdatedAt!: string;
+
   @IsArray()
   @ArrayMaxSize(100)
   @ValidateNested({ each: true })

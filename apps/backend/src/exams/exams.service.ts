@@ -244,20 +244,24 @@ export class ExamsService {
         select: {
           id: true,
           scope: true,
-          active: true,
           subjects: { select: { subjectId: true } },
+          parts: { select: { type: true } },
         },
       });
       if (!template) {
         throw new NotFoundException('시험 템플릿을 찾을 수 없습니다.');
       }
-      if (!template.active) {
-        throw new BadRequestException(
-          '활성 템플릿만 실제 시험으로 만들 수 있습니다.',
-        );
-      }
       if (template.scope !== dto.scope) {
         throw new BadRequestException('시험 범위가 템플릿의 범위와 다릅니다.');
+      }
+
+      const hasWrittenPart = template.parts.some(
+        (part) => part.type === 'WRITTEN',
+      );
+      if (hasWrittenPart && dto.writtenPassScore === undefined) {
+        throw new BadRequestException(
+          '템플릿에 필기 파트가 있으면 필기 합격 점수를 입력해야 합니다.',
+        );
       }
 
       const canCover = await this.access.canCoverSubjects(
@@ -293,6 +297,8 @@ export class ExamsService {
           courseOfferingId: dto.courseOfferingId,
           templateId: dto.sourceTemplateId,
           examOpensAt: opensAt,
+          writtenTotalScore: dto.writtenTotalScore ?? 100,
+          writtenPassScore: dto.writtenPassScore ?? 0,
         });
       }
 

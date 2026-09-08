@@ -41,7 +41,6 @@ export type ExamTemplateMinAggregateOutputType = {
   scope: $Enums.ExamScope | null
   stage: $Enums.ExamStage | null
   defaultOpenDays: number | null
-  active: boolean | null
   createdById: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -54,7 +53,6 @@ export type ExamTemplateMaxAggregateOutputType = {
   scope: $Enums.ExamScope | null
   stage: $Enums.ExamStage | null
   defaultOpenDays: number | null
-  active: boolean | null
   createdById: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -67,7 +65,6 @@ export type ExamTemplateCountAggregateOutputType = {
   scope: number
   stage: number
   defaultOpenDays: number
-  active: number
   createdById: number
   createdAt: number
   updatedAt: number
@@ -90,7 +87,6 @@ export type ExamTemplateMinAggregateInputType = {
   scope?: true
   stage?: true
   defaultOpenDays?: true
-  active?: true
   createdById?: true
   createdAt?: true
   updatedAt?: true
@@ -103,7 +99,6 @@ export type ExamTemplateMaxAggregateInputType = {
   scope?: true
   stage?: true
   defaultOpenDays?: true
-  active?: true
   createdById?: true
   createdAt?: true
   updatedAt?: true
@@ -116,7 +111,6 @@ export type ExamTemplateCountAggregateInputType = {
   scope?: true
   stage?: true
   defaultOpenDays?: true
-  active?: true
   createdById?: true
   createdAt?: true
   updatedAt?: true
@@ -216,7 +210,6 @@ export type ExamTemplateGroupByOutputType = {
   scope: $Enums.ExamScope
   stage: $Enums.ExamStage
   defaultOpenDays: number | null
-  active: boolean
   createdById: string | null
   createdAt: Date
   updatedAt: Date
@@ -252,7 +245,6 @@ export type ExamTemplateWhereInput = {
   scope?: Prisma.EnumExamScopeFilter<"ExamTemplate"> | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFilter<"ExamTemplate"> | $Enums.ExamStage
   defaultOpenDays?: Prisma.IntNullableFilter<"ExamTemplate"> | number | null
-  active?: Prisma.BoolFilter<"ExamTemplate"> | boolean
   createdById?: Prisma.UuidNullableFilter<"ExamTemplate"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ExamTemplate"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ExamTemplate"> | Date | string
@@ -269,7 +261,6 @@ export type ExamTemplateOrderByWithRelationInput = {
   scope?: Prisma.SortOrder
   stage?: Prisma.SortOrder
   defaultOpenDays?: Prisma.SortOrderInput | Prisma.SortOrder
-  active?: Prisma.SortOrder
   createdById?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -289,7 +280,6 @@ export type ExamTemplateWhereUniqueInput = Prisma.AtLeast<{
   scope?: Prisma.EnumExamScopeFilter<"ExamTemplate"> | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFilter<"ExamTemplate"> | $Enums.ExamStage
   defaultOpenDays?: Prisma.IntNullableFilter<"ExamTemplate"> | number | null
-  active?: Prisma.BoolFilter<"ExamTemplate"> | boolean
   createdById?: Prisma.UuidNullableFilter<"ExamTemplate"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ExamTemplate"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ExamTemplate"> | Date | string
@@ -306,7 +296,6 @@ export type ExamTemplateOrderByWithAggregationInput = {
   scope?: Prisma.SortOrder
   stage?: Prisma.SortOrder
   defaultOpenDays?: Prisma.SortOrderInput | Prisma.SortOrder
-  active?: Prisma.SortOrder
   createdById?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -327,7 +316,6 @@ export type ExamTemplateScalarWhereWithAggregatesInput = {
   scope?: Prisma.EnumExamScopeWithAggregatesFilter<"ExamTemplate"> | $Enums.ExamScope
   stage?: Prisma.EnumExamStageWithAggregatesFilter<"ExamTemplate"> | $Enums.ExamStage
   defaultOpenDays?: Prisma.IntNullableWithAggregatesFilter<"ExamTemplate"> | number | null
-  active?: Prisma.BoolWithAggregatesFilter<"ExamTemplate"> | boolean
   createdById?: Prisma.UuidNullableWithAggregatesFilter<"ExamTemplate"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ExamTemplate"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ExamTemplate"> | Date | string
@@ -340,7 +328,6 @@ export type ExamTemplateCreateInput = {
   scope: $Enums.ExamScope
   stage: $Enums.ExamStage
   defaultOpenDays?: number | null
-  active: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   createdBy?: Prisma.UserCreateNestedOneWithoutExamTemplatesCreatedInput
@@ -356,7 +343,6 @@ export type ExamTemplateUncheckedCreateInput = {
   scope: $Enums.ExamScope
   stage: $Enums.ExamStage
   defaultOpenDays?: number | null
-  active: boolean
   createdById?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -372,7 +358,6 @@ export type ExamTemplateUpdateInput = {
   scope?: Prisma.EnumExamScopeFieldUpdateOperationsInput | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFieldUpdateOperationsInput | $Enums.ExamStage
   defaultOpenDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdBy?: Prisma.UserUpdateOneWithoutExamTemplatesCreatedNestedInput
@@ -388,7 +373,6 @@ export type ExamTemplateUncheckedUpdateInput = {
   scope?: Prisma.EnumExamScopeFieldUpdateOperationsInput | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFieldUpdateOperationsInput | $Enums.ExamStage
   defaultOpenDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -404,7 +388,6 @@ export type ExamTemplateCreateManyInput = {
   scope: $Enums.ExamScope
   stage: $Enums.ExamStage
   defaultOpenDays?: number | null
-  active: boolean
   createdById?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -417,7 +400,6 @@ export type ExamTemplateUpdateManyMutationInput = {
   scope?: Prisma.EnumExamScopeFieldUpdateOperationsInput | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFieldUpdateOperationsInput | $Enums.ExamStage
   defaultOpenDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -429,7 +411,6 @@ export type ExamTemplateUncheckedUpdateManyInput = {
   scope?: Prisma.EnumExamScopeFieldUpdateOperationsInput | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFieldUpdateOperationsInput | $Enums.ExamStage
   defaultOpenDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -457,7 +438,6 @@ export type ExamTemplateCountOrderByAggregateInput = {
   scope?: Prisma.SortOrder
   stage?: Prisma.SortOrder
   defaultOpenDays?: Prisma.SortOrder
-  active?: Prisma.SortOrder
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -474,7 +454,6 @@ export type ExamTemplateMaxOrderByAggregateInput = {
   scope?: Prisma.SortOrder
   stage?: Prisma.SortOrder
   defaultOpenDays?: Prisma.SortOrder
-  active?: Prisma.SortOrder
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -487,7 +466,6 @@ export type ExamTemplateMinOrderByAggregateInput = {
   scope?: Prisma.SortOrder
   stage?: Prisma.SortOrder
   defaultOpenDays?: Prisma.SortOrder
-  active?: Prisma.SortOrder
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -595,7 +573,6 @@ export type ExamTemplateCreateWithoutCreatedByInput = {
   scope: $Enums.ExamScope
   stage: $Enums.ExamStage
   defaultOpenDays?: number | null
-  active: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   subjects?: Prisma.ExamTemplateSubjectCreateNestedManyWithoutExamTemplateInput
@@ -610,7 +587,6 @@ export type ExamTemplateUncheckedCreateWithoutCreatedByInput = {
   scope: $Enums.ExamScope
   stage: $Enums.ExamStage
   defaultOpenDays?: number | null
-  active: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   subjects?: Prisma.ExamTemplateSubjectUncheckedCreateNestedManyWithoutExamTemplateInput
@@ -654,7 +630,6 @@ export type ExamTemplateScalarWhereInput = {
   scope?: Prisma.EnumExamScopeFilter<"ExamTemplate"> | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFilter<"ExamTemplate"> | $Enums.ExamStage
   defaultOpenDays?: Prisma.IntNullableFilter<"ExamTemplate"> | number | null
-  active?: Prisma.BoolFilter<"ExamTemplate"> | boolean
   createdById?: Prisma.UuidNullableFilter<"ExamTemplate"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ExamTemplate"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ExamTemplate"> | Date | string
@@ -667,7 +642,6 @@ export type ExamTemplateCreateWithoutExamsInput = {
   scope: $Enums.ExamScope
   stage: $Enums.ExamStage
   defaultOpenDays?: number | null
-  active: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   createdBy?: Prisma.UserCreateNestedOneWithoutExamTemplatesCreatedInput
@@ -682,7 +656,6 @@ export type ExamTemplateUncheckedCreateWithoutExamsInput = {
   scope: $Enums.ExamScope
   stage: $Enums.ExamStage
   defaultOpenDays?: number | null
-  active: boolean
   createdById?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -713,7 +686,6 @@ export type ExamTemplateUpdateWithoutExamsInput = {
   scope?: Prisma.EnumExamScopeFieldUpdateOperationsInput | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFieldUpdateOperationsInput | $Enums.ExamStage
   defaultOpenDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdBy?: Prisma.UserUpdateOneWithoutExamTemplatesCreatedNestedInput
@@ -728,7 +700,6 @@ export type ExamTemplateUncheckedUpdateWithoutExamsInput = {
   scope?: Prisma.EnumExamScopeFieldUpdateOperationsInput | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFieldUpdateOperationsInput | $Enums.ExamStage
   defaultOpenDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -743,7 +714,6 @@ export type ExamTemplateCreateWithoutSubjectsInput = {
   scope: $Enums.ExamScope
   stage: $Enums.ExamStage
   defaultOpenDays?: number | null
-  active: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   createdBy?: Prisma.UserCreateNestedOneWithoutExamTemplatesCreatedInput
@@ -758,7 +728,6 @@ export type ExamTemplateUncheckedCreateWithoutSubjectsInput = {
   scope: $Enums.ExamScope
   stage: $Enums.ExamStage
   defaultOpenDays?: number | null
-  active: boolean
   createdById?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -789,7 +758,6 @@ export type ExamTemplateUpdateWithoutSubjectsInput = {
   scope?: Prisma.EnumExamScopeFieldUpdateOperationsInput | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFieldUpdateOperationsInput | $Enums.ExamStage
   defaultOpenDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdBy?: Prisma.UserUpdateOneWithoutExamTemplatesCreatedNestedInput
@@ -804,7 +772,6 @@ export type ExamTemplateUncheckedUpdateWithoutSubjectsInput = {
   scope?: Prisma.EnumExamScopeFieldUpdateOperationsInput | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFieldUpdateOperationsInput | $Enums.ExamStage
   defaultOpenDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -819,7 +786,6 @@ export type ExamTemplateCreateWithoutPartsInput = {
   scope: $Enums.ExamScope
   stage: $Enums.ExamStage
   defaultOpenDays?: number | null
-  active: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   createdBy?: Prisma.UserCreateNestedOneWithoutExamTemplatesCreatedInput
@@ -834,7 +800,6 @@ export type ExamTemplateUncheckedCreateWithoutPartsInput = {
   scope: $Enums.ExamScope
   stage: $Enums.ExamStage
   defaultOpenDays?: number | null
-  active: boolean
   createdById?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -865,7 +830,6 @@ export type ExamTemplateUpdateWithoutPartsInput = {
   scope?: Prisma.EnumExamScopeFieldUpdateOperationsInput | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFieldUpdateOperationsInput | $Enums.ExamStage
   defaultOpenDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdBy?: Prisma.UserUpdateOneWithoutExamTemplatesCreatedNestedInput
@@ -880,7 +844,6 @@ export type ExamTemplateUncheckedUpdateWithoutPartsInput = {
   scope?: Prisma.EnumExamScopeFieldUpdateOperationsInput | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFieldUpdateOperationsInput | $Enums.ExamStage
   defaultOpenDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -895,7 +858,6 @@ export type ExamTemplateCreateManyCreatedByInput = {
   scope: $Enums.ExamScope
   stage: $Enums.ExamStage
   defaultOpenDays?: number | null
-  active: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -907,7 +869,6 @@ export type ExamTemplateUpdateWithoutCreatedByInput = {
   scope?: Prisma.EnumExamScopeFieldUpdateOperationsInput | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFieldUpdateOperationsInput | $Enums.ExamStage
   defaultOpenDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subjects?: Prisma.ExamTemplateSubjectUpdateManyWithoutExamTemplateNestedInput
@@ -922,7 +883,6 @@ export type ExamTemplateUncheckedUpdateWithoutCreatedByInput = {
   scope?: Prisma.EnumExamScopeFieldUpdateOperationsInput | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFieldUpdateOperationsInput | $Enums.ExamStage
   defaultOpenDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subjects?: Prisma.ExamTemplateSubjectUncheckedUpdateManyWithoutExamTemplateNestedInput
@@ -937,7 +897,6 @@ export type ExamTemplateUncheckedUpdateManyWithoutCreatedByInput = {
   scope?: Prisma.EnumExamScopeFieldUpdateOperationsInput | $Enums.ExamScope
   stage?: Prisma.EnumExamStageFieldUpdateOperationsInput | $Enums.ExamStage
   defaultOpenDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -998,7 +957,6 @@ export type ExamTemplateSelect<ExtArgs extends runtime.Types.Extensions.Internal
   scope?: boolean
   stage?: boolean
   defaultOpenDays?: boolean
-  active?: boolean
   createdById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1016,7 +974,6 @@ export type ExamTemplateSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   scope?: boolean
   stage?: boolean
   defaultOpenDays?: boolean
-  active?: boolean
   createdById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1030,7 +987,6 @@ export type ExamTemplateSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   scope?: boolean
   stage?: boolean
   defaultOpenDays?: boolean
-  active?: boolean
   createdById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1044,13 +1000,12 @@ export type ExamTemplateSelectScalar = {
   scope?: boolean
   stage?: boolean
   defaultOpenDays?: boolean
-  active?: boolean
   createdById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ExamTemplateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "description" | "scope" | "stage" | "defaultOpenDays" | "active" | "createdById" | "createdAt" | "updatedAt", ExtArgs["result"]["examTemplate"]>
+export type ExamTemplateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "description" | "scope" | "stage" | "defaultOpenDays" | "createdById" | "createdAt" | "updatedAt", ExtArgs["result"]["examTemplate"]>
 export type ExamTemplateInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   createdBy?: boolean | Prisma.ExamTemplate$createdByArgs<ExtArgs>
   subjects?: boolean | Prisma.ExamTemplate$subjectsArgs<ExtArgs>
@@ -1098,10 +1053,6 @@ export type $ExamTemplatePayload<ExtArgs extends runtime.Types.Extensions.Intern
      * 기본 응시 기간 일수입니다.
      */
     defaultOpenDays: number | null
-    /**
-     * 사용 여부입니다.
-     */
-    active: boolean
     /**
      * 작성자 식별자입니다.
      */
@@ -1547,7 +1498,6 @@ export interface ExamTemplateFieldRefs {
   readonly scope: Prisma.FieldRef<"ExamTemplate", 'ExamScope'>
   readonly stage: Prisma.FieldRef<"ExamTemplate", 'ExamStage'>
   readonly defaultOpenDays: Prisma.FieldRef<"ExamTemplate", 'Int'>
-  readonly active: Prisma.FieldRef<"ExamTemplate", 'Boolean'>
   readonly createdById: Prisma.FieldRef<"ExamTemplate", 'String'>
   readonly createdAt: Prisma.FieldRef<"ExamTemplate", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"ExamTemplate", 'DateTime'>

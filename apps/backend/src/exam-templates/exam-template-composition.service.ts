@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types';
+import type { Prisma } from '../generated/prisma/client';
 import {
   DifficultyLevel,
   ExamPartType,
@@ -19,7 +20,6 @@ export type TemplateQuestionEntry = {
   id: string;
   questionId: string;
   displayOrder: number;
-  score: number;
   question: {
     id: string;
     subjectId: string;
@@ -52,41 +52,27 @@ export type TemplateCriterionEntry = {
   displayOrder: number;
 };
 
-/**
- * 담긴 점수 합계와 파트 총점의 차이다.
- *
- * `difference = assignedScoreSum - partTotalScore`. 양수면 담은 점수가 총점보다
- * 많고, 음수면 모자란다. 초안 편집 중에는 0이 아니어도 정상이며, 최종 일치
- * 검증은 6단계 활성화 검증에서 한다.
- */
-type ScoreSummary = {
-  partId: string;
-  partTotalScore: number;
-  assignedScoreSum: number;
-  difference: number;
-};
-
-export type TemplateQuestionsResponse = ScoreSummary & {
+export type TemplateQuestionsResponse = {
   templateId: string;
+  partId: string;
+  /** 동시 편집 방지용. 다음 편집 요청에 그대로 되돌려 보낸다. */
+  updatedAt: string;
   questions: TemplateQuestionEntry[];
 };
 
-export type TemplateCriteriaResponse = ScoreSummary & {
+export type TemplateCriteriaResponse = {
   templateId: string;
+  partId: string;
+  updatedAt: string;
   criteria: TemplateCriterionEntry[];
 };
-
-/** 소수 둘째 자리까지만 남긴다. Decimal(6,2) 합산의 부동소수 오차를 없앤다. */
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
-}
 
 /**
  * 시험 템플릿 파트의 구성(필기 문제 선택 · 실기 평가 항목)을 다룬다.
  *
- * 순서 유니크 제약 때문에 목록은 항상 전량 교체 방식으로만 저장한다. 점수
- * 합계 검증은 하지 않고, 대신 응답에 합계·총점·차이를 실어 프론트가 실시간
- * 으로 보여줄 수 있게 한다(기획안 §13.4, §13.5).
+ * 순서 유니크 제약 때문에 목록은 항상 전량 교체 방식으로만 저장한다. 템플릿은
+ * 배점을 갖지 않으므로 점수 합계는 다루지 않는다. 배점·총점 일치 검증은 실제
+ * 시험 예약 전 검증(§14.9)에서 한다.
  */
 @Injectable()
 export class ExamTemplateCompositionService {
@@ -103,7 +89,6 @@ export class ExamTemplateCompositionService {
       templateId,
       ExamPartType.WRITTEN,
       actor,
-      false,
     );
 
     const rows = await this.prisma.examTemplateQuestion.findMany({
@@ -123,7 +108,6 @@ export class ExamTemplateCompositionService {
       id: row.id,
       questionId: row.questionId,
       displayOrder: row.displayOrder,
-      score: Number(row.score),
       question: {
         id: row.question.id,
         subjectId: row.question.subjectId,
@@ -148,16 +132,10 @@ export class ExamTemplateCompositionService {
       },
     }));
 
-    const assignedScoreSum = round2(
-      questions.reduce((sum, entry) => sum + entry.score, 0),
-    );
-
     return {
       templateId,
       partId: ctx.partId,
-      partTotalScore: ctx.partTotalScore,
-      assignedScoreSum,
-      difference: round2(assignedScoreSum - ctx.partTotalScore),
+      updatedAt: ctx.updatedAt.toISOString(),
       questions,
     };
   }
@@ -172,8 +150,8 @@ export class ExamTemplateCompositionService {
       templateId,
       ExamPartType.WRITTEN,
       actor,
-      true,
     );
+    this.assertFresh(ctx.updatedAt, dto.expectedUpdatedAt);
 
     const items = dto.questions;
     const ids = items.map((item) => item.questionId);
@@ -216,10 +194,10 @@ export class ExamTemplateCompositionService {
             examTemplatePartId: ctx.partId,
             questionId: item.questionId,
             displayOrder: index,
-            score: item.score,
           })),
         });
       }
+      await this.touch(tx, templateId);
 
       await tx.auditLog.create({
         data: {
@@ -246,7 +224,6 @@ export class ExamTemplateCompositionService {
       templateId,
       ExamPartType.PRACTICAL,
       actor,
-      false,
     );
 
     const rows = await this.prisma.examTemplatePracticalCriterion.findMany({
@@ -262,16 +239,10 @@ export class ExamTemplateCompositionService {
       displayOrder: row.displayOrder,
     }));
 
-    const assignedScoreSum = round2(
-      criteria.reduce((sum, entry) => sum + entry.maxScore, 0),
-    );
-
     return {
       templateId,
       partId: ctx.partId,
-      partTotalScore: ctx.partTotalScore,
-      assignedScoreSum,
-      difference: round2(assignedScoreSum - ctx.partTotalScore),
+      updatedAt: ctx.updatedAt.toISOString(),
       criteria,
     };
   }
@@ -286,8 +257,8 @@ export class ExamTemplateCompositionService {
       templateId,
       ExamPartType.PRACTICAL,
       actor,
-      true,
     );
+    this.assertFresh(ctx.updatedAt, dto.expectedUpdatedAt);
 
     const items = dto.criteria.map((item) => ({
       name: item.name.trim(),
@@ -314,6 +285,7 @@ export class ExamTemplateCompositionService {
           })),
         });
       }
+      await this.touch(tx, templateId);
 
       await tx.auditLog.create({
         data: {
@@ -333,30 +305,49 @@ export class ExamTemplateCompositionService {
   }
 
   /**
-   * 템플릿 존재·접근 권한·(쓰기라면) 초안 여부를 확인하고, 대상 파트를 찾는다.
-   *
-   * 조회 불가는 404로 숨기고, 활성 템플릿에 쓰기 시도는 409, 해당 유형의 파트가
-   * 없으면 404다.
+   * 동시 편집을 막는다. 마지막으로 읽은 `updatedAt`과 현재 값이 다르면 409.
+   */
+  private assertFresh(current: Date, expected: string): void {
+    if (current.getTime() !== new Date(expected).getTime()) {
+      throw new ConflictException(
+        '다른 곳에서 먼저 저장되었습니다. 템플릿을 다시 불러온 뒤 편집하세요.',
+      );
+    }
+  }
+
+  /** 자식 테이블만 바뀌어도 템플릿 updatedAt을 올려 낙관적 락 기준을 갱신한다. */
+  private touch(
+    tx: Prisma.TransactionClient,
+    templateId: string,
+  ): Promise<unknown> {
+    return tx.examTemplate.update({
+      where: { id: templateId },
+      data: { updatedAt: new Date() },
+    });
+  }
+
+  /**
+   * 템플릿 존재·접근 권한을 확인하고 대상 파트를 찾는다. 조회 불가는 404,
+   * 해당 유형의 파트가 없으면 404다. `updatedAt`은 낙관적 락에 쓴다.
    */
   private async loadPartContext(
     templateId: string,
     type: ExamPartType,
     actor: AuthenticatedUser,
-    forWrite: boolean,
   ): Promise<{
     partId: string;
-    partTotalScore: number;
+    updatedAt: Date;
     templateSubjectIds: string[];
   }> {
     const template = await this.prisma.examTemplate.findUnique({
       where: { id: templateId },
       select: {
-        active: true,
         createdById: true,
+        updatedAt: true,
         subjects: { select: { subjectId: true } },
         parts: {
           where: { type },
-          select: { id: true, totalScore: true },
+          select: { id: true },
         },
       },
     });
@@ -376,12 +367,6 @@ export class ExamTemplateCompositionService {
       throw new NotFoundException('시험 템플릿을 찾을 수 없습니다.');
     }
 
-    if (forWrite && template.active) {
-      throw new ConflictException(
-        '활성 템플릿의 구성은 변경할 수 없습니다. 복제 후 편집하세요.',
-      );
-    }
-
     const part = template.parts[0];
     if (!part) {
       throw new NotFoundException(
@@ -393,7 +378,7 @@ export class ExamTemplateCompositionService {
 
     return {
       partId: part.id,
-      partTotalScore: Number(part.totalScore),
+      updatedAt: template.updatedAt,
       templateSubjectIds,
     };
   }

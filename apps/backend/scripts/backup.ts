@@ -11,7 +11,7 @@
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { mkdir, stat } from 'node:fs/promises';
+import { mkdir, readdir, stat, unlink } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -58,6 +58,45 @@ async function sha256(path: string): Promise<string> {
       .on('data', (chunk) => hash.update(chunk))
       .on('end', () => resolvePromise(hash.digest('hex')));
   });
+}
+
+/**
+ * 보관 기한이 지난 로컬 덤프 파일을 지운다(기획안 §14.3 "앱 로컬 디스크에 영구
+ * 저장 금지", §14.5 계층별 보관). `backup_runs` 이력 행은 지우지 않고 파일 실물만
+ * 정리하며, 삭제한 행은 상태를 표시해 둔다.
+ *
+ * 오프사이트 암호화 사본 이관은 스토리지 자격 증명이 정해지면 여기(파일 삭제
+ * 직전)에 붙인다. 지금은 로컬 무한 적재만 막는다.
+ */
+async function pruneOldBackups(): Promise<void> {
+  const cutoff = Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  let removed = 0;
+
+  const entries = await readdir(BACKUP_DIR).catch(() => [] as string[]);
+  for (const name of entries) {
+    if (!name.startsWith('lms-') || !name.endsWith('.dump')) {
+      continue;
+    }
+    const filePath = resolve(BACKUP_DIR, name);
+    const { mtimeMs } = await stat(filePath);
+    if (mtimeMs >= cutoff) {
+      continue;
+    }
+    await unlink(filePath);
+    removed += 1;
+    await prisma.backupRun.updateMany({
+      where: { storageKey: filePath, status: 'SUCCESS' },
+      data: { status: 'EXPIRED' },
+    });
+  }
+
+  if (removed > 0) {
+    await recordSystemLog('INFO', '보관 기한이 지난 백업 덤프 정리', {
+      removed,
+      retentionDays: RETENTION_DAYS,
+    });
+    console.log(`오래된 백업 ${removed}건 삭제`);
+  }
 }
 
 async function recordSystemLog(
@@ -109,6 +148,9 @@ async function main(): Promise<void> {
       storageKey: filePath,
     });
     console.log(`백업 성공: ${filePath} (${size} bytes)`);
+
+    // 성공한 백업이 생긴 뒤에만 오래된 덤프를 정리한다.
+    await pruneOldBackups();
   } catch (error: unknown) {
     const messageText =
       error instanceof Error ? error.message : '알 수 없는 오류';

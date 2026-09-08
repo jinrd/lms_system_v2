@@ -53,6 +53,13 @@ export type QuestionResponse = {
   updatedAt: string;
   options: QuestionOptionResponse[];
   acceptedAnswers: QuestionAcceptedAnswerResponse[];
+  /**
+   * 진행 중인 시험에 출제되어 있으면 채워진다. 프론트는 이 값이 있으면
+   * "이미 출제된 문제이므로 시험이 끝난 후 수정 가능"을 표시하고 편집을 잠근다.
+   */
+  editLock?: {
+    exams: Array<{ id: string; title: string; status: string }>;
+  };
 };
 
 const QUESTION_INCLUDE = {
@@ -152,7 +159,50 @@ export class QuestionsService {
       throw new NotFoundException('문제를 찾을 수 없습니다.');
     }
 
-    return this.toResponse(question);
+    const liveExams = await this.findLiveExamsUsing(id);
+    return this.toResponse(
+      question,
+      liveExams.length > 0 ? { exams: liveExams } : undefined,
+    );
+  }
+
+  /**
+   * 이 문제를 스냅샷으로 물고 있는 시험 중 아직 끝나지 않은(COMPLETED·CANCELED가
+   * 아닌) 시험을 돌려준다. 결과가 있으면 문제 편집을 잠근다.
+   */
+  private async findLiveExamsUsing(
+    questionId: string,
+  ): Promise<Array<{ id: string; title: string; status: string }>> {
+    const rows = await this.prisma.examQuestion.findMany({
+      where: {
+        sourceQuestionId: questionId,
+        exam: { status: { notIn: ['COMPLETED', 'CANCELED'] } },
+      },
+      select: { exam: { select: { id: true, title: true, status: true } } },
+      distinct: ['examId'],
+    });
+    return rows.map((row) => ({
+      id: row.exam.id,
+      title: row.exam.title,
+      status: row.exam.status,
+    }));
+  }
+
+  /**
+   * 진행 중인 시험에 출제된 문제는 수정·비활성화를 거부한다. 시험이 끝나면
+   * 자동으로 풀린다. DB 트리거가 최종 방어선이고, 여기서는 이해 가능한 오류를 낸다.
+   */
+  private async assertNotInLiveExam(questionId: string): Promise<void> {
+    const liveExams = await this.findLiveExamsUsing(questionId);
+    if (liveExams.length > 0) {
+      throw new ConflictException(
+        `진행 중인 시험(${liveExams
+          .map((exam) => exam.title)
+          .join(
+            ', ',
+          )})에 출제된 문제입니다. 시험이 끝난 후 수정할 수 있습니다.`,
+      );
+    }
   }
 
   async create(
@@ -248,6 +298,8 @@ export class QuestionsService {
     if (!canAccess) {
       throw new NotFoundException('문제를 찾을 수 없습니다.');
     }
+
+    await this.assertNotInLiveExam(id);
 
     const nextSubjectId = dto.subjectId ?? existing.subjectId;
     if (dto.subjectId && dto.subjectId !== existing.subjectId) {
@@ -387,6 +439,8 @@ export class QuestionsService {
       return this.toResponse(existing);
     }
 
+    await this.assertNotInLiveExam(id);
+
     if (dto.active) {
       this.assertStructure(
         existing.type,
@@ -482,8 +536,12 @@ export class QuestionsService {
     });
   }
 
-  private toResponse(question: QuestionWithRelations): QuestionResponse {
+  private toResponse(
+    question: QuestionWithRelations,
+    editLock?: QuestionResponse['editLock'],
+  ): QuestionResponse {
     return {
+      ...(editLock ? { editLock } : {}),
       id: question.id,
       subjectId: question.subjectId,
       type: question.type,

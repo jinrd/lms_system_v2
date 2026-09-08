@@ -5,7 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types';
-import { normalizeAnswer } from '../common/answer-normalizer';
+import {
+  ANSWER_NORMALIZATION_VERSION,
+  normalizeAnswerForVersion,
+} from '../common/answer-normalizer';
 import {
   AttemptStatus,
   ExamStatus,
@@ -198,19 +201,6 @@ export class StudentExamsService {
     const ctx = await this.loadAttemptContext(actor, examId);
     this.assertWrittenOpen(ctx);
 
-    const existing = await this.prisma.examPartSubmission.findUnique({
-      where: {
-        examAttemptId_examPartId: {
-          examAttemptId: ctx.attemptId,
-          examPartId: ctx.writtenPart.id,
-        },
-      },
-      select: { id: true, status: true },
-    });
-    if (existing && existing.status !== AttemptStatus.NOT_STARTED) {
-      return this.getWrittenQuestions(actor, examId);
-    }
-
     const now = new Date();
     const timeoutDeadline = new Date(
       now.getTime() + ctx.writtenPart.durationMinutes * 60_000,
@@ -227,6 +217,26 @@ export class StudentExamsService {
     });
 
     await this.prisma.$transaction(async (tx) => {
+      // 응시 행을 잠가 더블클릭·다중 탭의 동시 시작을 직렬화한다. 먼저 들어온
+      // 요청이 파트 제출과 순서를 만들고, 뒤이은 요청은 기존 순서를 그대로 쓴다
+      // (기획안 §15.2.2 "이미 있으면 기존 순서 반환" / D-34).
+      await tx.$queryRaw`
+        SELECT id FROM exam_attempts WHERE id = ${ctx.attemptId}::uuid FOR UPDATE
+      `;
+
+      const existing = await tx.examPartSubmission.findUnique({
+        where: {
+          examAttemptId_examPartId: {
+            examAttemptId: ctx.attemptId,
+            examPartId: ctx.writtenPart.id,
+          },
+        },
+        select: { id: true, status: true },
+      });
+      if (existing && existing.status !== AttemptStatus.NOT_STARTED) {
+        return;
+      }
+
       const submission = await tx.examPartSubmission.create({
         data: {
           examId,
@@ -437,7 +447,12 @@ export class StudentExamsService {
 
     const question = await this.prisma.examQuestion.findFirst({
       where: { id: questionId, examPartId: ctx.writtenPart.id },
-      select: { id: true, type: true, options: { select: { id: true } } },
+      select: {
+        id: true,
+        type: true,
+        normalizationVersion: true,
+        options: { select: { id: true } },
+      },
     });
     if (!question) {
       throw new NotFoundException('이 파트의 문제가 아닙니다.');
@@ -492,10 +507,17 @@ export class StudentExamsService {
       const nextVersion = expectedVersion + 1;
 
       const isShort = question.type === QuestionType.SHORT_ANSWER;
+      // 채점 재현성을 위해 저장 시점에 문항 스냅샷의 정규화 버전으로 값을 동결한다.
+      // 나중에 정규화 규칙이 바뀌어도 이 답안은 저장 당시 규칙으로 채점된다.
+      const normalizationVersion = question.normalizationVersion
+        ? Number(question.normalizationVersion)
+        : ANSWER_NORMALIZATION_VERSION;
       const answerData = {
         subjectiveText: isShort && subjectiveRaw ? subjectiveRaw : null,
         normalizedText:
-          isShort && subjectiveRaw ? normalizeAnswer(subjectiveRaw) : null,
+          isShort && subjectiveRaw
+            ? normalizeAnswerForVersion(subjectiveRaw, normalizationVersion)
+            : null,
         savedAt: now,
         version: nextVersion,
       };
@@ -576,7 +598,7 @@ export class StudentExamsService {
         '개인 마감 시각이 지났습니다. 마지막으로 저장된 답안이 자동 제출됩니다.',
       );
     }
-    const claimed = await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
       const updated = await tx.examPartSubmission.updateMany({
         where: { id: submission.id, status: AttemptStatus.IN_PROGRESS },
         data: {
@@ -587,7 +609,7 @@ export class StudentExamsService {
         },
       });
       if (updated.count === 0) {
-        return false;
+        return;
       }
 
       await tx.auditLog.create({
@@ -601,13 +623,12 @@ export class StudentExamsService {
           result: 'SUCCESS',
         },
       });
-      return true;
-    });
 
-    // 제출 직후 즉시 자동 채점한다. 배치와 경합해도 채점 쪽이 상태로 방어한다.
-    if (claimed) {
-      await this.writtenGrading.gradeWrittenSubmission(submission.id);
-    }
+      // 최종 제출과 자동 채점을 한 트랜잭션으로 묶는다. 예전에는 트랜잭션 커밋
+      // 뒤 별도 호출로 채점해, 그 호출이 유실되면 SUBMITTED인데 미채점 상태로
+      // 방치됐다(기획안 §26).
+      await this.writtenGrading.gradeWrittenSubmissionTx(tx, submission.id);
+    });
 
     return this.getWrittenQuestions(actor, examId);
   }

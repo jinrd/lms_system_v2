@@ -178,6 +178,21 @@ export class ExamMaintenanceService implements OnModuleInit, OnModuleDestroy {
         await this.writtenGrading.gradeWrittenSubmission(submission.id);
       }
     }
+
+    // 제출은 됐지만 채점되지 않은 채 남은 필기 제출을 쓸어담는다. 제출·채점을
+    // 한 트랜잭션으로 묶었으므로 정상 흐름에선 생기지 않지만, 프로세스 중단 등으로
+    // 남은 제출을 이 배치가 복구해 시험이 GRADING에서 멈추지 않게 한다(기획안 §26).
+    const stuck = await this.prisma.examPartSubmission.findMany({
+      where: {
+        status: AttemptStatus.SUBMITTED,
+        examPart: { type: ExamPartType.WRITTEN },
+        exam: { status: { not: ExamStatus.CANCELED } },
+      },
+      select: { id: true },
+    });
+    for (const submission of stuck) {
+      await this.writtenGrading.gradeWrittenSubmission(submission.id);
+    }
   }
 
   /** 4·5·6단계: 응시 종료 전이, 미응시·미완료 확정, 채점 대기 전이. */

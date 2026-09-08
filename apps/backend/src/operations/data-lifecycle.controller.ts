@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
+import { Controller, Get, Post, Query } from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator';
 import {
   buildPaginatedResult,
@@ -7,7 +7,10 @@ import {
 } from '../common/pagination';
 import { UserRole } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
-import { DataLifecycleService } from './data-lifecycle.service';
+import {
+  DataLifecycleService,
+  type LifecycleRunSummary,
+} from './data-lifecycle.service';
 import { LifecycleRunQueryDto } from './dto/lifecycle-run-query.dto';
 
 type LifecycleRunResponse = {
@@ -31,13 +34,14 @@ export class DataLifecycleController {
     private readonly prisma: PrismaService,
   ) {}
 
-  /** 모든 생명주기 작업을 즉시 1회 실행한다. 관리자 전용. */
+  /**
+   * 모든 생명주기 작업을 즉시 1회 실행한다(동기 처리). 관리자 전용.
+   * 다른 실행이 진행 중이면 `ran: false`로 응답한다.
+   */
   @Post('run')
-  @HttpCode(202)
   @Roles(UserRole.ADMIN)
-  async run(): Promise<{ started: boolean }> {
-    await this.service.runAll();
-    return { started: true };
+  run(): Promise<LifecycleRunSummary> {
+    return this.service.runAll();
   }
 
   @Get('runs')

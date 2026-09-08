@@ -38,11 +38,9 @@ const SESSION_MANAGEMENT_ROLES = [
   ...MANAGEMENT_ROLES,
 ] as const;
 
-const CANCELLATION_ROLES = [
-  UserRole.MANAGER,
-  UserRole.PRINCIPAL,
-  UserRole.ADMIN,
-] as const;
+// 수업 취소·보강 생성은 실장·원장 전용이다. 관리자도 직접 수행할 수 없는
+// 명시적 권한 예외다(기획안 §9.7 / D-38).
+const CANCELLATION_ROLES = [UserRole.MANAGER, UserRole.PRINCIPAL] as const;
 
 @Roles(...MANAGEMENT_ROLES)
 @Controller('classes/:classId/sessions')

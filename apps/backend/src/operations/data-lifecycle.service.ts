@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  type OnModuleDestroy,
-  type OnModuleInit,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { UserRole, UserStatus } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
@@ -19,8 +14,12 @@ import { SystemLogsService } from './system-logs.service';
  *
  * `FILE_RETENTION`은 오브젝트 스토리지 연동이 확정되지 않아 지금은 아무것도 하지
  * 않는 스텁이다. 실행 이력에는 `scanned = 0`으로 남는다.
+ *
+ * 실행 주기는 프로세스 안 타이머가 아니라 OS cron이 맡는다. 배포 환경의 cron이
+ * 하루 1회 `pnpm --filter @lms/backend lifecycle`(scripts/data-lifecycle.ts)를
+ * 호출한다. 관리자 API의 수동 실행도 같은 `runAll()`을 부른다. 재기동마다 전체
+ * 재스캔이 돌고 `data_lifecycle_run` 행이 무더기로 쌓이던 문제를 없애기 위함이다.
  */
-const RUN_INTERVAL_MS = 6 * 60 * 60 * 1000;
 /** 한 묶음에서 조회·삭제할 행 수. */
 const BATCH_SIZE = 1000;
 /** 한 번의 실행에서 한 작업이 처리할 최대 행 수. 나머지는 다음 주기로 넘긴다. */
@@ -51,10 +50,15 @@ type JobOutcome = {
   lastCursor?: string | null;
 };
 
+export type LifecycleRunSummary = {
+  /** 이미 다른 실행이 진행 중이어서 이번 호출은 아무것도 하지 않았으면 false. */
+  ran: boolean;
+  jobs: Array<{ jobType: LifecycleJobType; status: string }>;
+};
+
 @Injectable()
-export class DataLifecycleService implements OnModuleInit, OnModuleDestroy {
+export class DataLifecycleService {
   private readonly logger = new Logger(DataLifecycleService.name);
-  private timer: NodeJS.Timeout | null = null;
   private running = false;
 
   constructor(
@@ -63,42 +67,30 @@ export class DataLifecycleService implements OnModuleInit, OnModuleDestroy {
     private readonly systemLogs: SystemLogsService,
   ) {}
 
-  onModuleInit(): void {
-    if (process.env.NODE_ENV === 'test') {
-      return;
-    }
-    this.timer = setInterval(() => {
-      void this.runAll();
-    }, RUN_INTERVAL_MS);
-    this.timer.unref();
-    void this.runAll();
-  }
-
-  onModuleDestroy(): void {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-  }
-
-  /** 모든 생명주기 작업을 순서대로 1회 실행한다. 수동 트리거와 주기 실행이 공유한다. */
-  async runAll(): Promise<void> {
+  /**
+   * 모든 생명주기 작업을 순서대로 1회 실행하고 작업별 결과 요약을 돌려준다.
+   * OS cron(scripts/data-lifecycle.ts)과 관리자 수동 실행 API가 공유한다.
+   * 다른 실행이 진행 중이면 아무것도 하지 않고 `ran: false`를 돌려준다.
+   */
+  async runAll(): Promise<LifecycleRunSummary> {
     if (this.running) {
-      return;
+      return { ran: false, jobs: [] };
     }
     this.running = true;
+    const jobs: LifecycleRunSummary['jobs'] = [];
     try {
       for (const jobType of LIFECYCLE_JOB_TYPES) {
-        await this.runJob(jobType);
+        jobs.push({ jobType, status: await this.runJob(jobType) });
       }
       await this.pruneRunHistory();
     } finally {
       this.running = false;
     }
+    return { ran: true, jobs };
   }
 
-  /** 한 작업을 실행하고 `data_lifecycle_runs`에 결과를 남긴다. */
-  async runJob(jobType: LifecycleJobType): Promise<void> {
+  /** 한 작업을 실행하고 `data_lifecycle_runs`에 결과를 남긴다. 최종 상태 문자열을 돌려준다. */
+  async runJob(jobType: LifecycleJobType): Promise<string> {
     const run = await this.prisma.dataLifecycleRun.create({
       data: { jobType, startedAt: new Date(), status: 'RUNNING' },
     });
@@ -136,6 +128,8 @@ export class DataLifecycleService implements OnModuleInit, OnModuleDestroy {
           failure: outcome.failure,
         },
       });
+
+      return status;
     } catch (error: unknown) {
       await this.prisma.dataLifecycleRun.update({
         where: { id: run.id },
@@ -156,6 +150,7 @@ export class DataLifecycleService implements OnModuleInit, OnModuleDestroy {
         metadata: { jobType },
       });
       this.logger.error(`생명주기 작업 ${jobType} 실패`, error as Error);
+      return 'FAILURE';
     }
   }
 
