@@ -17,7 +17,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:e2e": "NODE_ENV=test PORT=3000 DATABASE_URL=postgresql://test:test@localhost:5432/lms_test?schema=public jest --config ./test/jest-e2e.json --runInBand",
+    "test:e2e": "NODE_ENV=test DATABASE_URL=\"${E2E_DATABASE_URL:-postgresql://dev_user:dev_password@localhost:5432/lms_test?schema=public}\" bash -c 'tsx test/prepare-db.ts && NODE_OPTIONS=--experimental-vm-modules jest --config ./test/jest-e2e.json --runInBand'",
     "backup": "tsx scripts/backup.ts",
     "lifecycle": "tsx scripts/data-lifecycle.ts",
     "verify:schema": "bash scripts/verify-schema.sh"
