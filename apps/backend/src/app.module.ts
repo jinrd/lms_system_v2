@@ -25,6 +25,7 @@ import { ExamTemplatesModule } from './exam-templates/exam-templates.module';
 import { ExamsModule } from './exams/exams.module';
 import { CommunicationsModule } from './communications/communications.module';
 import { OperationsModule } from './operations/operations.module';
+import { StatisticsModule } from './statistics/statistics.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 
 @Module({
@@ -70,6 +71,7 @@ import { MaintenanceModule } from './maintenance/maintenance.module';
     ExamsModule,
     CommunicationsModule,
     OperationsModule,
+    StatisticsModule,
   ],
   controllers: [HealthController],
   providers: [
