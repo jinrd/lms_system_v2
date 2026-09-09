@@ -19,7 +19,8 @@
     "test:cov": "jest --coverage",
     "test:e2e": "NODE_ENV=test PORT=3000 DATABASE_URL=postgresql://test:test@localhost:5432/lms_test?schema=public jest --config ./test/jest-e2e.json --runInBand",
     "backup": "tsx scripts/backup.ts",
-    "lifecycle": "tsx scripts/data-lifecycle.ts"
+    "lifecycle": "tsx scripts/data-lifecycle.ts",
+    "verify:schema": "bash scripts/verify-schema.sh"
   },
   "dependencies": {
     "@jest/globals": "^30.4.1",

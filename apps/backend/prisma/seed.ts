@@ -595,8 +595,44 @@ async function seedSystemSettings(): Promise<void> {
   console.log(`시스템 설정 ${keys.length}개 확인 완료`);
 }
 
+/**
+ * 시행 중인 필수 약관을 생성한다(기획안 §3·§7.2·§33.3). 이게 없으면 회원가입과
+ * 로그인 시 필수 약관 동의 흐름이 동작하지 않는다. `(type, version)` 기준으로
+ * 이미 있으면 두지 않아 멱등하다.
+ */
+async function seedTermsDocuments(): Promise<void> {
+  const docs = [
+    {
+      type: '이용약관',
+      version: '1.0',
+      title: '서비스 이용약관',
+      content: '예제 시드 이용약관 본문입니다. 실제 문구로 교체하세요.',
+    },
+    {
+      type: '개인정보 수집·이용 동의',
+      version: '1.0',
+      title: '개인정보 수집·이용 동의',
+      content:
+        '예제 시드 개인정보 수집·이용 동의 본문입니다. 실제 문구로 교체하세요.',
+    },
+  ];
+  const effectiveAt = new Date('2026-01-01T00:00:00.000Z');
+  for (const doc of docs) {
+    const existing = await prisma.termsDocument.findFirst({
+      where: { type: doc.type, version: doc.version },
+      select: { id: true },
+    });
+    if (existing) continue;
+    await prisma.termsDocument.create({
+      data: { ...doc, required: true, effectiveAt, active: true },
+    });
+  }
+  console.log(`필수 약관 ${docs.length}건 확인 완료`);
+}
+
 async function seed(): Promise<void> {
   await seedSystemSettings();
+  await seedTermsDocuments();
 
   const passwordHashes = new Map<string, string>();
   for (const password of new Set(credentials.map((item) => item.password))) {
