@@ -5,7 +5,16 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { Gender, UserRole, UserStatus } from '../src/generated/prisma/enums';
+import {
+  EnrollmentStatus,
+  EnrollmentType,
+  Gender,
+  SessionKind,
+  SessionStatus,
+  SubjectMode,
+  UserRole,
+  UserStatus,
+} from '../src/generated/prisma/enums';
 
 export type TestContext = {
   app: INestApplication<App>;
@@ -133,6 +142,151 @@ export async function seedCore(prisma: PrismaService): Promise<{
   });
 
   return { users, termsIds, passwordHash };
+}
+
+export type TeachingContext = {
+  educationFieldId: string;
+  subjectId: string;
+  courseOfferingId: string;
+  courseOfferingSubjectId: string;
+  classId: string;
+  classProgramId: string;
+  classSubjectId: string;
+  /** studentId -> { enrollmentId, enrollmentSubjectId } */
+  enrollments: Record<
+    string,
+    { enrollmentId: string; enrollmentSubjectId: string }
+  >;
+};
+
+/**
+ * 강의·반·수강까지 이어지는 최소 컨텍스트를 만든다: 교육 분야 → 과목 →
+ * 교육과정(담당 강사) → 반 → class_program → class_subject, 그리고 학생별
+ * 기본(REGULAR·ACTIVE) 수강 + 과목 참여(attendance/grade managed).
+ */
+export async function seedTeachingContext(
+  prisma: PrismaService,
+  params: { instructorId: string; studentIds: string[] },
+): Promise<TeachingContext> {
+  const field = await prisma.educationField.create({
+    data: { name: `분야-${Date.now()}`, displayOrder: 1, active: true },
+    select: { id: true },
+  });
+  const subject = await prisma.subject.create({
+    data: {
+      educationFieldId: field.id,
+      name: `과목-${Date.now()}`,
+      mode: SubjectMode.THEORY,
+      displayOrder: 1,
+      active: true,
+    },
+    select: { id: true },
+  });
+  const offering = await prisma.courseOffering.create({
+    data: {
+      name: `교육과정-${Date.now()}`,
+      primaryEducationFieldId: field.id,
+      instructorId: params.instructorId,
+    },
+    select: { id: true },
+  });
+  const cos = await prisma.courseOfferingSubject.create({
+    data: { courseOfferingId: offering.id, subjectId: subject.id },
+    select: { id: true },
+  });
+  const klass = await prisma.class.create({
+    data: {
+      name: `반-${Date.now()}`,
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-12-31'),
+      capacity: 20,
+    },
+    select: { id: true },
+  });
+  const program = await prisma.classProgram.create({
+    data: { classId: klass.id, courseOfferingId: offering.id },
+    select: { id: true },
+  });
+  const classSubject = await prisma.classSubject.create({
+    data: {
+      classId: klass.id,
+      courseOfferingId: offering.id,
+      courseOfferingSubjectId: cos.id,
+      classProgramId: program.id,
+      active: true,
+    },
+    select: { id: true },
+  });
+
+  const enrollments: TeachingContext['enrollments'] = {};
+  for (const studentId of params.studentIds) {
+    const enrollment = await prisma.enrollment.create({
+      data: {
+        studentId,
+        courseOfferingId: offering.id,
+        classId: klass.id,
+        type: EnrollmentType.REGULAR,
+        status: EnrollmentStatus.ACTIVE,
+        startsOn: new Date('2026-01-01'),
+        endsOn: new Date('2026-12-31'),
+        attendanceManaged: true,
+        gradeManaged: true,
+      },
+      select: { id: true },
+    });
+    const enrollmentSubject = await prisma.enrollmentSubject.create({
+      data: {
+        enrollmentId: enrollment.id,
+        courseOfferingId: offering.id,
+        courseOfferingSubjectId: cos.id,
+        startsOn: new Date('2026-01-01'),
+        endsOn: new Date('2026-12-31'),
+        attendanceManaged: true,
+        gradeManaged: true,
+      },
+      select: { id: true },
+    });
+    enrollments[studentId] = {
+      enrollmentId: enrollment.id,
+      enrollmentSubjectId: enrollmentSubject.id,
+    };
+  }
+
+  return {
+    educationFieldId: field.id,
+    subjectId: subject.id,
+    courseOfferingId: offering.id,
+    courseOfferingSubjectId: cos.id,
+    classId: klass.id,
+    classProgramId: program.id,
+    classSubjectId: classSubject.id,
+    enrollments,
+  };
+}
+
+/** 실제 수업 1회를 만든다. 기본은 지금 진행 중(시작 과거·종료 미래). */
+export async function seedSession(
+  prisma: PrismaService,
+  tc: TeachingContext,
+  instructorId: string,
+  opts: { startsAt?: Date; endsAt?: Date; status?: SessionStatus } = {},
+): Promise<string> {
+  const now = Date.now();
+  const session = await prisma.classSession.create({
+    data: {
+      classId: tc.classId,
+      classSubjectId: tc.classSubjectId,
+      courseOfferingSubjectId: tc.courseOfferingSubjectId,
+      classProgramId: tc.classProgramId,
+      instructorId,
+      kind: SessionKind.REGULAR,
+      startsAt: opts.startsAt ?? new Date(now - 5 * 60_000),
+      endsAt: opts.endsAt ?? new Date(now + 60 * 60_000),
+      status: opts.status ?? SessionStatus.SCHEDULED,
+    },
+    select: { id: true },
+  });
+  return session.id;
 }
 
 /** loginId/password 로 로그인해 accessToken·refreshToken 을 얻는다. */
