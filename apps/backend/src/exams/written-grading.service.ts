@@ -3,6 +3,7 @@ import {
   matchesAcceptedAnswer,
   ANSWER_NORMALIZATION_VERSION,
 } from '../common/answer-normalizer';
+import { exactSetMatch } from '../common/exact-set-match';
 import type { Prisma } from '../generated/prisma/client';
 import {
   AttemptStatus,
@@ -15,14 +16,6 @@ import { PrismaService } from '../prisma/prisma.service';
 /** 소수 둘째 자리까지만 남긴다. Decimal(6,2) 합산의 부동소수 오차를 없앤다. */
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
-}
-
-function sameSet(a: readonly string[], b: readonly string[]): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  const set = new Set(a);
-  return b.every((value) => set.has(value));
 }
 
 /**
@@ -139,7 +132,8 @@ export class WrittenGradingService {
         const chosenIds = answer
           ? answer.selectedOptions.map((s) => s.examQuestionOptionId)
           : [];
-        isCorrect = chosenIds.length > 0 && sameSet(correctIds, chosenIds);
+        isCorrect =
+          chosenIds.length > 0 && exactSetMatch(correctIds, chosenIds);
       }
 
       return {

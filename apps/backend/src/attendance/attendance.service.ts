@@ -20,6 +20,7 @@ import {
   UserRole,
   UserStatus,
 } from '../generated/prisma/enums';
+import { computeAttendanceBucket } from '../common/attendance-rate';
 import { toSeoulEndOfDay } from '../common/seoul-date';
 import { SessionMaintenanceService } from '../maintenance/session-maintenance.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -128,28 +129,24 @@ export class AttendanceService {
     const countOf = (status: AttendanceStatus): number =>
       grouped.find((item) => item.status === status)?._count._all ?? 0;
 
-    const present = countOf(AttendanceStatus.PRESENT);
-    const late = countOf(AttendanceStatus.LATE);
-    const absent = countOf(AttendanceStatus.ABSENT);
-    const earlyLeave = countOf(AttendanceStatus.EARLY_LEAVE);
-    const excused = countOf(AttendanceStatus.EXCUSED);
-    const unprocessed = countOf(AttendanceStatus.UNPROCESSED);
-
-    const countedTotal = present + late + earlyLeave + absent;
-    const earned = present + late + earlyLeave * 0.5;
+    const bucket = computeAttendanceBucket({
+      present: countOf(AttendanceStatus.PRESENT),
+      late: countOf(AttendanceStatus.LATE),
+      absent: countOf(AttendanceStatus.ABSENT),
+      earlyLeave: countOf(AttendanceStatus.EARLY_LEAVE),
+      excused: countOf(AttendanceStatus.EXCUSED),
+      unprocessed: countOf(AttendanceStatus.UNPROCESSED),
+    });
 
     return {
-      present,
-      late,
-      absent,
-      earlyLeave,
-      excused,
-      unprocessed,
-      countedTotal,
-      attendanceRate:
-        countedTotal === 0
-          ? null
-          : Math.round((earned / countedTotal) * 1000) / 10,
+      present: bucket.present,
+      late: bucket.late,
+      absent: bucket.absent,
+      earlyLeave: bucket.earlyLeave,
+      excused: bucket.excused,
+      unprocessed: bucket.unprocessed,
+      countedTotal: bucket.countedTotal,
+      attendanceRate: bucket.attendanceRate,
     };
   }
 

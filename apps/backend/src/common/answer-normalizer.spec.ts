@@ -3,6 +3,7 @@ import {
   ANSWER_NORMALIZATION_VERSION,
   matchesAcceptedAnswer,
   normalizeAnswer,
+  normalizeAnswerForVersion,
 } from './answer-normalizer';
 
 describe('normalizeAnswer', () => {
@@ -56,5 +57,27 @@ describe('matchesAcceptedAnswer', () => {
   it('빈 답안은 정답이 아니다', () => {
     expect(matchesAcceptedAnswer('   ', accepted)).toBe(false);
     expect(matchesAcceptedAnswer('   ', [''])).toBe(false);
+  });
+
+  it('버전 인자를 명시해도 v1 규칙으로 채점한다', () => {
+    expect(matchesAcceptedAnswer('OHM  LAW', accepted, 1)).toBe(true);
+  });
+});
+
+describe('normalizeAnswerForVersion', () => {
+  it('버전 1은 기본 정규화와 같다', () => {
+    expect(normalizeAnswerForVersion('  A  B ', 1)).toBe(
+      normalizeAnswer('  A  B '),
+    );
+  });
+
+  it('없는 버전이면 던진다 — 조용히 다른 규칙으로 채점하지 않는다', () => {
+    expect(() => normalizeAnswerForVersion('x', 999)).toThrow();
+  });
+
+  it('현재 기본 버전은 반드시 등록돼 있다', () => {
+    expect(() =>
+      normalizeAnswerForVersion('x', ANSWER_NORMALIZATION_VERSION),
+    ).not.toThrow();
   });
 });

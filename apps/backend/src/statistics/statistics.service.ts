@@ -1,5 +1,9 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types';
+import {
+  type AttendanceBucket,
+  computeAttendanceBucket,
+} from '../common/attendance-rate';
 import { todaySeoulDateString } from '../common/seoul-date';
 import { Prisma } from '../generated/prisma/client';
 import {
@@ -18,21 +22,7 @@ const STAFF_ROLES: readonly UserRole[] = [
   UserRole.ADMIN,
 ];
 
-/** 출석 상태별 집계와 파생 출석률이다(기획안 §7 계산식). */
-export type AttendanceBucket = {
-  present: number;
-  late: number;
-  earlyLeave: number;
-  absent: number;
-  excused: number;
-  unprocessed: number;
-  /** 지각 횟수 별도 집계(§7). late와 같은 값이지만 명시적으로 노출한다. */
-  lateCount: number;
-  /** 출석률 분모: 출석 + 지각 + 조퇴 + 결석. */
-  countedTotal: number;
-  /** (출석 + 지각 + 조퇴×0.5) ÷ countedTotal × 100. 분모 0이면 null. */
-  attendanceRate: number | null;
-};
+export type { AttendanceBucket };
 
 export type AttendanceStatisticsResponse = {
   range: { from: string | null; to: string | null };
@@ -216,27 +206,16 @@ export class StatisticsService {
     return { from: toDate(query.from), to: toDate(query.to) };
   }
 
+  /** enum 이름으로 집계된 개수를 출석률 계산 입력 형태로 옮긴다. */
   private bucket(counts: Record<string, number>): AttendanceBucket {
-    const present = counts.PRESENT ?? 0;
-    const late = counts.LATE ?? 0;
-    const earlyLeave = counts.EARLY_LEAVE ?? 0;
-    const absent = counts.ABSENT ?? 0;
-    const excused = counts.EXCUSED ?? 0;
-    const unprocessed = counts.UNPROCESSED ?? 0;
-    const countedTotal = present + late + earlyLeave + absent;
-    const earned = present + late + earlyLeave * 0.5;
-    return {
-      present,
-      late,
-      earlyLeave,
-      absent,
-      excused,
-      unprocessed,
-      lateCount: late,
-      countedTotal,
-      attendanceRate:
-        countedTotal === 0 ? null : round1((earned / countedTotal) * 100),
-    };
+    return computeAttendanceBucket({
+      present: counts.PRESENT ?? 0,
+      late: counts.LATE ?? 0,
+      earlyLeave: counts.EARLY_LEAVE ?? 0,
+      absent: counts.ABSENT ?? 0,
+      excused: counts.EXCUSED ?? 0,
+      unprocessed: counts.UNPROCESSED ?? 0,
+    });
   }
 
   async attendance(

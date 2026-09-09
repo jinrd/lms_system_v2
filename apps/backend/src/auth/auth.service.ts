@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { isMinorOn } from '../common/age';
 import type { AuthenticatedUser } from './auth.types';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import * as argon2 from 'argon2';
@@ -464,7 +465,7 @@ export class AuthService {
 
     // 미성년 여부는 클라이언트가 준 플래그를 믿지 않고 생년월일로 서버가 판정한다
     // (기획안 §3 / Part II line 1343).
-    const isMinor = this.isMinorOn(new Date(dto.birthDate), new Date());
+    const isMinor = isMinorOn(new Date(dto.birthDate), new Date());
 
     if (isMinor && (!dto.guardianName || !dto.guardianPhone)) {
       throw new BadRequestException(
@@ -759,16 +760,6 @@ export class AuthService {
 
   private hashValue(value: string): string {
     return createHash('sha256').update(value).digest('hex');
-  }
-
-  /**
-   * 기준일에 만 19세 미만이면 미성년으로 본다. 생년월일이
-   * (기준일 - 19년)보다 뒤면 아직 만 19세가 되지 않은 것이다.
-   */
-  private isMinorOn(birthDate: Date, at: Date): boolean {
-    const cutoff = new Date(at);
-    cutoff.setFullYear(cutoff.getFullYear() - 19);
-    return birthDate > cutoff;
   }
 
   private isUniqueConstraintError(error: unknown): boolean {
