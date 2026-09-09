@@ -6,9 +6,15 @@ import type { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import {
+  DifficultyLevel,
   EnrollmentStatus,
   EnrollmentType,
+  ExamPartType,
+  ExamScope,
+  ExamStage,
+  ExamStatus,
   Gender,
+  QuestionType,
   SessionKind,
   SessionStatus,
   SubjectMode,
@@ -287,6 +293,85 @@ export async function seedSession(
     select: { id: true },
   });
   return session.id;
+}
+
+/**
+ * 문제은행 문제 1개 + 그 문제를 스냅샷으로 물고 있는 진행 중 시험(DRAFT)을 만든다.
+ * 문제 편집 잠금 트리거·서비스 검증 테스트에 쓴다. `questionId` 를 돌려준다.
+ */
+export async function seedQuestionInLiveExam(
+  prisma: PrismaService,
+  tc: TeachingContext,
+): Promise<{ questionId: string; examId: string }> {
+  const question = await prisma.questionBank.create({
+    data: {
+      subjectId: tc.subjectId,
+      type: QuestionType.SHORT_ANSWER,
+      prompt: '옴의 법칙은?',
+      defaultScore: 10,
+      difficulty: DifficultyLevel.NORMAL,
+      active: true,
+      acceptedAnswers: {
+        create: {
+          answerText: 'V=IR',
+          normalizedAnswer: 'v=ir',
+          displayOrder: 0,
+        },
+      },
+    },
+    select: { id: true },
+  });
+
+  const now = Date.now();
+  const exam = await prisma.exam.create({
+    data: {
+      courseOfferingId: tc.courseOfferingId,
+      title: '진행 중 시험',
+      scope: ExamScope.SUBJECT,
+      stage: ExamStage.REGULAR,
+      status: ExamStatus.DRAFT,
+      opensAt: new Date(now + 60_000),
+      closesAt: new Date(now + 3_600_000),
+    },
+    select: { id: true },
+  });
+  await prisma.examSubject.create({
+    data: {
+      examId: exam.id,
+      courseOfferingId: tc.courseOfferingId,
+      courseOfferingSubjectId: tc.courseOfferingSubjectId,
+    },
+  });
+  const part = await prisma.examPart.create({
+    data: {
+      examId: exam.id,
+      type: ExamPartType.WRITTEN,
+      totalScore: 10,
+      passScore: 6,
+      opensAt: new Date(now + 60_000),
+      closesAt: new Date(now + 3_600_000),
+      durationMinutes: 30,
+    },
+    select: { id: true },
+  });
+  await prisma.examQuestion.create({
+    data: {
+      examId: exam.id,
+      examPartId: part.id,
+      courseOfferingSubjectId: tc.courseOfferingSubjectId,
+      sourceQuestionId: question.id,
+      type: QuestionType.SHORT_ANSWER,
+      prompt: '옴의 법칙은?',
+      score: 10,
+      displayOrder: 0,
+      normalizationVersion: '1',
+      acceptedAnswers: {
+        create: { answerText: 'V=IR', normalizedAnswer: 'v=ir' },
+      },
+    },
+  });
+
+  return { questionId: question.id, examId: exam.id };
 }
 
 /** loginId/password 로 로그인해 accessToken·refreshToken 을 얻는다. */
