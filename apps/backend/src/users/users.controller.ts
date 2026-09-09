@@ -28,7 +28,9 @@ import {
   IssueTemporaryPasswordResponse,
 } from './dto/issue-temporary-password.dto';
 import { ChangeUserStatusDto } from './dto/change-user-status.dto';
+import { UpdateStudentProfileDto } from './dto/update-student-profile.dto';
 import { UserSearchQueryDto } from './dto/user-search-query.dto';
+import type { StudentProfileResponse } from './users.service';
 
 const APPROVAL_ROLES = [
   UserRole.MANAGER,
@@ -109,6 +111,28 @@ export class UsersController {
   @Get()
   findUsers(@Query() query: UserSearchQueryDto): Promise<UsersPageResponse> {
     return this.usersService.findUsers(query);
+  }
+
+  /** 학생 개인정보 수정. 강사는 담당 학생만(기획안 §3 / §6.2). */
+  @Roles(
+    UserRole.INSTRUCTOR,
+    UserRole.MANAGER,
+    UserRole.PRINCIPAL,
+    UserRole.ADMIN,
+  )
+  @Patch(':id/profile')
+  updateStudentProfile(
+    @Param('id', ParseUUIDPipe) userId: string,
+    @Body() dto: UpdateStudentProfileDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<StudentProfileResponse> {
+    return this.usersService.updateStudentProfile(
+      userId,
+      dto,
+      actor,
+      request.ip,
+    );
   }
 
   @Roles(UserRole.MANAGER, UserRole.PRINCIPAL, UserRole.ADMIN)

@@ -10,6 +10,7 @@ import * as argon2 from 'argon2';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import {
   EnrollmentStatus,
+  Gender,
   UserRole,
   UserStatus,
 } from '../generated/prisma/enums';
@@ -23,7 +24,22 @@ import {
   IssueTemporaryPasswordDto,
   IssueTemporaryPasswordResponse,
 } from './dto/issue-temporary-password.dto';
+import { UpdateStudentProfileDto } from './dto/update-student-profile.dto';
 import { UserSearchQueryDto } from './dto/user-search-query.dto';
+
+export type StudentProfileResponse = {
+  id: string;
+  loginId: string | null;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  birthDate: string | null;
+  gender: Gender | null;
+  isMinorAtSignup: boolean;
+  guardianName: string | null;
+  guardianPhone: string | null;
+  updatedAt: string;
+};
 
 export type PendingStudentResponse = {
   id: string;
@@ -583,6 +599,168 @@ export class UsersService {
       temporaryPassword,
       temporaryPasswordExpiresAt: expiresAt.toISOString(),
     };
+  }
+
+  /**
+   * 학생 개인정보를 수정한다(기획안 §3 / §6.2). 학생 본인은 호출할 수 없고,
+   * 담당 강사(담당 교육과정에 이 학생이 현재 수강 중일 때)와 실장·원장·관리자만
+   * 가능하다. 보낸 필드만 바꾸고 변경 전후 값과 작업자를 감사 로그에 남긴다.
+   * 미성년으로 가입한 학생의 보호자 정보는 이 API로 비울 수 없다.
+   */
+  async updateStudentProfile(
+    userId: string,
+    dto: UpdateStudentProfileDto,
+    actor: AuthenticatedUser,
+    ipAddress?: string,
+  ): Promise<StudentProfileResponse> {
+    const reason = dto.reason.trim();
+    if (reason.length === 0) {
+      throw new BadRequestException('변경 사유가 필요합니다.');
+    }
+
+    const target = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { studentProfile: true },
+    });
+    if (
+      !target ||
+      target.role !== UserRole.STUDENT ||
+      target.status === UserStatus.DELETED
+    ) {
+      throw new NotFoundException('학생 계정을 찾을 수 없습니다.');
+    }
+    if (target.status !== UserStatus.ACTIVE) {
+      throw new ConflictException(
+        '활성 상태의 학생만 개인정보를 수정할 수 있습니다.',
+      );
+    }
+
+    await this.assertCanEditStudentProfile(actor, target.id);
+
+    const email =
+      dto.email === undefined
+        ? undefined
+        : dto.email.trim().length === 0
+          ? null
+          : dto.email.trim().toLowerCase();
+
+    const userData: {
+      name?: string;
+      phone?: string;
+      email?: string | null;
+      birthDate?: Date;
+      gender?: Gender;
+    } = {};
+    if (dto.name !== undefined) userData.name = dto.name.trim();
+    if (dto.phone !== undefined)
+      userData.phone = dto.phone.replace(/[^0-9]/g, '');
+    if (email !== undefined) userData.email = email;
+    if (dto.birthDate !== undefined)
+      userData.birthDate = new Date(dto.birthDate);
+    if (dto.gender !== undefined) userData.gender = dto.gender;
+
+    const profileData: { guardianName?: string; guardianPhone?: string } = {};
+    if (dto.guardianName !== undefined)
+      profileData.guardianName = dto.guardianName.trim();
+    if (dto.guardianPhone !== undefined)
+      profileData.guardianPhone = dto.guardianPhone.replace(/[^0-9]/g, '');
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (Object.keys(userData).length > 0) {
+        await tx.user.update({ where: { id: target.id }, data: userData });
+      }
+      if (Object.keys(profileData).length > 0) {
+        await tx.studentProfile.update({
+          where: { userId: target.id },
+          data: profileData,
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorRole: actor.role,
+          action: 'STUDENT_PROFILE_UPDATED',
+          resourceType: 'USER',
+          resourceId: target.id,
+          beforeData: {
+            name: target.name,
+            phone: target.phone,
+            email: target.email,
+            birthDate: target.birthDate?.toISOString().slice(0, 10) ?? null,
+            gender: target.gender,
+            guardianName: target.studentProfile?.guardianName ?? null,
+            guardianPhone: target.studentProfile?.guardianPhone ?? null,
+          },
+          afterData: {
+            ...userData,
+            ...(userData.birthDate
+              ? { birthDate: userData.birthDate.toISOString().slice(0, 10) }
+              : {}),
+            ...profileData,
+          },
+          reason,
+          ipAddress,
+          result: 'SUCCESS',
+        },
+      });
+
+      return tx.user.findUniqueOrThrow({
+        where: { id: target.id },
+        include: { studentProfile: true },
+      });
+    });
+
+    return {
+      id: updated.id,
+      loginId: updated.loginId,
+      name: updated.name,
+      phone: updated.phone,
+      email: updated.email,
+      birthDate: updated.birthDate?.toISOString().slice(0, 10) ?? null,
+      gender: updated.gender,
+      isMinorAtSignup: updated.studentProfile?.isMinorAtSignup ?? false,
+      guardianName: updated.studentProfile?.guardianName ?? null,
+      guardianPhone: updated.studentProfile?.guardianPhone ?? null,
+      updatedAt: updated.updatedAt.toISOString(),
+    };
+  }
+
+  /**
+   * 학생 개인정보 수정 권한을 확인한다. 실장·원장·관리자는 전체, 강사는 담당
+   * 교육과정에 이 학생이 현재 수강 중일 때만 허용한다(2026-09-01 개편).
+   */
+  private async assertCanEditStudentProfile(
+    actor: AuthenticatedUser,
+    studentId: string,
+  ): Promise<void> {
+    if (
+      actor.role === UserRole.ADMIN ||
+      actor.role === UserRole.MANAGER ||
+      actor.role === UserRole.PRINCIPAL
+    ) {
+      return;
+    }
+    if (actor.role !== UserRole.INSTRUCTOR) {
+      throw new ForbiddenException('학생 개인정보를 수정할 권한이 없습니다.');
+    }
+
+    const today = todaySeoulDateOnly();
+    const assigned = await this.prisma.enrollment.findFirst({
+      where: {
+        studentId,
+        status: EnrollmentStatus.ACTIVE,
+        startsOn: { lte: today },
+        OR: [{ endsOn: null }, { endsOn: { gte: today } }],
+        courseOffering: { instructorId: actor.id, archivedAt: null },
+      },
+      select: { id: true },
+    });
+    if (!assigned) {
+      throw new ForbiddenException(
+        '현재 담당 학생의 개인정보만 수정할 수 있습니다.',
+      );
+    }
   }
 
   async findUsers(query: UserSearchQueryDto): Promise<UsersPageResponse> {
