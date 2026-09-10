@@ -20,6 +20,7 @@ import { QuestionsPage } from "./features/questions/QuestionsPage";
 
 import { ExamTemplatesPage } from "./features/exam-templates/ExamTemplatesPage";
 import { ExamWorkspacePage } from "./features/exams/ExamWorkspacePage";
+import { InquiriesPage } from "./features/communications/InquiriesPage";
 import { NoticesPage } from "./features/communications/NoticesPage";
 
 type PlaceholderRoute = {
@@ -29,11 +30,6 @@ type PlaceholderRoute = {
 };
 
 const placeholderRoutes: PlaceholderRoute[] = [
-  {
-    path: "inquiries",
-    title: "문의사항",
-    description: "학생 문의와 담당자 답변을 관리합니다.",
-  },
   {
     path: "analytics",
     title: "운영 통계",
@@ -95,6 +91,10 @@ const router = createBrowserRouter([
       {
         path: "notices",
         element: <NoticesPage />,
+      },
+      {
+        path: "inquiries",
+        element: <InquiriesPage />,
       },
       {
         path: "education",
