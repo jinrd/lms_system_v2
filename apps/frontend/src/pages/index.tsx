@@ -1,53 +1,90 @@
 import {
   ArrowRight,
-  RefreshCw,
-  BookOpenCheck,
-  CalendarClock,
-  ChevronRight,
+  Bell,
+  CheckCircle2,
+  Circle,
   ClipboardList,
-  UserCheck,
-  Users,
+  Pin,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import {
-  EmptyState,
-  ErrorState,
-  LoadingState,
-} from "../components/ui/PageStates";
-import {
   getMyAttendanceSessions,
   getMyAttendanceSummary,
+  type StudentAttendanceSession,
 } from "../features/attendance/attendance.api";
 import {
+  getClassSessions,
   getInstructorClasses,
   getManagedClasses,
+  type ClassSession,
 } from "../features/classes/class-management.api";
-import { getPrograms } from "../features/courses/programs.api";
+import {
+  getInquiries,
+  getMyNotices,
+  getNotices,
+  type InquiryListItem,
+  type MyNotice,
+  type Notice,
+} from "../features/communications/communications.api";
+import { getExams, type Exam } from "../features/exams/exams.api";
+import { getAuditLogs, type AuditLog } from "../features/operations/operations.api";
 import { getUsers } from "../features/users/users.api";
+import "./dashboard.css";
 
-export function DashboardPage() {
-  const { user } = useAuth();
+const SEOUL_TIME_ZONE = "Asia/Seoul";
 
-  if (user?.role === "STUDENT") {
-    return <StudentDashboard />;
-  }
-
-  if (user?.role === "INSTRUCTOR") {
-    return <InstructorDashboard />;
-  }
-
-  return <OperationDashboard />;
+function todayString(): string {
+  return new Date().toLocaleDateString("sv-SE", { timeZone: SEOUL_TIME_ZONE });
 }
 
 function formatTime(value: string): string {
   return new Intl.DateTimeFormat("ko-KR", {
-    timeZone: "Asia/Seoul",
+    timeZone: SEOUL_TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   }).format(new Date(value));
 }
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: SEOUL_TIME_ZONE,
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .format(new Date(value))
+    .replace(/\. /g, ".")
+    .replace(/\.$/, "");
+}
+
+function formatToday(): string {
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: SEOUL_TIME_ZONE,
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  }).format(new Date());
+}
+
+function formatRelativeTime(value: string): string {
+  const elapsed = Date.now() - new Date(value).getTime();
+  const minutes = Math.max(0, Math.floor(elapsed / 60_000));
+  if (minutes < 1) return "방금 전";
+  if (minutes < 60) return `${minutes}분 전`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  return formatDate(value);
+}
+
+const SESSION_LABELS: Record<string, string> = {
+  SCHEDULED: "수업 전",
+  IN_PROGRESS: "진행 중",
+  COMPLETED: "완료",
+  CANCELED: "휴강",
+};
 
 const ATTENDANCE_LABELS: Record<string, string> = {
   UNPROCESSED: "미처리",
@@ -58,406 +95,356 @@ const ATTENDANCE_LABELS: Record<string, string> = {
   EXCUSED: "공결",
 };
 
-function StudentDashboard() {
-  const sessionsQuery = useQuery({
-    queryKey: ["attendance", "my-sessions"],
-    queryFn: getMyAttendanceSessions,
-  });
-  const summaryQuery = useQuery({
-    queryKey: ["attendance", "my-summary"],
-    queryFn: getMyAttendanceSummary,
-  });
-
-  const sessions = sessionsQuery.data ?? [];
-  const summary = summaryQuery.data;
-
-  return (
-    <>
-      <section className="page-header">
-        <div>
-          <h1>내 학습</h1>
-          <p>오늘 수업과 출석 현황을 확인합니다.</p>
-        </div>
-      </section>
-
-      <section className="surface-card">
-        <header className="card-header">
-          <div>
-            <h2>오늘 수업</h2>
-            <p>출석 코드는 수업 화면에서 입력합니다.</p>
-          </div>
-          <Link className="button button--primary" to="/attendance">
-            출석 코드 입력 <ArrowRight size={16} />
-          </Link>
-        </header>
-
-        <div className="card-body">
-          {sessionsQuery.isLoading && (
-            <LoadingState message="오늘 수업을 불러오고 있습니다." />
-          )}
-          {sessionsQuery.isError && (
-            <ErrorState message="오늘 수업을 불러오지 못했습니다." onRetry={() => void sessionsQuery.refetch()} />
-          )}
-          {sessionsQuery.isSuccess &&
-            (sessions.length === 0 ? (
-              <EmptyState
-                title="오늘 예정된 수업이 없습니다."
-                description="수강 중인 반의 오늘 수업이 여기에 표시됩니다."
-              />
-            ) : (
-              <div className="data-list">
-                {sessions.map((session) => (
-                  <article className="list-row" key={session.id}>
-                    <div>
-                      <strong>{session.title || session.subjectName}</strong>
-                      <p>
-                        {session.className} · {session.courseOfferingName}
-                      </p>
-                      <small>
-                        <CalendarClock size={13} />
-                        {formatTime(session.startsAt)}~
-                        {formatTime(session.endsAt)} ·{" "}
-                        {session.room || "강의실 미정"}
-                      </small>
-                    </div>
-                    <span className="status-badge status-badge--neutral">
-                      {session.attendance
-                        ? ATTENDANCE_LABELS[session.attendance.status]
-                        : "미처리"}
-                    </span>
-                  </article>
-                ))}
-              </div>
-            ))}
-        </div>
-      </section>
-
-      <section className="surface-card">
-        <header className="card-header">
-          <div>
-            <h2>내 출석률</h2>
-            <p>
-              출석·지각은 1회, 조퇴는 0.5회로 계산하며 공결과 미처리는
-              제외합니다.
-            </p>
-          </div>
-        </header>
-
-        <div className="card-body">
-          {summaryQuery.isLoading && (
-            <LoadingState message="출석률을 계산하고 있습니다." />
-          )}
-          {summaryQuery.isError && (
-            <ErrorState message="출석률을 불러오지 못했습니다." onRetry={() => void summaryQuery.refetch()} />
-          )}
-          {summary &&
-            (summary.attendanceRate === null ? (
-              <EmptyState
-                title="아직 집계할 출석 기록이 없습니다."
-                description="수업이 진행되면 출석률이 표시됩니다."
-              />
-            ) : (
-              <>
-                <div className="attendance-chart__value">
-                  <strong>{summary.attendanceRate}%</strong>
-                  <span>전체 출석률 (대상 {summary.countedTotal}회)</span>
-                </div>
-                <div className="attendance-legend">
-                  <span>
-                    <i className="legend-dot legend-dot--success" />
-                    출석 {summary.present}
-                  </span>
-                  <span>
-                    <i className="legend-dot legend-dot--warning" />
-                    지각 {summary.late}
-                  </span>
-                  <span>
-                    <i className="legend-dot legend-dot--warning" />
-                    조퇴 {summary.earlyLeave}
-                  </span>
-                  <span>
-                    <i className="legend-dot legend-dot--danger" />
-                    결석 {summary.absent}
-                  </span>
-                  <span>공결 {summary.excused}</span>
-                </div>
-              </>
-            ))}
-        </div>
-      </section>
-    </>
-  );
+function dashboardName(name: string | undefined, fallback: string): string {
+  return name?.trim() || fallback;
 }
 
-function InstructorDashboard() {
-  const classesQuery = useQuery({
-    queryKey: ["instructor", "classes"],
-    queryFn: getInstructorClasses,
-  });
+type DashboardPanelProps = {
+  title: string;
+  to: string;
+  children: React.ReactNode;
+};
 
-  const rows = classesQuery.data ?? [];
-  const classCount = new Set(rows.map((item) => item.id)).size;
-
+function DashboardPanel({ title, to, children }: DashboardPanelProps) {
   return (
-    <>
-      <section className="page-header">
-        <div>
-          <h1>강사 대시보드</h1>
-          <p>담당 교육과정이 포함된 반과 수업을 관리합니다.</p>
-        </div>
-        <Link className="button button--primary" to="/schedule">
-          수업 일정 <ArrowRight size={16} />
+    <section className="surface-card dashboard-panel">
+      <header className="dashboard-panel__header">
+        <h2>{title}</h2>
+        <Link className="dashboard-panel__more" to={to}>
+          전체보기 <ArrowRight size={14} aria-hidden="true" />
         </Link>
-      </section>
-
-      <section className="surface-card">
-        <header className="card-header">
-          <div>
-            <h2>담당 반</h2>
-            <p>출석 코드 생성과 수업 일지는 수업 일정에서 처리합니다.</p>
-          </div>
-        </header>
-        <div className="card-body">
-          {classesQuery.isLoading && (
-            <LoadingState message="담당 반을 불러오고 있습니다." />
-          )}
-          {classesQuery.isError && (
-            <ErrorState message="담당 반을 불러오지 못했습니다." onRetry={() => void classesQuery.refetch()} />
-          )}
-          {classesQuery.isSuccess &&
-            (classCount === 0 ? (
-              <EmptyState
-                title="담당 반이 없습니다."
-                description="담당 교육과정이 반에 연결되면 여기에 표시됩니다."
-              />
-            ) : (
-              <div className="data-list">
-                {rows.map((row) => (
-                  <article
-                    className="list-row"
-                    key={`${row.id}:${row.courseOfferingId}`}
-                  >
-                    <div>
-                      <strong>{row.name}</strong>
-                      <p>
-                        {row.courseOfferingName} · 운영 과목 {row.subjectCount}
-                        개
-                      </p>
-                      <small>
-                        <CalendarClock size={13} />
-                        {row.startDate}~{row.endDate} ·{" "}
-                        {row.room || "강의실 미정"}
-                      </small>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ))}
-        </div>
-      </section>
-    </>
+      </header>
+      <div className="dashboard-panel__body">{children}</div>
+    </section>
   );
 }
 
-function OperationDashboard() {
-  const pendingQuery = useQuery({
-    queryKey: ["users", "dashboard", "pending"],
-    queryFn: () =>
-      getUsers({
-        role: "STUDENT",
-        status: "PENDING_APPROVAL",
-        page: 1,
-        limit: 1,
-      }),
-  });
-  const studentsQuery = useQuery({
-    queryKey: ["users", "dashboard", "students"],
-    queryFn: () =>
-      getUsers({ role: "STUDENT", status: "ACTIVE", page: 1, limit: 1 }),
-  });
-  const classesQuery = useQuery({
-    queryKey: ["managed-classes", "dashboard"],
-    queryFn: () => getManagedClasses(false),
-  });
-  const programsQuery = useQuery({
-    queryKey: ["education-programs", "dashboard"],
-    queryFn: () => getPrograms(),
-  });
+function DashboardLoading({ label }: { label: string }) {
+  return <p className="dashboard-panel__state">{label} 불러오는 중...</p>;
+}
 
-  const classes = classesQuery.data?.items ?? [];
-  const operating = classes.filter(
-    (item) => item.derivedStatus === "OPERATING",
-  ).length;
+function DashboardError({ label }: { label: string }) {
+  return <p className="dashboard-panel__state dashboard-panel__state--error">{label} 불러오지 못했습니다.</p>;
+}
 
-  const cards = [
-    {
-      label: "승인 대기 학생",
-      value: pendingQuery.data?.pagination.total,
-      detail: pendingQuery.data?.pagination.total === 0 ? "대기 중인 학생이 없습니다" : "확인이 필요합니다",
-      query: pendingQuery,
-      icon: UserCheck,
-      to: "/users",
-    },
-    {
-      label: "활성 학생",
-      value: studentsQuery.data?.pagination.total,
-      detail: "수강 가능한 학생",
-      query: studentsQuery,
-      icon: Users,
-      to: "/users",
-    },
-    {
-      label: "운영 중 반",
-      value: classesQuery.isSuccess ? operating : undefined,
-      detail: `전체 ${classes.length}개 반`,
-      query: classesQuery,
-      icon: BookOpenCheck,
-      to: "/classes",
-    },
-    {
-      label: "교육과정",
-      value: programsQuery.data?.pagination.total,
-      detail: "보관 제외",
-      query: programsQuery,
-      icon: ClipboardList,
-      to: "/courses",
-    },
-  ];
-
-  const quickActions = [
-    {
-      label: "학생·직원 관리",
-      description: "가입 승인과 계정 상태를 확인합니다.",
-      icon: Users,
-      to: "/users",
-    },
-    {
-      label: "반 운영 관리",
-      description: "교육과정, 기간과 수강생을 관리합니다.",
-      icon: BookOpenCheck,
-      to: "/classes",
-    },
-    {
-      label: "오늘 수업 일정",
-      description: "수업 시작과 출석 처리 상태를 확인합니다.",
-      icon: CalendarClock,
-      to: "/schedule",
-    },
-  ];
-
+function DashboardEmpty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="page-stack dashboard-page">
-      <section className="page-header">
-        <div>
-          <h1>운영 대시보드</h1>
-          <p>확인이 필요한 운영 현황과 자주 쓰는 업무를 한곳에서 봅니다.</p>
-        </div>
-      </section>
-
-      {pendingQuery.isSuccess && pendingQuery.data.pagination.total > 0 && (
-        <section className="dashboard-priority" aria-labelledby="pending-heading">
-          <UserCheck size={24} aria-hidden="true" />
-          <div>
-            <h2 id="pending-heading">가입 승인 대기 학생이 {pendingQuery.data.pagination.total}명 있습니다</h2>
-            <p>학생 정보를 확인하고 가입 승인을 처리하세요.</p>
-          </div>
-          <Link className="button button--primary" to="/users">학생 확인 <ArrowRight size={16} aria-hidden="true" /></Link>
-        </section>
-      )}
-
-      <section className="surface-card operation-overview">
-        <header className="card-header">
-          <div>
-            <h2>오늘의 운영 현황</h2>
-            <p>확인이 필요한 항목부터 살펴보세요.</p>
-          </div>
-          <span className="operation-overview__date">
-            {new Intl.DateTimeFormat("ko-KR", {
-              timeZone: "Asia/Seoul",
-              month: "long",
-              day: "numeric",
-              weekday: "short",
-            }).format(new Date())}
-          </span>
-        </header>
-
-        <div className="summary-grid">
-          {cards.map((card) => (
-            <div className="summary-cell" key={card.label}>
-              <Link className="summary-card" to={card.to} aria-busy={card.query.isPending}>
-                <div className="summary-card__icon" aria-hidden="true">
-                  <card.icon size={20} />
-                </div>
-                <div>
-                  <p>{card.label}</p>
-                  <strong className={card.query.isPending || card.query.isError ? "summary-card__state" : undefined}>
-                    {card.query.isPending ? "불러오는 중" : card.query.isError ? "조회 실패" : (card.value ?? "—")}
-                  </strong>
-                  <span>{card.query.isError ? "잠시 후 다시 시도해 주세요" : card.query.isPending ? "현황을 확인하고 있습니다" : card.detail}</span>
-                </div>
-                <ChevronRight size={17} aria-hidden="true" />
-              </Link>
-              {card.query.isError && (
-                <button type="button" className="button button--ghost summary-cell__retry"
-                  disabled={card.query.isFetching}
-                  aria-label={`${card.label} 다시 시도`}
-                  onClick={() => void card.query.refetch()}>
-                  <RefreshCw size={14} aria-hidden="true" />
-                  {card.query.isFetching ? "재시도 중" : "다시 시도"}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="surface-card dashboard-quick-actions">
-        <header className="card-header">
-          <div>
-            <h2>빠른 업무</h2>
-            <p>매일 자주 사용하는 관리 화면으로 이동합니다.</p>
-          </div>
-        </header>
-
-        <nav className="dashboard-action-list" aria-label="빠른 업무">
-          {quickActions.map((action) => (
-            <Link className="dashboard-action" key={action.to} to={action.to}>
-              <span className="dashboard-action__icon" aria-hidden="true">
-                <action.icon size={19} />
-              </span>
-              <span className="dashboard-action__body">
-                <strong>{action.label}</strong>
-                <small>{action.description}</small>
-              </span>
-              <ChevronRight size={17} aria-hidden="true" />
-            </Link>
-          ))}
-        </nav>
-      </section>
+    <div className="dashboard-empty">
+      <CheckCircle2 size={19} aria-hidden="true" />
+      <span>{children}</span>
     </div>
   );
 }
 
-type PlaceholderPageProps = {
+type DashboardScheduleItem = {
+  id: string;
   title: string;
-  description: string;
+  meta: string;
+  startsAt: string;
+  status: string;
 };
+
+function ScheduleList({ items }: { items: DashboardScheduleItem[] }) {
+  if (items.length === 0) return <DashboardEmpty>오늘 예정된 수업이 없습니다.</DashboardEmpty>;
+  return (
+    <div className="dashboard-schedule-list">
+      {items.slice(0, 5).map((item) => (
+        <article className="dashboard-schedule-row" key={item.id}>
+          <time>{formatTime(item.startsAt)}</time>
+          <span className={`dashboard-schedule-row__dot dashboard-schedule-row__dot--${item.status.toLowerCase()}`} />
+          <div>
+            <strong>{item.title}</strong>
+            <small>{item.meta}</small>
+          </div>
+          <span className={`status-badge status-badge--${item.status === "IN_PROGRESS" ? "success" : item.status === "CANCELED" ? "danger" : "neutral"}`}>
+            {SESSION_LABELS[item.status] ?? item.status}
+          </span>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+type DashboardTask = {
+  id: string;
+  title: string;
+  detail: string;
+  badge: string;
+  tone: "danger" | "warning" | "neutral";
+  to: string;
+};
+
+function TaskList({ items }: { items: DashboardTask[] }) {
+  if (items.length === 0) return <DashboardEmpty>지금 바로 확인할 긴급 업무가 없습니다.</DashboardEmpty>;
+  return (
+    <div className="dashboard-task-list">
+      {items.slice(0, 5).map((item) => (
+        <Link className="dashboard-task-row" key={item.id} to={item.to}>
+          <span className="dashboard-task-row__check"><Circle size={16} aria-hidden="true" /></span>
+          <span className="dashboard-task-row__copy">
+            <strong>{item.title}</strong>
+            <small>{item.detail}</small>
+          </span>
+          <span className={`dashboard-task-row__badge dashboard-task-row__badge--${item.tone}`}>{item.badge}</span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+type DashboardNoticeItem = Pick<Notice, "id" | "title" | "important" | "createdAt"> | Pick<MyNotice, "id" | "title" | "important" | "createdAt">;
+
+function NoticeList({ items }: { items: DashboardNoticeItem[] }) {
+  if (items.length === 0) return <DashboardEmpty>등록된 공지사항이 없습니다.</DashboardEmpty>;
+  return (
+    <div className="dashboard-notice-list">
+      {items.slice(0, 5).map((notice) => (
+        <Link className="dashboard-notice-row" key={notice.id} to="/notices">
+          <span className={notice.important ? "dashboard-notice-row__pin dashboard-notice-row__pin--active" : "dashboard-notice-row__pin"}>
+            {notice.important ? <Pin size={14} aria-label="중요 공지" /> : <Bell size={13} aria-hidden="true" />}
+          </span>
+          <strong>{notice.title}</strong>
+          <time>{formatDate(notice.createdAt)}</time>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+type DashboardActivity = {
+  id: string;
+  title: string;
+  occurredAt: string;
+  tone?: "primary" | "muted";
+};
+
+function ActivityList({ items }: { items: DashboardActivity[] }) {
+  if (items.length === 0) return <DashboardEmpty>최근 활동이 없습니다.</DashboardEmpty>;
+  return (
+    <div className="dashboard-activity-list">
+      {items.slice(0, 5).map((activity) => (
+        <article className="dashboard-activity-row" key={activity.id}>
+          <span className={`dashboard-activity-row__marker dashboard-activity-row__marker--${activity.tone ?? "muted"}`} />
+          <div>
+            <strong>{activity.title}</strong>
+            <time>{formatRelativeTime(activity.occurredAt)}</time>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function DashboardHeader({ name }: { name: string }) {
+  return (
+    <section className="dashboard-greeting">
+      <div>
+        <p className="dashboard-greeting__eyebrow">오늘의 학원 운영</p>
+        <h1>안녕하세요, {name}님!</h1>
+        <p>오늘도 좋은 하루 되세요.</p>
+      </div>
+      <time dateTime={todayString()}>{formatToday()}</time>
+    </section>
+  );
+}
+
+async function getSessionsForClasses(classIds: string[]): Promise<ClassSession[]> {
+  if (classIds.length === 0) return [];
+  const today = todayString();
+  const sessionGroups = await Promise.all(classIds.map((classId) => getClassSessions(classId, { startDate: today, endDate: today })));
+  return sessionGroups.flat().sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+}
+
+export function DashboardPage() {
+  const { user } = useAuth();
+  if (user?.role === "STUDENT") return <StudentDashboard name={dashboardName(user.name, "학생")} />;
+  if (user?.role === "INSTRUCTOR") return <InstructorDashboard name={dashboardName(user.name, "강사")} />;
+  return <OperationDashboard name={dashboardName(user?.name, "운영자")} isAdmin={user?.role === "ADMIN"} />;
+}
+
+function StudentDashboard({ name }: { name: string }) {
+  const sessionsQuery = useQuery({ queryKey: ["attendance", "my-sessions"], queryFn: getMyAttendanceSessions });
+  const summaryQuery = useQuery({ queryKey: ["attendance", "my-summary"], queryFn: getMyAttendanceSummary });
+  const noticesQuery = useQuery({ queryKey: ["notices", "dashboard", "mine"], queryFn: () => getMyNotices({ page: 1 }) });
+  const sessions = sessionsQuery.data ?? [];
+  const scheduleItems: DashboardScheduleItem[] = sessions.map((session) => ({
+    id: session.id,
+    title: session.title || session.subjectName,
+    meta: `${session.className} · ${session.room || "강의실 미정"}`,
+    startsAt: session.startsAt,
+    status: session.status,
+  }));
+  const tasks: DashboardTask[] = sessions
+    .filter((session) => !session.attendance || session.attendance.status === "UNPROCESSED")
+    .map((session) => ({
+      id: `attendance:${session.id}`,
+      title: `${session.subjectName} 출석 확인`,
+      detail: `${formatTime(session.startsAt)} 수업 · ${session.codeAvailable ? "출석 코드 입력 가능" : "수업 시작 전"}`,
+      badge: session.codeAvailable ? "지금 확인" : "오늘",
+      tone: session.codeAvailable ? "danger" : "warning",
+      to: "/attendance",
+    }));
+  const activities: DashboardActivity[] = sessions
+    .filter((session): session is StudentAttendanceSession & { attendance: NonNullable<StudentAttendanceSession["attendance"]> } => Boolean(session.attendance))
+    .map((session) => ({
+      id: `student-session:${session.id}`,
+      title: `${session.subjectName} · ${ATTENDANCE_LABELS[session.attendance.status] ?? session.attendance.status}`,
+      occurredAt: session.attendance.checkedAt || session.startsAt,
+      tone: session.attendance.status === "PRESENT" ? "primary" : "muted",
+    }));
+  if (summaryQuery.data?.attendanceRate !== null && summaryQuery.data?.attendanceRate !== undefined) {
+    activities.unshift({ id: "attendance-summary", title: `누적 출석률 ${summaryQuery.data.attendanceRate}% · 대상 ${summaryQuery.data.countedTotal}회`, occurredAt: new Date().toISOString(), tone: "primary" });
+  }
+  return (
+    <div className="dashboard-page">
+      <DashboardHeader name={name} />
+      <div className="dashboard-workspace">
+        <DashboardPanel title="오늘의 일정" to="/attendance">
+          {sessionsQuery.isPending ? <DashboardLoading label="오늘 일정을" /> : sessionsQuery.isError ? <DashboardError label="오늘 일정을" /> : <ScheduleList items={scheduleItems} />}
+        </DashboardPanel>
+        <DashboardPanel title="긴급한 일" to="/learning">
+          {sessionsQuery.isPending ? <DashboardLoading label="할 일을" /> : sessionsQuery.isError ? <DashboardError label="할 일을" /> : <TaskList items={tasks} />}
+        </DashboardPanel>
+        <DashboardPanel title="최근 공지사항" to="/notices">
+          {noticesQuery.isPending ? <DashboardLoading label="공지사항을" /> : noticesQuery.isError ? <DashboardError label="공지사항을" /> : <NoticeList items={noticesQuery.data.items} />}
+        </DashboardPanel>
+        <DashboardPanel title="최근 활동" to="/attendance">
+          {sessionsQuery.isPending || summaryQuery.isPending ? <DashboardLoading label="최근 활동을" /> : sessionsQuery.isError || summaryQuery.isError ? <DashboardError label="최근 활동을" /> : <ActivityList items={activities} />}
+        </DashboardPanel>
+      </div>
+    </div>
+  );
+}
+
+function InstructorDashboard({ name }: { name: string }) {
+  const classesQuery = useQuery({ queryKey: ["instructor", "classes"], queryFn: getInstructorClasses });
+  const classIds = [...new Set((classesQuery.data ?? []).map((item) => item.id))];
+  const sessionsQuery = useQuery({
+    queryKey: ["instructor", "dashboard", "sessions", todayString(), classIds],
+    queryFn: () => getSessionsForClasses(classIds),
+    enabled: classesQuery.isSuccess,
+  });
+  const noticesQuery = useQuery({ queryKey: ["notices", "dashboard", "mine"], queryFn: () => getMyNotices({ page: 1 }) });
+  const sessions = sessionsQuery.data ?? [];
+  const scheduleItems: DashboardScheduleItem[] = sessions.map((session) => ({ id: session.id, title: session.title || session.subjectName, meta: `${session.courseOfferingName} · ${session.room || "강의실 미정"}`, startsAt: session.startsAt, status: session.status }));
+  const tasks: DashboardTask[] = sessions.filter((session) => session.status === "COMPLETED" && !session.journalWrittenAt).map((session) => ({ id: `journal:${session.id}`, title: `${session.subjectName} 수업 일지 작성`, detail: `${formatTime(session.endsAt)} 종료 수업`, badge: "오늘 마감", tone: "danger", to: "/schedule" }));
+  const activities: DashboardActivity[] = sessions.map((session) => ({ id: `instructor-session:${session.id}`, title: `${session.subjectName} 수업 ${SESSION_LABELS[session.status] ?? session.status}`, occurredAt: session.updatedAt, tone: session.status === "IN_PROGRESS" || session.status === "COMPLETED" ? "primary" : "muted" }));
+  return (
+    <div className="dashboard-page">
+      <DashboardHeader name={name} />
+      <div className="dashboard-workspace">
+        <DashboardPanel title="오늘의 일정" to="/schedule">
+          {classesQuery.isPending || sessionsQuery.isPending ? <DashboardLoading label="오늘 일정을" /> : classesQuery.isError || sessionsQuery.isError ? <DashboardError label="오늘 일정을" /> : <ScheduleList items={scheduleItems} />}
+        </DashboardPanel>
+        <DashboardPanel title="긴급한 일" to="/schedule">
+          {classesQuery.isPending || sessionsQuery.isPending ? <DashboardLoading label="할 일을" /> : classesQuery.isError || sessionsQuery.isError ? <DashboardError label="할 일을" /> : <TaskList items={tasks} />}
+        </DashboardPanel>
+        <DashboardPanel title="최근 공지사항" to="/notices">
+          {noticesQuery.isPending ? <DashboardLoading label="공지사항을" /> : noticesQuery.isError ? <DashboardError label="공지사항을" /> : <NoticeList items={noticesQuery.data.items} />}
+        </DashboardPanel>
+        <DashboardPanel title="최근 활동" to="/schedule">
+          {sessionsQuery.isPending ? <DashboardLoading label="최근 활동을" /> : sessionsQuery.isError ? <DashboardError label="최근 활동을" /> : <ActivityList items={activities} />}
+        </DashboardPanel>
+      </div>
+    </div>
+  );
+}
+
+function inquiryTask(inquiry: InquiryListItem): DashboardTask {
+  return { id: `inquiry:${inquiry.id}`, title: inquiry.title, detail: `${inquiry.className || "일반 문의"} · 답변 ${inquiry.replyCount}건`, badge: inquiry.status === "RECEIVED" ? "답변 대기" : "처리 중", tone: inquiry.status === "RECEIVED" ? "danger" : "warning", to: "/inquiries" };
+}
+
+function examTask(exam: Exam): DashboardTask {
+  const isGrading = exam.status === "GRADING";
+  return { id: `exam:${exam.id}`, title: exam.title, detail: `${exam.courseOfferingName} · ${isGrading ? "채점 결과 확인 필요" : "시험 설정 확인 필요"}`, badge: isGrading ? "채점 필요" : "예약 전", tone: isGrading ? "danger" : "warning", to: "/learning" };
+}
+
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+  BACKUP_RESTORE_TESTED: "백업 복원 상태를 점검했습니다.",
+  CLASS_CREATED: "새 반을 등록했습니다.",
+  CLASS_UPDATED: "반 정보를 수정했습니다.",
+  CLASS_SESSION_STATUS_CHANGED: "수업 상태를 변경했습니다.",
+  ATTENDANCE_MANUALLY_CHANGED: "출석 정보를 수정했습니다.",
+  EXAM_CREATED: "시험을 등록했습니다.",
+  EXAM_SCHEDULED: "시험 일정을 확정했습니다.",
+  EXAM_RESULTS_PUBLISHED: "시험 결과를 공개했습니다.",
+  EXAM_TEMPLATE_CREATED: "시험 템플릿을 등록했습니다.",
+  EXAM_TEMPLATE_UPDATED: "시험 템플릿을 수정했습니다.",
+  HANDOVER_CREATED: "강사 인수인계를 등록했습니다.",
+  HANDOVER_ACKNOWLEDGED: "강사 인수인계를 확인했습니다.",
+  INQUIRY_CREATED: "문의사항을 등록했습니다.",
+  INQUIRY_REPLIED: "문의사항에 답변했습니다.",
+  NOTICE_CREATED: "공지사항을 등록했습니다.",
+  NOTICE_UPDATED: "공지사항을 수정했습니다.",
+  QUESTION_CREATED: "문제은행에 문항을 등록했습니다.",
+  QUESTION_UPDATED: "문제은행 문항을 수정했습니다.",
+  STUDENT_SIGNUP_APPROVED: "학생 가입을 승인했습니다.",
+  USER_DEACTIVATED: "사용자 계정을 비활성화했습니다.",
+  USER_REACTIVATED: "사용자 계정을 다시 활성화했습니다.",
+};
+
+function auditActivity(log: AuditLog): DashboardActivity {
+  const action = AUDIT_ACTION_LABELS[log.action] ?? `${log.action} 작업을 처리했습니다.`;
+  const actor = log.actorName ? `${log.actorName}님이` : "시스템이";
+  return { id: `audit:${log.id}`, title: `${actor} ${action}`, occurredAt: log.createdAt, tone: log.result === "SUCCESS" ? "primary" : "muted" };
+}
+
+function OperationDashboard({ name, isAdmin }: { name: string; isAdmin: boolean }) {
+  const classesQuery = useQuery({ queryKey: ["managed-classes", "dashboard"], queryFn: () => getManagedClasses(false) });
+  const operatingClassIds = (classesQuery.data?.items ?? []).filter((item) => item.derivedStatus === "OPERATING").map((item) => item.id);
+  const sessionsQuery = useQuery({ queryKey: ["operations", "dashboard", "sessions", todayString(), operatingClassIds], queryFn: () => getSessionsForClasses(operatingClassIds), enabled: classesQuery.isSuccess });
+  const pendingQuery = useQuery({ queryKey: ["users", "dashboard", "pending"], queryFn: () => getUsers({ role: "STUDENT", status: "PENDING_APPROVAL", page: 1, limit: 1 }) });
+  const inquiriesQuery = useQuery({ queryKey: ["inquiries", "dashboard"], queryFn: () => getInquiries({ page: 1 }) });
+  const noticesQuery = useQuery({ queryKey: ["notices", "dashboard", "staff"], queryFn: () => getNotices({ page: 1 }) });
+  const examsQuery = useQuery({ queryKey: ["exams", "dashboard"], queryFn: () => getExams({ page: 1, limit: 20 }) });
+  const auditQuery = useQuery({ queryKey: ["operations", "dashboard", "audit"], queryFn: () => getAuditLogs({ page: 1 }), enabled: isAdmin });
+  const sessions = sessionsQuery.data ?? [];
+  const scheduleItems: DashboardScheduleItem[] = sessions.map((session) => ({ id: session.id, title: session.title || session.subjectName, meta: `${session.courseOfferingName} · ${session.room || "강의실 미정"}`, startsAt: session.startsAt, status: session.status }));
+  const inquiryTasks = (inquiriesQuery.data?.items ?? []).filter((item) => item.status === "RECEIVED" || item.status === "IN_PROGRESS").map(inquiryTask);
+  const examTasks = (examsQuery.data?.items ?? []).filter((item) => item.status === "DRAFT" || item.status === "GRADING").map(examTask);
+  const pendingCount = pendingQuery.data?.pagination.total ?? 0;
+  const tasks: DashboardTask[] = [
+    ...(pendingCount > 0 ? [{ id: "pending-students", title: `가입 승인 대기 학생 ${pendingCount}명`, detail: "학생 정보를 확인하고 가입 승인을 처리하세요.", badge: "오늘 확인", tone: "danger" as const, to: "/users" }] : []),
+    ...inquiryTasks,
+    ...examTasks,
+  ];
+  const fallbackActivities: DashboardActivity[] = [
+    ...(inquiriesQuery.data?.items ?? []).map((item) => ({ id: `inquiry-activity:${item.id}`, title: `문의사항 ‘${item.title}’이 업데이트됐습니다.`, occurredAt: item.updatedAt, tone: "primary" as const })),
+    ...(noticesQuery.data?.items ?? []).map((item) => ({ id: `notice-activity:${item.id}`, title: `공지사항 ‘${item.title}’이 등록됐습니다.`, occurredAt: item.createdAt, tone: "muted" as const })),
+  ].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  const activities = isAdmin ? (auditQuery.data?.items ?? []).map(auditActivity) : fallbackActivities;
+  const taskQueriesPending = pendingQuery.isPending || inquiriesQuery.isPending || examsQuery.isPending;
+  const taskQueriesError = pendingQuery.isError || inquiriesQuery.isError || examsQuery.isError;
+  const activityPending = isAdmin ? auditQuery.isPending : inquiriesQuery.isPending || noticesQuery.isPending;
+  const activityError = isAdmin ? auditQuery.isError : inquiriesQuery.isError || noticesQuery.isError;
+  return (
+    <div className="dashboard-page">
+      <DashboardHeader name={name} />
+      <div className="dashboard-workspace">
+        <DashboardPanel title="오늘의 일정" to="/classes">
+          {classesQuery.isPending || sessionsQuery.isPending ? <DashboardLoading label="오늘 일정을" /> : classesQuery.isError || sessionsQuery.isError ? <DashboardError label="오늘 일정을" /> : <ScheduleList items={scheduleItems} />}
+        </DashboardPanel>
+        <DashboardPanel title="긴급한 일" to="/users">
+          {taskQueriesPending ? <DashboardLoading label="할 일을" /> : taskQueriesError ? <DashboardError label="할 일을" /> : <TaskList items={tasks} />}
+        </DashboardPanel>
+        <DashboardPanel title="최근 공지사항" to="/notices">
+          {noticesQuery.isPending ? <DashboardLoading label="공지사항을" /> : noticesQuery.isError ? <DashboardError label="공지사항을" /> : <NoticeList items={noticesQuery.data.items} />}
+        </DashboardPanel>
+        <DashboardPanel title="최근 활동" to={isAdmin ? "/system" : "/inquiries"}>
+          {activityPending ? <DashboardLoading label="최근 활동을" /> : activityError ? <DashboardError label="최근 활동을" /> : <ActivityList items={activities} />}
+        </DashboardPanel>
+      </div>
+    </div>
+  );
+}
+
+type PlaceholderPageProps = { title: string; description: string };
 
 export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
   return (
     <>
-      <section className="page-header">
-        <div>
-          <h1>{title}</h1>
-          <p>{description}</p>
-        </div>
-      </section>
-
-      <section className="content-card placeholder-card">
-        <ClipboardList size={36} />
-        <h2>{title} 화면 준비 완료</h2>
-        <p>해당 백엔드 단계와 함께 실제 기능을 연결합니다.</p>
-      </section>
+      <section className="page-header"><div><h1>{title}</h1><p>{description}</p></div></section>
+      <section className="content-card placeholder-card"><ClipboardList size={36} /><h2>{title} 화면 준비 완료</h2><p>해당 백엔드 단계와 함께 실제 기능을 연결합니다.</p></section>
     </>
   );
 }
