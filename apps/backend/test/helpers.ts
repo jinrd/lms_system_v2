@@ -374,6 +374,175 @@ export async function seedQuestionInLiveExam(
   return { questionId: question.id, examId: exam.id };
 }
 
+export type FullWrittenExam = {
+  examId: string;
+  writtenPartId: string;
+  /** source 문제은행 id */
+  sourceSingleId: string;
+  sourceShortId: string;
+  /** studentId -> attemptId */
+  attempts: Record<string, string>;
+};
+
+/**
+ * OPEN 상태의 필기 시험 하나를 통째로 만든다: 문제은행(단일 선택 1 + 단답형 1) →
+ * 시험 → WRITTEN 파트(응시 기간 열림) → 문항 스냅샷 → 대상 반 → 학생별 응시 기록
+ * (NOT_STARTED). 학생이 바로 `POST /me/exams/:id/parts/WRITTEN/start` 할 수 있다.
+ */
+export async function seedFullWrittenExam(
+  prisma: PrismaService,
+  tc: TeachingContext,
+  studentIds: string[],
+): Promise<FullWrittenExam> {
+  const now = Date.now();
+
+  const single = await prisma.questionBank.create({
+    data: {
+      subjectId: tc.subjectId,
+      type: QuestionType.SINGLE_CHOICE,
+      prompt: '1 + 1 = ?',
+      defaultScore: 10,
+      difficulty: DifficultyLevel.NORMAL,
+      active: true,
+      options: {
+        create: [
+          { content: '2', displayOrder: 0, isCorrect: true },
+          { content: '3', displayOrder: 1, isCorrect: false },
+        ],
+      },
+    },
+    select: { id: true },
+  });
+  const short = await prisma.questionBank.create({
+    data: {
+      subjectId: tc.subjectId,
+      type: QuestionType.SHORT_ANSWER,
+      prompt: '대한민국의 수도는?',
+      defaultScore: 10,
+      difficulty: DifficultyLevel.NORMAL,
+      active: true,
+      acceptedAnswers: {
+        create: {
+          answerText: '서울',
+          normalizedAnswer: '서울',
+          displayOrder: 0,
+        },
+      },
+    },
+    select: { id: true },
+  });
+
+  // 시험·파트·문항을 한 트랜잭션에 넣는다. 파트 배점 합계 = 총점 지연 제약
+  // 트리거가 커밋 시점에만 검사하도록 하기 위함이다(중간에는 합계가 안 맞는다).
+  const { examId, partId } = await prisma.$transaction(async (tx) => {
+    const exam = await tx.exam.create({
+      data: {
+        courseOfferingId: tc.courseOfferingId,
+        title: '필기 시험',
+        scope: ExamScope.SUBJECT,
+        stage: ExamStage.REGULAR,
+        status: ExamStatus.OPEN,
+        opensAt: new Date(now - 3_600_000),
+        closesAt: new Date(now + 3_600_000),
+        targetLockedAt: new Date(now - 1_800_000),
+      },
+      select: { id: true },
+    });
+    await tx.examSubject.create({
+      data: {
+        examId: exam.id,
+        courseOfferingId: tc.courseOfferingId,
+        courseOfferingSubjectId: tc.courseOfferingSubjectId,
+      },
+    });
+    await tx.examClassTarget.create({
+      data: {
+        examId: exam.id,
+        courseOfferingId: tc.courseOfferingId,
+        classId: tc.classId,
+      },
+    });
+    const part = await tx.examPart.create({
+      data: {
+        examId: exam.id,
+        type: ExamPartType.WRITTEN,
+        totalScore: 20,
+        passScore: 12,
+        opensAt: new Date(now - 3_600_000),
+        closesAt: new Date(now + 3_600_000),
+        durationMinutes: 60,
+      },
+      select: { id: true },
+    });
+    await tx.examQuestion.create({
+      data: {
+        examId: exam.id,
+        examPartId: part.id,
+        courseOfferingSubjectId: tc.courseOfferingSubjectId,
+        sourceQuestionId: single.id,
+        type: QuestionType.SINGLE_CHOICE,
+        prompt: '1 + 1 = ?',
+        score: 10,
+        displayOrder: 0,
+        options: {
+          create: [
+            { content: '2', displayOrder: 0, isCorrect: true },
+            { content: '3', displayOrder: 1, isCorrect: false },
+          ],
+        },
+      },
+    });
+    await tx.examQuestion.create({
+      data: {
+        examId: exam.id,
+        examPartId: part.id,
+        courseOfferingSubjectId: tc.courseOfferingSubjectId,
+        sourceQuestionId: short.id,
+        type: QuestionType.SHORT_ANSWER,
+        prompt: '대한민국의 수도는?',
+        score: 10,
+        displayOrder: 1,
+        normalizationVersion: '1',
+        acceptedAnswers: {
+          create: { answerText: '서울', normalizedAnswer: '서울' },
+        },
+      },
+    });
+    return { examId: exam.id, partId: part.id };
+  });
+  const exam = { id: examId };
+  const part = { id: partId };
+
+  const attempts: Record<string, string> = {};
+  for (const studentId of studentIds) {
+    const enr = tc.enrollments[studentId];
+    const attempt = await prisma.examAttempt.create({
+      data: {
+        examId: exam.id,
+        courseOfferingId: tc.courseOfferingId,
+        classId: tc.classId,
+        studentId,
+        enrollmentId: enr.enrollmentId,
+        status: 'NOT_STARTED',
+        writtenResult: 'PENDING',
+        practicalResult: 'PENDING',
+        finalResult: 'PENDING',
+        version: 0,
+      },
+      select: { id: true },
+    });
+    attempts[studentId] = attempt.id;
+  }
+
+  return {
+    examId: exam.id,
+    writtenPartId: part.id,
+    sourceSingleId: single.id,
+    sourceShortId: short.id,
+    attempts,
+  };
+}
+
 /** loginId/password 로 로그인해 accessToken·refreshToken 을 얻는다. */
 export async function login(
   ctx: TestContext,
