@@ -19,7 +19,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
 import { PendingUsersQueryDto } from './dto/pending-users-query.dto';
 import { randomBytes } from 'crypto';
-import { CreateStaffDto, CreateStaffResponse } from './dto/create-staff.dto';
+import { ApproveSignupDto } from './dto/approve-signup.dto';
 import {
   IssueTemporaryPasswordDto,
   IssueTemporaryPasswordResponse,
@@ -41,7 +41,7 @@ export type StudentProfileResponse = {
   updatedAt: string;
 };
 
-export type PendingStudentResponse = {
+export type PendingSignupResponse = {
   id: string;
   loginId: string;
   email: string | null;
@@ -55,8 +55,8 @@ export type PendingStudentResponse = {
   createdAt: string;
 };
 
-export type PendingStudentsPageResponse = {
-  items: PendingStudentResponse[];
+export type PendingSignupsPageResponse = {
+  items: PendingSignupResponse[];
   pagination: {
     page: number;
     limit: number;
@@ -70,6 +70,10 @@ export type UserStatusChangeResponse = {
   previousStatus: UserStatus;
   status: UserStatus;
   changedAt: string;
+};
+
+export type SignupApprovalResponse = UserStatusChangeResponse & {
+  role: UserRole;
 };
 
 export type UserSummaryResponse = {
@@ -104,15 +108,19 @@ export class UsersService {
   /** 하루를 밀리초로. 보관 기한 계산에 쓴다. */
   private static readonly DAY_MS = 24 * 60 * 60 * 1000;
 
-  async findPendingStudents(
+  /**
+   * 가입 대기(PENDING_APPROVAL) 신청자를 돌려준다. 가입은 모두 공개 회원가입으로
+   * 들어오므로 신청 시점 역할은 항상 STUDENT이고, 승인자가 역할을 정한다
+   * (기획안 §6.1 / D-18).
+   */
+  async findPendingSignups(
     query: PendingUsersQueryDto,
-  ): Promise<PendingStudentsPageResponse> {
+  ): Promise<PendingSignupsPageResponse> {
     const skip = (query.page - 1) * query.limit;
 
     const [users, total] = await this.prisma.$transaction(async (tx) => {
       const users = await tx.user.findMany({
         where: {
-          role: UserRole.STUDENT,
           status: UserStatus.PENDING_APPROVAL,
         },
         include: {
@@ -126,7 +134,6 @@ export class UsersService {
       });
       const total = await tx.user.count({
         where: {
-          role: UserRole.STUDENT,
           status: UserStatus.PENDING_APPROVAL,
         },
       });
@@ -141,7 +148,7 @@ export class UsersService {
         !user.gender ||
         !user.studentProfile
       ) {
-        throw new Error(`가입 대기 학생 데이터가 불완전합니다: ${user.id}`);
+        throw new Error(`가입 신청자 데이터가 불완전합니다: ${user.id}`);
       }
 
       return {
@@ -170,12 +177,21 @@ export class UsersService {
     };
   }
 
-  async approveStudent(
+  /**
+   * 가입 신청을 승인하면서 역할을 부여한다(기획안 §6.1 / D-18). 승인자별 부여
+   * 가능 역할은 관리자 → 학생·강사·실장·원장·관리자, 실장·원장 → 학생·강사다.
+   * 학생이 아닌 역할로 승인하면 회원가입 때 만들어진 학생 프로필과 생년월일·성별을
+   * 지운다.
+   */
+  async approveSignup(
     userId: string,
+    dto: ApproveSignupDto,
     actor: AuthenticatedUser,
     ipAddress?: string,
-  ): Promise<UserStatusChangeResponse> {
+  ): Promise<SignupApprovalResponse> {
     const changedAt = new Date();
+    const grantedRole = dto.role;
+    this.assertCanGrantRole(actor.role, grantedRole);
 
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`
@@ -191,17 +207,19 @@ export class UsersService {
         },
       });
 
-      if (!user || user.role !== UserRole.STUDENT) {
-        throw new NotFoundException('학생 계정을 찾을 수 없습니다.');
+      if (!user) {
+        throw new NotFoundException('가입 신청자를 찾을 수 없습니다.');
       }
 
       if (user.status !== UserStatus.PENDING_APPROVAL) {
         throw new ConflictException(
-          '가입 대기 상태의 학생만 승인할 수 있습니다.',
+          '가입 대기 상태의 신청자만 승인할 수 있습니다.',
         );
       }
 
       const previousStatus = user.status;
+      const previousRole = user.role;
+      const isStudent = grantedRole === UserRole.STUDENT;
 
       await tx.user.update({
         where: {
@@ -209,20 +227,28 @@ export class UsersService {
         },
         data: {
           status: UserStatus.ACTIVE,
+          role: grantedRole,
           approvedById: actor.id,
           approvedAt: changedAt,
           rejectedAt: null,
           rejectionReason: null,
           scheduledDeletionAt: null,
+          ...(isStudent ? {} : { birthDate: null, gender: null }),
         },
       });
+
+      if (!isStudent) {
+        // 회원가입 폼은 학생 형태라 항상 학생 프로필이 생성된다. 학생이 아닌
+        // 역할로 승인하면 필요 없는 개인정보를 남기지 않는다.
+        await tx.studentProfile.deleteMany({ where: { userId: user.id } });
+      }
 
       await tx.userStatusHistory.create({
         data: {
           userId: user.id,
           previousStatus,
           newStatus: UserStatus.ACTIVE,
-          reason: '학생 회원가입 승인',
+          reason: `회원가입 승인 (${grantedRole})`,
           changedById: actor.id,
           changedAt,
         },
@@ -232,14 +258,16 @@ export class UsersService {
         data: {
           actorId: actor.id,
           actorRole: actor.role,
-          action: 'STUDENT_SIGNUP_APPROVED',
+          action: 'SIGNUP_APPROVED',
           resourceType: 'USER',
           resourceId: user.id,
           beforeData: {
             status: previousStatus,
+            role: previousRole,
           },
           afterData: {
             status: UserStatus.ACTIVE,
+            role: grantedRole,
             approvedAt: changedAt.toISOString(),
           },
           ipAddress,
@@ -251,12 +279,13 @@ export class UsersService {
         id: user.id,
         previousStatus,
         status: UserStatus.ACTIVE,
+        role: grantedRole,
         changedAt: changedAt.toISOString(),
       };
     });
   }
 
-  async rejectStudent(
+  async rejectSignup(
     userId: string,
     reason: string,
     actor: AuthenticatedUser,
@@ -286,13 +315,13 @@ export class UsersService {
         },
       });
 
-      if (!user || user.role !== UserRole.STUDENT) {
-        throw new NotFoundException('학생 계정을 찾을 수 없습니다.');
+      if (!user) {
+        throw new NotFoundException('가입 신청자를 찾을 수 없습니다.');
       }
 
       if (user.status !== UserStatus.PENDING_APPROVAL) {
         throw new ConflictException(
-          '가입 대기 상태의 학생만 거절할 수 있습니다.',
+          '가입 대기 상태의 신청자만 거절할 수 있습니다.',
         );
       }
 
@@ -341,7 +370,7 @@ export class UsersService {
         data: {
           actorId: actor.id,
           actorRole: actor.role,
-          action: 'STUDENT_SIGNUP_REJECTED',
+          action: 'SIGNUP_REJECTED',
           resourceType: 'USER',
           resourceId: user.id,
           beforeData: {
@@ -365,124 +394,6 @@ export class UsersService {
         changedAt: changedAt.toISOString(),
       };
     });
-  }
-
-  async createStaff(
-    dto: CreateStaffDto,
-    actor: AuthenticatedUser,
-    ipAddress?: string,
-  ): Promise<CreateStaffResponse> {
-    this.assertCanCreateStaff(actor.role, dto.role);
-
-    const loginId = dto.loginId.trim().toLowerCase();
-    const normalizedPhone = dto.phone.replace(/[^0-9]/g, '');
-
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        loginId: {
-          equals: loginId,
-          mode: 'insensitive',
-        },
-        status: {
-          not: UserStatus.DELETED,
-        },
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    if (existingUser) {
-      throw new ConflictException('이미 사용 중인 로그인 아이디입니다.');
-    }
-
-    const temporaryPassword = this.createTemporaryPassword();
-
-    if (
-      temporaryPassword.toLowerCase() === loginId ||
-      temporaryPassword.replace(/[^0-9]/g, '') === normalizedPhone
-    ) {
-      throw new BadRequestException(
-        '임시 비밀번호를 생성하지 못했습니다. 다시 시도해 주세요.',
-      );
-    }
-
-    const passwordHash = await argon2.hash(temporaryPassword, {
-      type: argon2.argon2id,
-    });
-
-    const now = new Date();
-    const temporaryPasswordExpiresAt = new Date(
-      now.getTime() + 24 * 60 * 60 * 1000,
-    );
-
-    try {
-      const user = await this.prisma.$transaction(async (tx) => {
-        const created = await tx.user.create({
-          data: {
-            loginId,
-            email: dto.email?.trim().toLowerCase(),
-            passwordHash,
-            name: dto.name.trim(),
-            phone: normalizedPhone,
-            role: dto.role,
-            status: UserStatus.ACTIVE,
-            mustChangePassword: true,
-            temporaryPasswordExpiresAt,
-            passwordChangedAt: now,
-            createdById: actor.id,
-          },
-          select: {
-            id: true,
-            loginId: true,
-            name: true,
-            role: true,
-          },
-        });
-
-        await tx.auditLog.create({
-          data: {
-            actorId: actor.id,
-            actorRole: actor.role,
-            action: 'STAFF_ACCOUNT_CREATED',
-            resourceType: 'USER',
-            resourceId: created.id,
-            afterData: {
-              loginId: created.loginId,
-              name: created.name,
-              role: created.role,
-              status: UserStatus.ACTIVE,
-              mustChangePassword: true,
-              temporaryPasswordExpiresAt:
-                temporaryPasswordExpiresAt.toISOString(),
-            },
-            ipAddress,
-            result: 'SUCCESS',
-          },
-        });
-
-        return created;
-      });
-
-      if (!user.loginId) {
-        throw new Error('생성된 직원 로그인 아이디가 없습니다.');
-      }
-
-      return {
-        id: user.id,
-        loginId: user.loginId,
-        name: user.name,
-        role: user.role,
-        temporaryPassword,
-        temporaryPasswordExpiresAt: temporaryPasswordExpiresAt.toISOString(),
-      };
-    } catch (error: unknown) {
-      if (this.isUniqueConstraintError(error)) {
-        throw new ConflictException('이미 사용 중인 로그인 아이디입니다.');
-      }
-
-      throw error;
-    }
   }
 
   async issueTemporaryPassword(
@@ -1160,34 +1071,25 @@ export class UsersService {
     }
   }
 
-  private assertCanCreateStaff(
-    actorRole: UserRole,
-    targetRole: UserRole,
-  ): void {
-    if (targetRole === UserRole.STUDENT) {
-      throw new BadRequestException(
-        '학생은 공개 회원가입 또는 학생 관리 기능으로 생성해야 합니다.',
-      );
-    }
-
-    if (targetRole === UserRole.INSTRUCTOR) {
-      const allowedRoles: UserRole[] = [
+  /**
+   * 가입 승인 시 부여할 수 있는 역할을 승인자 역할로 제한한다(기획안 §6.1 / D-18).
+   * 관리자는 모든 역할을, 실장·원장은 학생·강사만 부여할 수 있다.
+   */
+  private assertCanGrantRole(actorRole: UserRole, targetRole: UserRole): void {
+    const grantable: Partial<Record<UserRole, UserRole[]>> = {
+      [UserRole.ADMIN]: [
+        UserRole.STUDENT,
+        UserRole.INSTRUCTOR,
         UserRole.MANAGER,
         UserRole.PRINCIPAL,
         UserRole.ADMIN,
-      ];
+      ],
+      [UserRole.MANAGER]: [UserRole.STUDENT, UserRole.INSTRUCTOR],
+      [UserRole.PRINCIPAL]: [UserRole.STUDENT, UserRole.INSTRUCTOR],
+    };
 
-      if (!allowedRoles.includes(actorRole)) {
-        throw new ForbiddenException('강사 계정을 생성할 권한이 없습니다.');
-      }
-
-      return;
-    }
-
-    if (actorRole !== UserRole.ADMIN) {
-      throw new ForbiddenException(
-        '실장·원장·관리자 계정은 관리자만 생성할 수 있습니다.',
-      );
+    if (!(grantable[actorRole] ?? []).includes(targetRole)) {
+      throw new ForbiddenException('해당 역할을 부여할 권한이 없습니다.');
     }
   }
 

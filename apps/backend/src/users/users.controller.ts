@@ -17,12 +17,13 @@ import { UserRole } from '../generated/prisma/enums';
 import { PendingUsersQueryDto } from './dto/pending-users-query.dto';
 import { RejectUserDto } from './dto/reject-user.dto';
 import {
-  type PendingStudentsPageResponse,
+  type PendingSignupsPageResponse,
+  type SignupApprovalResponse,
   type UserStatusChangeResponse,
   UsersPageResponse,
   UsersService,
 } from './users.service';
-import { CreateStaffDto, CreateStaffResponse } from './dto/create-staff.dto';
+import { ApproveSignupDto } from './dto/approve-signup.dto';
 import {
   IssueTemporaryPasswordDto,
   IssueTemporaryPasswordResponse,
@@ -44,46 +45,37 @@ export class UsersController {
 
   @Roles(...APPROVAL_ROLES)
   @Get('pending')
-  findPendingStudents(
+  findPendingSignups(
     @Query() query: PendingUsersQueryDto,
-  ): Promise<PendingStudentsPageResponse> {
-    return this.usersService.findPendingStudents(query);
+  ): Promise<PendingSignupsPageResponse> {
+    return this.usersService.findPendingSignups(query);
   }
 
   @Roles(...APPROVAL_ROLES)
   @Post(':id/approve')
-  approveStudent(
+  approveSignup(
     @Param('id', ParseUUIDPipe) userId: string,
+    @Body() dto: ApproveSignupDto,
     @CurrentUser() actor: AuthenticatedUser,
     @Req() request: Request,
-  ): Promise<UserStatusChangeResponse> {
-    return this.usersService.approveStudent(userId, actor, request.ip);
+  ): Promise<SignupApprovalResponse> {
+    return this.usersService.approveSignup(userId, dto, actor, request.ip);
   }
 
   @Roles(...APPROVAL_ROLES)
   @Post(':id/reject')
-  rejectStudent(
+  rejectSignup(
     @Param('id', ParseUUIDPipe) userId: string,
     @Body() dto: RejectUserDto,
     @CurrentUser() actor: AuthenticatedUser,
     @Req() request: Request,
   ): Promise<UserStatusChangeResponse> {
-    return this.usersService.rejectStudent(
+    return this.usersService.rejectSignup(
       userId,
       dto.reason,
       actor,
       request.ip,
     );
-  }
-
-  @Roles(UserRole.MANAGER, UserRole.PRINCIPAL, UserRole.ADMIN)
-  @Post('staff')
-  createStaff(
-    @Body() dto: CreateStaffDto,
-    @CurrentUser() actor: AuthenticatedUser,
-    @Req() request: Request,
-  ): Promise<CreateStaffResponse> {
-    return this.usersService.createStaff(dto, actor, request.ip);
   }
 
   @Roles(
