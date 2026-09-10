@@ -20,6 +20,7 @@ import { QuestionsPage } from "./features/questions/QuestionsPage";
 
 import { ExamTemplatesPage } from "./features/exam-templates/ExamTemplatesPage";
 import { ExamWorkspacePage } from "./features/exams/ExamWorkspacePage";
+import { NoticesPage } from "./features/communications/NoticesPage";
 
 type PlaceholderRoute = {
   path: string;
@@ -28,11 +29,6 @@ type PlaceholderRoute = {
 };
 
 const placeholderRoutes: PlaceholderRoute[] = [
-  {
-    path: "notices",
-    title: "공지사항",
-    description: "학생과 강사에게 전달할 공지를 관리합니다.",
-  },
   {
     path: "inquiries",
     title: "문의사항",
@@ -95,6 +91,10 @@ const router = createBrowserRouter([
       {
         path: "dashboard",
         element: <DashboardPage />,
+      },
+      {
+        path: "notices",
+        element: <NoticesPage />,
       },
       {
         path: "education",
