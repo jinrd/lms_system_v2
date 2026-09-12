@@ -223,13 +223,36 @@ function LifecyclePanel({ admin }: { admin: boolean }) {
   return <section className="surface-card"><header className="card-header"><div><h2>데이터 수명 주기 실행 이력</h2><p>총 {query.data?.pagination.total ?? 0}건</p></div>{admin && <button type="button" className="button button--primary" disabled={run.isPending} onClick={() => { if (window.confirm("데이터 보존 정책 작업을 지금 실행할까요?")) run.mutate(); }}>{run.isPending ? "실행 중…" : "지금 실행"}</button>}</header><div className="card-body"><label className="form-field"><span>상태</span><select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="">전체</option><option value="RUNNING">실행 중</option><option value="SUCCESS">성공</option><option value="PARTIAL_FAILURE">부분 실패</option><option value="FAILURE">실패</option></select></label>{run.isError && <p className="form-error">{message(run.error)}</p>}{run.isSuccess && <p className="form-success">{run.data.ran ? `${run.data.jobs.length}개 작업을 실행했습니다.` : "이미 실행 중인 작업이 있어 새 실행을 시작하지 않았습니다."}</p>}</div><QueryBody query={query} empty="실행 이력이 없습니다." render={(rows: LifecycleRun[]) => <div className="desktop-table"><table className="data-table"><thead><tr><th>시작</th><th>작업</th><th>상태</th><th>확인</th><th>성공</th><th>실패</th><th>오류</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td>{formatDateTime(row.startedAt)}</td><td>{row.jobType}</td><td>{row.status}</td><td>{row.scannedCount}</td><td>{row.successCount}</td><td>{row.failureCount}</td><td>{row.errorSummary ?? "-"}</td></tr>)}</tbody></table></div>} /><Pager page={page} totalPages={query.data?.pagination.totalPages ?? 1} onChange={setPage} /></section>;
 }
 
+function RestoreTestCell({ row, admin, pending, onRecord }: { row: BackupRun; admin: boolean; pending: boolean; onRecord: (result: "SUCCESS" | "FAILURE") => void }) {
+  const [showActions, setShowActions] = useState(false);
+  const canRecord = admin && row.status === "SUCCESS";
+  const tested = row.restoreTestResult !== null;
+
+  return (
+    <div className="operations-restore-cell">
+      {tested ? (
+        <span className={`status-badge status-badge--${row.restoreTestResult === "SUCCESS" ? "success" : "danger"}`}>{row.restoreTestResult === "SUCCESS" ? "성공" : "실패"}</span>
+      ) : (
+        <span className="operations-restore-cell__none">미실시</span>
+      )}
+      {canRecord && !showActions && <button type="button" className="operations-restore-cell__link" onClick={() => setShowActions(true)}>{tested ? "다시 기록" : "기록하기"}</button>}
+      {canRecord && showActions && (
+        <div className="operations-restore-cell__actions">
+          <button type="button" className="button button--secondary" disabled={pending} onClick={() => { onRecord("SUCCESS"); setShowActions(false); }}>성공 기록</button>
+          <button type="button" className="button button--ghost" disabled={pending} onClick={() => { onRecord("FAILURE"); setShowActions(false); }}>실패 기록</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BackupsPanel({ admin }: { admin: boolean }) {
   const client = useQueryClient();
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("");
   const query = useQuery({ queryKey: ["operations", "backups", page, status], queryFn: () => getBackupRuns({ page, status: status || undefined }) });
   const restore = useMutation({ mutationFn: ({ id, result }: { id: string; result: "SUCCESS" | "FAILURE" }) => recordRestoreTest(id, result), onSuccess: async () => client.invalidateQueries({ queryKey: ["operations", "backups"] }) });
-  return <section className="surface-card"><header className="card-header"><div><h2>최근 백업 스냅샷</h2><p>총 {query.data?.pagination.total ?? 0}건</p></div></header><div className="card-body"><label className="form-field"><span>상태</span><select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="">전체</option><option value="RUNNING">실행 중</option><option value="SUCCESS">성공</option><option value="FAILURE">실패</option></select></label>{restore.isError && <p className="form-error">{message(restore.error)}</p>}</div><QueryBody query={query} empty="백업 실행 이력이 없습니다." render={(rows: BackupRun[]) => <div className="desktop-table"><table className="data-table"><thead><tr><th>생성 일시</th><th>상태</th><th>저장 위치</th><th>크기</th><th>보관 기한</th><th>복구 테스트</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td>{formatDateTime(row.startedAt)}</td><td>{row.status}{row.errorMessage ? <><br /><small>{row.errorMessage}</small></> : null}</td><td>{row.storageKey ?? "-"}</td><td>{row.sizeBytes ? `${Math.round(Number(row.sizeBytes) / 1048576)} MiB` : "-"}</td><td>{formatDateTime(row.retentionUntil)}</td><td>{row.restoreTestResult ?? "미실시"}<br />{admin && row.status === "SUCCESS" && <><button type="button" className="button button--secondary" disabled={restore.isPending} onClick={() => restore.mutate({ id: row.id, result: "SUCCESS" })}>성공 기록</button> <button type="button" className="button button--ghost" disabled={restore.isPending} onClick={() => restore.mutate({ id: row.id, result: "FAILURE" })}>실패 기록</button></>}</td></tr>)}</tbody></table></div>} /><Pager page={page} totalPages={query.data?.pagination.totalPages ?? 1} onChange={setPage} /></section>;
+  return <section className="surface-card"><header className="card-header"><div><h2>최근 백업 스냅샷</h2><p>총 {query.data?.pagination.total ?? 0}건</p></div></header><div className="card-body"><label className="form-field"><span>상태</span><select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="">전체</option><option value="RUNNING">실행 중</option><option value="SUCCESS">성공</option><option value="FAILURE">실패</option></select></label>{restore.isError && <p className="form-error">{message(restore.error)}</p>}</div><QueryBody query={query} empty="백업 실행 이력이 없습니다." render={(rows: BackupRun[]) => <div className="desktop-table"><table className="data-table"><thead><tr><th>생성 일시</th><th>상태</th><th>저장 위치</th><th>크기</th><th>보관 기한</th><th>복구 테스트</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td>{formatDateTime(row.startedAt)}</td><td><span className={`status-badge status-badge--${row.status === "SUCCESS" ? "success" : row.status === "RUNNING" ? "info" : "danger"}`}>{row.status === "SUCCESS" ? "성공" : row.status === "RUNNING" ? "실행 중" : "실패"}</span>{row.errorMessage ? <><br /><small>{row.errorMessage}</small></> : null}</td><td>{row.storageKey ?? "-"}</td><td>{row.sizeBytes ? `${Math.round(Number(row.sizeBytes) / 1048576)} MiB` : "-"}</td><td>{formatDateTime(row.retentionUntil)}</td><td><RestoreTestCell row={row} admin={admin} pending={restore.isPending} onRecord={(result) => restore.mutate({ id: row.id, result })} /></td></tr>)}</tbody></table></div>} /><Pager page={page} totalPages={query.data?.pagination.totalPages ?? 1} onChange={setPage} /></section>;
 }
 
 type QueryLike<T> = { isPending: boolean; isError: boolean; error: unknown; data?: { items: T[] }; refetch: () => Promise<unknown> };
