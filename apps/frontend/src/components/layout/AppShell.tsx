@@ -165,10 +165,10 @@ const navigationGroups: NavigationGroup[] = [
     label: "시스템 관리",
     items: [
       {
-        label: "시스템 설정",
+        label: "시스템 운영",
         path: "/system",
         icon: Settings,
-        roles: ["ADMIN"],
+        roles: MANAGEMENT_ROLES,
       },
       {
         label: "약관 관리",
@@ -227,6 +227,11 @@ export function AppShell() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [location.pathname]);
 
   if (!user) {
     return null;

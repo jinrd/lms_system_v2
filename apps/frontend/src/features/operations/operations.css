@@ -1,0 +1,73 @@
+.system-operations-page {
+  min-width: 0;
+}
+
+.system-operations-page > .tabs {
+  position: sticky;
+  z-index: 5;
+  top: 0;
+  background: var(--background);
+}
+
+.system-operations-page > .surface-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.system-operations-page > .surface-card > .card-body.form-grid {
+  grid-template-columns: repeat(3, minmax(160px, 240px));
+  padding-block: 14px;
+  border-bottom: 1px solid var(--border);
+  background: #fafbfa;
+}
+
+.system-operations-page .desktop-table {
+  max-height: min(620px, calc(100vh - 300px));
+  overflow: auto;
+}
+
+.system-operations-page .data-table th {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+}
+
+.system-operations-page details > summary {
+  min-height: 36px;
+  color: var(--primary-dark);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.system-operations-page pre {
+  max-width: 520px;
+  max-height: 320px;
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  background: var(--surface-muted);
+  font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+}
+
+.system-operations-page .pagination {
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 767px) {
+  .system-operations-page > .tabs {
+    top: 58px;
+  }
+
+  .system-operations-page > .surface-card > .card-body.form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .system-operations-page .desktop-table {
+    display: block;
+    max-height: none;
+  }
+}

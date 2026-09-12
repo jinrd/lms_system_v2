@@ -7,7 +7,7 @@ import { AuthProvider, GuestOnly, RequireAuth } from "./auth/AuthProvider";
 import { AppShell } from "./components/layout/AppShell";
 import { ErrorState } from "./components/ui/PageStates";
 import { ChangePasswordPage, LoginPage, SignupPage } from "./pages/AuthPages";
-import { DashboardPage, PlaceholderPage } from "./pages";
+import { DashboardPage } from "./pages";
 import { RequireRole } from "./auth/RequireRole";
 import { EducationPage } from "./features/education/EducationPage";
 import { CoursesPage } from "./features/courses/CoursePage";
@@ -25,20 +25,7 @@ import { InquiriesPage } from "./features/communications/InquiriesPage";
 import { NoticesPage } from "./features/communications/NoticesPage";
 import { PendingConsentPage } from "./pages/PendingConsentPage";
 import { AnalyticsPage } from "./features/analytics/AnalyticsPage";
-
-type PlaceholderRoute = {
-  path: string;
-  title: string;
-  description: string;
-};
-
-const placeholderRoutes: PlaceholderRoute[] = [
-  {
-    path: "system",
-    title: "시스템 관리",
-    description: "로그, 백업, 파일과 시스템 설정을 관리합니다.",
-  },
-];
+import { SystemOperationsPage } from "./features/operations/SystemOperationsPage";
 
 const router = createBrowserRouter([
   {
@@ -186,15 +173,14 @@ const router = createBrowserRouter([
           </RequireRole>
         ),
       },
-      ...placeholderRoutes.map((route) => ({
-        path: route.path,
+      {
+        path: "system",
         element: (
-          <PlaceholderPage
-            title={route.title}
-            description={route.description}
-          />
+          <RequireRole roles={["MANAGER", "PRINCIPAL", "ADMIN"]}>
+            <SystemOperationsPage />
+          </RequireRole>
         ),
-      })),
+      },
     ],
   },
 ]);
