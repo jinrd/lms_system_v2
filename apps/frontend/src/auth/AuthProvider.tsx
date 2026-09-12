@@ -21,7 +21,7 @@ import {
   removeRefreshToken,
   saveRefreshToken,
 } from "./auth-storage";
-import type { AuthResponse, AuthUser } from "./auth.types";
+import type { AuthResponse, AuthUser, PendingConsentResponse, PendingTerm } from "./auth.types";
 
 type LoginCredentials = {
   loginId: string;
@@ -35,8 +35,11 @@ type ChangePasswordInput = {
 
 type AuthContextValue = {
   user: AuthUser | null;
+  pendingTerms: PendingTerm[] | null;
   loading: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<{ pendingConsent: boolean }>;
+  consent: (agreedTermsDocumentIds: string[]) => Promise<void>;
+  cancelPendingConsent: () => void;
   logout: () => Promise<void>;
   changePassword: (input: ChangePasswordInput) => Promise<void>;
 };
@@ -45,6 +48,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [pendingTerms, setPendingTerms] = useState<PendingTerm[] | null>(null);
   const [loading, setLoading] = useState(true);
   const refreshPromise = useRef<Promise<string | null> | null>(null);
 
@@ -52,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     removeRefreshToken();
     setApiAccessToken(null);
     setUser(null);
+    setPendingTerms(null);
   }, []);
 
   const applyAuthResponse = useCallback((response: AuthResponse): string => {
@@ -61,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...response.user,
       mustChangePassword: response.mustChangePassword,
     });
+    setPendingTerms(null);
 
     return response.accessToken;
   }, []);
@@ -113,8 +119,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [refreshAccessToken]);
 
-  const login = async (credentials: LoginCredentials): Promise<void> => {
-    const response = await apiRequest<AuthResponse>("/auth/login", {
+  const login = async (credentials: LoginCredentials): Promise<{ pendingConsent: boolean }> => {
+    const response = await apiRequest<AuthResponse | PendingConsentResponse>("/auth/login", {
       method: "POST",
       skipAuth: true,
       body: {
@@ -125,6 +131,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
 
+    if ("pendingConsent" in response) {
+      setApiAccessToken(response.consentToken);
+      setPendingTerms(response.pendingTerms);
+      setUser(null);
+      return { pendingConsent: true };
+    }
+
+    applyAuthResponse(response);
+    return { pendingConsent: false };
+  };
+
+  const consent = async (agreedTermsDocumentIds: string[]): Promise<void> => {
+    const response = await apiRequest<AuthResponse>("/auth/consent", {
+      method: "POST",
+      body: {
+        agreedTermsDocumentIds,
+        deviceIdentifier: getDeviceIdentifier(),
+        deviceName: getDeviceName(),
+      },
+    });
     applyAuthResponse(response);
   };
 
@@ -157,8 +183,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        pendingTerms,
         loading,
         login,
+        consent,
+        cancelPendingConsent: clearSession,
         logout,
         changePassword,
       }}
@@ -181,7 +210,7 @@ export function useAuth(): AuthContextValue {
 }
 
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, pendingTerms, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -193,6 +222,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }
 
   if (!user) {
+    if (pendingTerms) {
+      return <Navigate to="/consent" replace />;
+    }
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
@@ -208,7 +240,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 export function GuestOnly({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, pendingTerms, loading } = useAuth();
 
   if (loading) {
     return (
@@ -225,6 +257,10 @@ export function GuestOnly({ children }: { children: ReactNode }) {
         replace
       />
     );
+  }
+
+  if (pendingTerms) {
+    return <Navigate to="/consent" replace />;
   }
 
   return children;

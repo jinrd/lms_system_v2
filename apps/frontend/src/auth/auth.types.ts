@@ -22,6 +22,20 @@ export type AuthResponse = {
   user: Omit<AuthUser, "mustChangePassword">;
 };
 
+export type PendingTerm = {
+  id: string;
+  type: string;
+  version: string;
+  title: string;
+};
+
+export type PendingConsentResponse = {
+  pendingConsent: true;
+  consentToken: string;
+  expiresIn: number;
+  pendingTerms: PendingTerm[];
+};
+
 export type LoginInput = {
   loginId: string;
   password: string;

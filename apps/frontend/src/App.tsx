@@ -22,6 +22,7 @@ import { ExamTemplatesPage } from "./features/exam-templates/ExamTemplatesPage";
 import { ExamWorkspacePage } from "./features/exams/ExamWorkspacePage";
 import { InquiriesPage } from "./features/communications/InquiriesPage";
 import { NoticesPage } from "./features/communications/NoticesPage";
+import { PendingConsentPage } from "./pages/PendingConsentPage";
 
 type PlaceholderRoute = {
   path: string;
@@ -66,6 +67,10 @@ const router = createBrowserRouter([
         <ChangePasswordPage />
       </RequireAuth>
     ),
+  },
+  {
+    path: "/consent",
+    element: <PendingConsentPage />,
   },
   {
     path: "/",

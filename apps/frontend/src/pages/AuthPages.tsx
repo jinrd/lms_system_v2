@@ -29,8 +29,8 @@ export function LoginPage() {
     setErrorMessage(null);
 
     try {
-      await login({ loginId, password });
-      navigate("/dashboard", { replace: true });
+      const result = await login({ loginId, password });
+      navigate(result.pendingConsent ? "/consent" : "/dashboard", { replace: true });
     } catch (error: unknown) {
       setErrorMessage(getErrorMessage(error));
     } finally {
