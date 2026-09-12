@@ -14,11 +14,204 @@
   overflow: hidden;
 }
 
-.system-operations-page > .surface-card > .card-body.form-grid {
-  grid-template-columns: repeat(3, minmax(160px, 240px));
-  padding-block: 14px;
+.operations-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   background: #fafbfa;
+}
+
+.operations-search {
+  position: relative;
+  flex: 1 1 260px;
+  min-width: 200px;
+}
+
+.operations-search svg {
+  position: absolute;
+  z-index: 1;
+  top: 12px;
+  left: 12px;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.operations-search input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px 0 36px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+}
+
+.operations-input {
+  height: 40px;
+  min-width: 180px;
+  padding: 0 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+}
+
+.operations-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.operations-pill {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.operations-pill:hover {
+  background: var(--surface-hover);
+}
+
+.operations-pill--active {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+  background: var(--primary-soft);
+}
+
+.operations-pill__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9ca3af;
+}
+
+.operations-pill__dot--success {
+  background: #16a34a;
+}
+
+.operations-pill__dot--warning {
+  background: #f59e0b;
+}
+
+.operations-pill__dot--danger {
+  background: #dc2626;
+}
+
+.operations-reset {
+  margin-left: auto;
+}
+
+.system-operations-page .data-table tbody tr {
+  cursor: pointer;
+}
+
+.system-operations-page .data-table tbody tr:hover {
+  background: var(--surface-hover);
+}
+
+.system-operations-page .data-table tbody tr[data-selected="true"] {
+  background: var(--surface-selected);
+}
+
+.operations-row-view {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--primary-dark);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.operations-detail {
+  margin: 12px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.operations-detail .card-header {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.operations-detail .card-header h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.operations-detail__close {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  background: transparent;
+  place-items: center;
+  cursor: pointer;
+}
+
+.operations-detail__close:hover {
+  background: var(--surface-hover);
+}
+
+.operations-detail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  overflow: hidden;
+  margin: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--border);
+}
+
+.operations-detail__meta > div {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--surface-muted);
+}
+
+.operations-detail__meta dt {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.operations-detail__meta dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.operations-detail pre {
+  margin: 12px 16px 16px;
+  max-width: none;
 }
 
 .system-operations-page .desktop-table {
@@ -62,12 +255,21 @@
     top: 58px;
   }
 
-  .system-operations-page > .surface-card > .card-body.form-grid {
-    grid-template-columns: 1fr;
-  }
-
   .system-operations-page .desktop-table {
     display: block;
     max-height: none;
+  }
+
+  .operations-stats {
+    justify-content: flex-start;
+  }
+
+  .operations-reset {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .operations-detail__meta {
+    grid-template-columns: 1fr;
   }
 }
