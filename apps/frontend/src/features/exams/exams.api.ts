@@ -13,6 +13,9 @@ export type ExamStatus =
   | "COMPLETED"
   | "CANCELED";
 
+export type AttemptStatus = "NOT_STARTED" | "NOT_ATTENDED" | "IN_PROGRESS" | "SUBMITTED" | "INCOMPLETE" | "GRADING" | "GRADED";
+export type PassStatus = "PENDING" | "PASS" | "FAIL";
+
 export type ExamPart = {
   id: string;
   type: ExamPartType;
@@ -166,6 +169,53 @@ export type ExamTargetList = {
   }>;
 };
 
+export type RescheduleExamInput = {
+  parts: Array<{
+    type: ExamPartType;
+    opensAt?: string;
+    closesAt?: string;
+    durationMinutes?: number;
+  }>;
+};
+
+export type AttemptDetail = {
+  examId: string;
+  attemptId: string;
+  studentId: string;
+  status: AttemptStatus;
+  writtenScore: number | null;
+  writtenResult: PassStatus;
+  finalResult: PassStatus;
+  questions: Array<{
+    examQuestionId: string;
+    type: QuestionType;
+    prompt: string;
+    explanation: string | null;
+    score: number;
+    awardedScore: number | null;
+    isCorrect: boolean | null;
+    subjectiveText: string | null;
+    selectedOptionIds: string[];
+    options: Array<{ id: string; content: string; isCorrect: boolean }>;
+    acceptedAnswers: string[];
+  }>;
+  revisions: Array<{
+    previousResult: unknown;
+    newResult: unknown;
+    reason: string;
+    changedById: string | null;
+    changedAt: string;
+  }>;
+};
+
+export type ReviseExamResultInput = {
+  reason: string;
+  writtenScore?: number;
+  writtenResult?: PassStatus;
+  finalResult?: PassStatus;
+  writtenFeedback?: string;
+};
+
 export function getExams(query: ExamQuery = {}): Promise<ExamPage> {
   const params = new URLSearchParams({ page: String(query.page ?? 1), limit: String(query.limit ?? 20) });
   if (query.courseOfferingId) params.set("courseOfferingId", query.courseOfferingId);
@@ -182,6 +232,12 @@ export function updateExam(id: string, input: UpdateExamInput): Promise<Exam> { 
 export function validateExam(id: string): Promise<ExamScheduleValidationResult> { return apiRequest(`/exams/${id}/validate`); }
 export function scheduleExam(id: string): Promise<Exam> { return apiRequest(`/exams/${id}/schedule`, { method: "POST" }); }
 export function cancelExam(id: string, reason: string): Promise<Exam> { return apiRequest(`/exams/${id}/cancel`, { method: "POST", body: { reason } }); }
+export function rescheduleExam(id: string, input: RescheduleExamInput): Promise<Exam> { return apiRequest(`/exams/${id}/reschedule`, { method: "POST", body: input }); }
+export function duplicateExam(id: string): Promise<Exam> { return apiRequest(`/exams/${id}/duplicate`, { method: "POST" }); }
+export function reviewExamResults(id: string): Promise<{ reviewedAt: string }> { return apiRequest(`/exams/${id}/results/review`, { method: "POST" }); }
+export function publishExamResults(id: string): Promise<{ publishedAt: string }> { return apiRequest(`/exams/${id}/results/publish`, { method: "POST" }); }
+export function getExamAttempt(id: string, attemptId: string): Promise<AttemptDetail> { return apiRequest(`/exams/${id}/attempts/${attemptId}`); }
+export function reviseExamResult(id: string, attemptId: string, input: ReviseExamResultInput): Promise<AttemptDetail> { return apiRequest(`/exams/${id}/attempts/${attemptId}/revise`, { method: "POST", body: input }); }
 export function getExamTargets(id: string): Promise<ExamTargetList> { return apiRequest(`/exams/${id}/targets`); }
 export function rebuildExamTargets(id: string): Promise<ExamTargetList> { return apiRequest(`/exams/${id}/targets/rebuild`, { method: "POST" }); }
 export function lockExamTargets(id: string): Promise<ExamTargetList> { return apiRequest(`/exams/${id}/targets/lock`, { method: "POST" }); }

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { apiRequest } from "../../lib/api-client";
 import {
   createExam,
+  duplicateExam,
   addExamTarget,
   cancelExam,
   deleteExamPart,
@@ -9,11 +10,16 @@ import {
   getExamCriteria,
   getExamQuestions,
   getExamTargets,
+  getExamAttempt,
   getExams,
   replaceExamCriteria,
   rebuildExamTargets,
   replaceExamQuestions,
   removeExamTarget,
+  publishExamResults,
+  rescheduleExam,
+  reviseExamResult,
+  reviewExamResults,
   scheduleExam,
   saveExamPart,
   lockExamTargets,
@@ -125,6 +131,24 @@ describe("실제 시험 API 계약", () => {
       ["/exams/e1/validate"],
       ["/exams/e1/schedule", { method: "POST" }],
       ["/exams/e1/cancel", { method: "POST", body: { reason: "일정 변경" } }],
+    ]);
+  });
+
+  it("재예약·복제·결과 관리 경로를 맞춘다", async () => {
+    vi.mocked(apiRequest).mockClear();
+    await rescheduleExam("e1", { parts: [{ type: "WRITTEN", durationMinutes: 90 }] });
+    await duplicateExam("e1");
+    await reviewExamResults("e1");
+    await publishExamResults("e1");
+    await getExamAttempt("e1", "a1");
+    await reviseExamResult("e1", "a1", { reason: "점수 확인", writtenScore: 80 });
+    expect(vi.mocked(apiRequest).mock.calls).toEqual([
+      ["/exams/e1/reschedule", { method: "POST", body: { parts: [{ type: "WRITTEN", durationMinutes: 90 }] } }],
+      ["/exams/e1/duplicate", { method: "POST" }],
+      ["/exams/e1/results/review", { method: "POST" }],
+      ["/exams/e1/results/publish", { method: "POST" }],
+      ["/exams/e1/attempts/a1"],
+      ["/exams/e1/attempts/a1/revise", { method: "POST", body: { reason: "점수 확인", writtenScore: 80 } }],
     ]);
   });
 
