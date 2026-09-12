@@ -301,14 +301,16 @@ export function TermsPage() {
                 </div>
 
                 <div className="button-group">
-                  <button
-                    type="button"
-                    className="button button--secondary"
-                    onClick={() => setEditingDocument(selectedDocument)}
-                  >
-                    <Pencil size={17} />
-                    수정
-                  </button>
+                  {!selectedDocument.active && (
+                    <button
+                      type="button"
+                      className="button button--secondary"
+                      onClick={() => setEditingDocument(selectedDocument)}
+                    >
+                      <Pencil size={17} />
+                      수정
+                    </button>
+                  )}
 
                   {!selectedDocument.active && (
                     <button
