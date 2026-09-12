@@ -26,6 +26,7 @@ import {
   type TermsType,
   updateTermsVersion,
 } from "./terms.api";
+import "./terms.css";
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "요청을 처리하지 못했습니다.";
@@ -52,8 +53,15 @@ function toLocalDateTime(value: string): string {
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 }
 
-function typeLabel(type: TermsType): string {
-  return TERMS_TYPE_LABELS[type];
+function formatShortDate(value: string): string {
+  return new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" })
+    .format(new Date(value))
+    .replace(/\. /g, ".")
+    .replace(/\.$/, "");
+}
+
+function typeLabel(type: string): string {
+  return TERMS_TYPE_LABELS[type as TermsType] ?? type;
 }
 
 export function TermsPage() {
@@ -73,7 +81,7 @@ export function TermsPage() {
   });
 
   const documents = termsQuery.data ?? [];
-  const types = TERMS_TYPES;
+  const types = Array.from(new Set(documents.map((document) => document.type)));
 
   const filteredDocuments = selectedType
     ? documents.filter((document) => document.type === selectedType)
@@ -83,6 +91,12 @@ export function TermsPage() {
     filteredDocuments.find((document) => document.id === selectedDocumentId) ??
     filteredDocuments[0] ??
     null;
+
+  const versionHistory = selectedDocument
+    ? documents
+        .filter((document) => document.type === selectedDocument.type)
+        .sort((a, b) => b.effectiveAt.localeCompare(a.effectiveAt))
+    : [];
 
   const refresh = async (): Promise<void> => {
     await queryClient.invalidateQueries({
@@ -419,6 +433,49 @@ export function TermsPage() {
             />
           )}
         </article>
+
+        {selectedDocument && (
+          <article className="surface-card terms-history-pane master-pane--mobile-hidden">
+            <header className="card-header">
+              <div>
+                <h2>버전 히스토리</h2>
+                <p>{typeLabel(selectedDocument.type)}의 전체 버전</p>
+              </div>
+            </header>
+
+            <div className="terms-history-list">
+              {versionHistory.map((document) => (
+                <button
+                  type="button"
+                  key={document.id}
+                  className={`terms-history-item ${
+                    selectedDocument.id === document.id
+                      ? "terms-history-item--active"
+                      : ""
+                  }`}
+                  onClick={() => {
+                    setSelectedDocumentId(document.id);
+                    setMobileDetailOpen(true);
+                  }}
+                >
+                  <strong>v{document.version}</strong>
+
+                  <span
+                    className={`status-badge ${
+                      document.active
+                        ? "status-badge--success"
+                        : "status-badge--neutral"
+                    }`}
+                  >
+                    {document.active ? "활성" : "비활성"}
+                  </span>
+
+                  <time>{formatShortDate(document.effectiveAt)}</time>
+                </button>
+              ))}
+            </div>
+          </article>
+        )}
       </section>
 
       {createOpen && (
