@@ -1,4 +1,5 @@
 import {
+  ArrowRightLeft,
   BarChart3,
   Bell,
   BookOpen,
@@ -134,6 +135,12 @@ const navigationGroups: NavigationGroup[] = [
         path: "/learning",
         icon: FileText,
         roles: ALL_ROLES,
+      },
+      {
+        label: "강사 인수인계",
+        path: "/handovers",
+        icon: ArrowRightLeft,
+        roles: STAFF_ROLES,
       },
     ],
   },

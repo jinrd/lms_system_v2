@@ -20,6 +20,7 @@ import { QuestionsPage } from "./features/questions/QuestionsPage";
 
 import { ExamTemplatesPage } from "./features/exam-templates/ExamTemplatesPage";
 import { ExamWorkspacePage } from "./features/exams/ExamWorkspacePage";
+import { HandoversPage } from "./features/communications/HandoversPage";
 import { InquiriesPage } from "./features/communications/InquiriesPage";
 import { NoticesPage } from "./features/communications/NoticesPage";
 import { PendingConsentPage } from "./pages/PendingConsentPage";
@@ -156,6 +157,14 @@ const router = createBrowserRouter([
       {
         path: "learning",
         element: <ExamWorkspacePage />,
+      },
+      {
+        path: "handovers",
+        element: (
+          <RequireRole roles={["INSTRUCTOR", "MANAGER", "PRINCIPAL", "ADMIN"]}>
+            <HandoversPage />
+          </RequireRole>
+        ),
       },
       {
         path: "users",
