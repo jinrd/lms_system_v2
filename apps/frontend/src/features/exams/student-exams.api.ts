@@ -1,5 +1,5 @@
 import { apiRequest } from "../../lib/api-client";
-import type { ExamStatus } from "./exams.api";
+import type { AttemptStatus, ExamStatus, PassStatus } from "./exams.api";
 import type { QuestionType } from "../questions/questions.api";
 
 export type MyExamSummary = {
@@ -59,12 +59,29 @@ export type SaveAnswerResponse = {
   savedAt: string;
 };
 
+export type MyExamResult = {
+  examId: string;
+  title: string;
+  published: boolean;
+  publishedAt: string | null;
+  revisedAt: string | null;
+  attemptStatus: AttemptStatus;
+  writtenScore: number | null;
+  finalResult: PassStatus;
+  writtenFeedback: string | null;
+  parts: Array<{ type: string; score: number | null; passScore: number; result: PassStatus }>;
+};
+
 export function getMyExams(): Promise<MyExamSummary[]> {
   return apiRequest("/me/exams");
 }
 
 export function getMyExam(id: string): Promise<MyExamSummary> {
   return apiRequest(`/me/exams/${id}`);
+}
+
+export function getMyExamResult(id: string): Promise<MyExamResult> {
+  return apiRequest(`/me/exams/${id}/result`);
 }
 
 export function startMyWrittenExam(id: string): Promise<MyWrittenQuestions> {
