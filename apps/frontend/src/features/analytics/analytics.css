@@ -1,0 +1,214 @@
+.analytics-page {
+  min-width: 0;
+}
+
+.analytics-filters {
+  grid-template-columns: repeat(2, minmax(180px, 260px));
+  justify-content: start;
+}
+
+.analytics-summary {
+  display: grid;
+  overflow: hidden;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.analytics-summary--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.analytics-summary article {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  align-items: center;
+  padding: 18px 20px;
+  border-right: 1px solid var(--border);
+}
+
+.analytics-summary article:last-child {
+  border-right: 0;
+}
+
+.analytics-summary svg {
+  grid-row: 1 / 3;
+  color: var(--primary);
+}
+
+.analytics-summary span {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.analytics-summary strong {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  font-size: 26px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.analytics-summary small {
+  grid-column: 2 / 4;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.analytics-panel,
+.analytics-exceptions {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.analytics-exceptions {
+  grid-column: 1 / -1;
+}
+
+.distribution-list {
+  display: grid;
+  gap: 18px;
+}
+
+.distribution-row {
+  display: grid;
+  grid-template-columns: 76px minmax(80px, 1fr) 28px;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.distribution-row > span {
+  color: var(--text-secondary);
+}
+
+.distribution-row > div {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--surface-muted);
+}
+
+.distribution-row i {
+  display: block;
+  min-width: 3px;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+}
+
+.distribution-row strong {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.analytics-exception-list,
+.analytics-compact-list {
+  display: grid;
+}
+
+.analytics-exception-list > a,
+.analytics-all-clear,
+.analytics-compact-list > div {
+  display: flex;
+  min-height: 68px;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  color: inherit;
+  text-decoration: none;
+}
+
+.analytics-exception-list > a:last-child,
+.analytics-compact-list > div:last-child {
+  border-bottom: 0;
+}
+
+.analytics-exception-list > a:hover {
+  background: var(--surface-hover);
+}
+
+.analytics-exception-list svg {
+  flex: 0 0 auto;
+  color: var(--warning);
+}
+
+.analytics-exception-list a > span:nth-child(2),
+.analytics-compact-list > div > span:first-child,
+.analytics-all-clear > span {
+  min-width: 0;
+  flex: 1;
+}
+
+.analytics-exception-list strong,
+.analytics-exception-list small,
+.analytics-compact-list strong,
+.analytics-compact-list small,
+.analytics-all-clear strong,
+.analytics-all-clear small {
+  display: block;
+}
+
+.analytics-exception-list small,
+.analytics-compact-list small,
+.analytics-all-clear small {
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.analytics-all-clear svg {
+  color: var(--success);
+}
+
+@media (max-width: 1023px) {
+  .analytics-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .analytics-summary article:nth-child(2) {
+    border-right: 0;
+  }
+
+  .analytics-summary article:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 767px) {
+  .analytics-filters,
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-summary,
+  .analytics-summary--three {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-summary article,
+  .analytics-summary article:nth-child(2) {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .analytics-summary article:last-child {
+    border-bottom: 0;
+  }
+
+  .analytics-exceptions {
+    grid-column: auto;
+  }
+}

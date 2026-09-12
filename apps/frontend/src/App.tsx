@@ -24,6 +24,7 @@ import { HandoversPage } from "./features/communications/HandoversPage";
 import { InquiriesPage } from "./features/communications/InquiriesPage";
 import { NoticesPage } from "./features/communications/NoticesPage";
 import { PendingConsentPage } from "./pages/PendingConsentPage";
+import { AnalyticsPage } from "./features/analytics/AnalyticsPage";
 
 type PlaceholderRoute = {
   path: string;
@@ -32,11 +33,6 @@ type PlaceholderRoute = {
 };
 
 const placeholderRoutes: PlaceholderRoute[] = [
-  {
-    path: "analytics",
-    title: "운영 통계",
-    description: "출석, 시험, 수강 현황을 분석합니다.",
-  },
   {
     path: "system",
     title: "시스템 관리",
@@ -179,6 +175,14 @@ const router = createBrowserRouter([
         element: (
           <RequireRole roles={["ADMIN"]}>
             <TermsPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: "analytics",
+        element: (
+          <RequireRole roles={["INSTRUCTOR", "MANAGER", "PRINCIPAL", "ADMIN"]}>
+            <AnalyticsPage />
           </RequireRole>
         ),
       },
