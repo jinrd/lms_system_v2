@@ -143,39 +143,11 @@ export function reactivateUser(
   });
 }
 
-export type StaffRole = "INSTRUCTOR" | "MANAGER" | "PRINCIPAL" | "ADMIN";
-
-export type CreateStaffInput = {
-  loginId: string;
-  name: string;
-  phone: string;
-  email?: string;
-  role: StaffRole;
-};
-
-export type CreateStaffResponse = {
-  id: string;
-  loginId: string;
-  name: string;
-  role: StaffRole;
-  temporaryPassword: string;
-  temporaryPasswordExpiresAt: string;
-};
-
 export type TemporaryPasswordResponse = {
   userId: string;
   temporaryPassword: string;
   temporaryPasswordExpiresAt: string;
 };
-
-export function createStaff(
-  input: CreateStaffInput,
-): Promise<CreateStaffResponse> {
-  return apiRequest<CreateStaffResponse>("/users/staff", {
-    method: "POST",
-    body: input,
-  });
-}
 
 export type StudentGender = "MALE" | "FEMALE" | "OTHER" | "UNDISCLOSED";
 

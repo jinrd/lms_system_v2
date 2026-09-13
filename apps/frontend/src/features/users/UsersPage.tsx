@@ -28,10 +28,7 @@ import {
   type UserStatus,
   type UserSummary,
 } from "./users.api";
-import {
-  CreateStaffButton,
-  TemporaryPasswordButton,
-} from "./StaffAccountActions";
+import { TemporaryPasswordButton } from "./StaffAccountActions";
 import "./users.css";
 
 type UserTab = "all" | "pending" | "inactive";
@@ -231,8 +228,6 @@ export function UsersPage() {
           <h1>사용자 관리</h1>
           <p>구성원의 계정 상태와 권한을 관리합니다.</p>
         </div>
-
-        <CreateStaffButton onCreated={refreshUsers} />
       </section>
 
       <div className="tabs" role="tablist">
