@@ -4,6 +4,7 @@ import {
   ChevronRight,
   Power,
   RotateCcw,
+  Search,
   UserCheck,
   UserRound,
   X,
@@ -12,11 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import type { UserRole } from "../../auth/auth.types";
 import { Modal } from "../../components/ui/Modal";
-import {
-  EmptyState,
-  ErrorState,
-  LoadingState,
-} from "../../components/ui/PageStates";
+import { EmptyState, ErrorState, LoadingState } from "../../components/ui/PageStates";
 import {
   approveStudent,
   deactivateUser,
@@ -24,7 +21,10 @@ import {
   getUsers,
   reactivateUser,
   rejectStudent,
+  updateStudentProfile,
   type PendingStudent,
+  type StudentGender,
+  type UpdateStudentProfileInput,
   type UserStatus,
   type UserSummary,
 } from "./users.api";
@@ -32,8 +32,9 @@ import {
   CreateStaffButton,
   TemporaryPasswordButton,
 } from "./StaffAccountActions";
+import "./users.css";
 
-type UserTab = "pending" | "all";
+type UserTab = "all" | "pending" | "inactive";
 
 type UserAction =
   | {
@@ -72,6 +73,13 @@ const STATUS_CLASS_NAMES: Record<UserStatus, string> = {
   DELETED: "status-badge--neutral",
 };
 
+const GENDER_LABELS: Record<StudentGender, string> = {
+  MALE: "남",
+  FEMALE: "여",
+  OTHER: "기타",
+  UNDISCLOSED: "비공개",
+};
+
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "요청을 처리하지 못했습니다.";
 }
@@ -85,40 +93,56 @@ function formatDateTime(date: string): string {
 
 export function UsersPage() {
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<UserTab>("pending");
+  const [tab, setTab] = useState<UserTab>("all");
   const [pendingPage, setPendingPage] = useState(1);
   const [userPage, setUserPage] = useState(1);
   const [keyword, setKeyword] = useState("");
   const [role, setRole] = useState<UserRole | "">("");
   const [status, setStatus] = useState<UserStatus | "">("");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [action, setAction] = useState<UserAction>(null);
+
+  const changeTab = (next: UserTab): void => {
+    setTab(next);
+    setSelectedUserId(null);
+    setUserPage(1);
+  };
 
   const pendingQuery = useQuery({
     queryKey: ["users", "pending", pendingPage],
     queryFn: () => getPendingStudents(pendingPage),
-    enabled: tab === "pending",
   });
 
+  const allCountQuery = useQuery({
+    queryKey: ["users", "count-all"],
+    queryFn: () => getUsers({ page: 1, limit: 1 }),
+  });
+
+  const inactiveCountQuery = useQuery({
+    queryKey: ["users", "count-inactive"],
+    queryFn: () => getUsers({ page: 1, limit: 1, status: "INACTIVE" }),
+  });
+
+  const effectiveStatus = tab === "inactive" ? "INACTIVE" : status;
+
   const usersQuery = useQuery({
-    queryKey: ["users", keyword, role, status, userPage],
+    queryKey: ["users", "list", keyword, role, effectiveStatus, userPage],
     queryFn: () =>
       getUsers({
         keyword: keyword || undefined,
         role: role || undefined,
-        status: status || undefined,
+        status: effectiveStatus || undefined,
         page: userPage,
       }),
-    enabled: tab === "all",
+    enabled: tab === "all" || tab === "inactive",
   });
 
   const refreshUsers = async (): Promise<void> => {
     await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: ["users", "pending"],
-      }),
-      queryClient.invalidateQueries({
-        queryKey: ["users"],
-      }),
+      queryClient.invalidateQueries({ queryKey: ["users", "pending"] }),
+      queryClient.invalidateQueries({ queryKey: ["users", "list"] }),
+      queryClient.invalidateQueries({ queryKey: ["users", "count-all"] }),
+      queryClient.invalidateQueries({ queryKey: ["users", "count-inactive"] }),
     ]);
   };
 
@@ -162,7 +186,9 @@ export function UsersPage() {
 
     setKeyword(String(formData.get("keyword") ?? "").trim());
     setRole(String(formData.get("role") ?? "") as UserRole | "");
-    setStatus(String(formData.get("status") ?? "") as UserStatus | "");
+    if (tab === "all") {
+      setStatus(String(formData.get("status") ?? "") as UserStatus | "");
+    }
     setUserPage(1);
   };
 
@@ -195,12 +221,15 @@ export function UsersPage() {
   const currentMutation =
     action?.type === "reject" ? rejectMutation : statusMutation;
 
+  const selectedUser =
+    usersQuery.data?.items.find((item) => item.id === selectedUserId) ?? null;
+
   return (
     <div className="page-stack users-page">
       <section className="page-header">
         <div>
-          <h1>학생·직원 관리</h1>
-          <p>가입 승인과 사용자 계정 상태를 관리합니다.</p>
+          <h1>사용자 관리</h1>
+          <p>구성원의 계정 상태와 권한을 관리합니다.</p>
         </div>
 
         <CreateStaffButton onCreated={refreshUsers} />
@@ -210,11 +239,26 @@ export function UsersPage() {
         <button
           type="button"
           role="tab"
+          aria-selected={tab === "all"}
+          className={`tab ${tab === "all" ? "tab--active" : ""}`}
+          onClick={() => changeTab("all")}
+        >
+          전체 사용자
+          {(allCountQuery.data?.pagination.total ?? 0) > 0 && (
+            <span className="tab__count">
+              {allCountQuery.data?.pagination.total}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          role="tab"
           aria-selected={tab === "pending"}
           className={`tab ${tab === "pending" ? "tab--active" : ""}`}
-          onClick={() => setTab("pending")}
+          onClick={() => changeTab("pending")}
         >
-          가입 승인 대기
+          승인 대기
           {(pendingQuery.data?.pagination.total ?? 0) > 0 && (
             <span className="tab__count">
               {pendingQuery.data?.pagination.total}
@@ -225,11 +269,16 @@ export function UsersPage() {
         <button
           type="button"
           role="tab"
-          aria-selected={tab === "all"}
-          className={`tab ${tab === "all" ? "tab--active" : ""}`}
-          onClick={() => setTab("all")}
+          aria-selected={tab === "inactive"}
+          className={`tab ${tab === "inactive" ? "tab--active" : ""}`}
+          onClick={() => changeTab("inactive")}
         >
-          전체 사용자
+          비활성 계정
+          {(inactiveCountQuery.data?.pagination.total ?? 0) > 0 && (
+            <span className="tab__count">
+              {inactiveCountQuery.data?.pagination.total}
+            </span>
+          )}
         </button>
       </div>
 
@@ -428,15 +477,16 @@ export function UsersPage() {
         </section>
       )}
 
-      {tab === "all" && (
+      {(tab === "all" || tab === "inactive") && (
         <>
-          <form className="filter-bar" onSubmit={handleSearch}>
-            <label className="filter-control">
+          <form className="filter-bar users-filter-bar" onSubmit={handleSearch}>
+            <label className="users-search">
+              <Search size={16} aria-hidden="true" />
               <span className="sr-only">사용자 검색</span>
               <input
                 name="keyword"
                 defaultValue={keyword}
-                placeholder="이름 또는 로그인 아이디 검색"
+                placeholder="이름, 아이디, 연락처로 검색"
               />
             </label>
 
@@ -453,230 +503,176 @@ export function UsersPage() {
               </select>
             </label>
 
-            <label className="filter-control">
-              <span className="sr-only">상태</span>
-              <select name="status" defaultValue={status}>
-                <option value="">전체 상태</option>
+            {tab === "all" && (
+              <label className="filter-control">
+                <span className="sr-only">상태</span>
+                <select name="status" defaultValue={status}>
+                  <option value="">전체 상태</option>
 
-                {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
+                  {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             <button type="submit" className="button button--secondary">
               검색
             </button>
           </form>
 
-          <section className="surface-card">
-            <header className="card-header">
-              <div>
-                <h2>전체 사용자</h2>
-                <p>총 {usersQuery.data?.pagination.total ?? 0}명</p>
-              </div>
-            </header>
+          <div className="users-workbench">
+            <section className="surface-card users-list-pane">
+              <header className="card-header">
+                <div>
+                  <h2>{tab === "inactive" ? "비활성 계정" : "전체 사용자"}</h2>
+                  <p>총 {usersQuery.data?.pagination.total ?? 0}명</p>
+                </div>
+              </header>
 
-            {usersQuery.isLoading && (
-              <LoadingState message="사용자를 불러오고 있습니다." />
-            )}
+              {usersQuery.isLoading && (
+                <LoadingState message="사용자를 불러오고 있습니다." />
+              )}
 
-            {usersQuery.isError && (
-              <ErrorState
-                message={getErrorMessage(usersQuery.error)}
-                onRetry={() => void usersQuery.refetch()}
-              />
-            )}
+              {usersQuery.isError && (
+                <ErrorState
+                  message={getErrorMessage(usersQuery.error)}
+                  onRetry={() => void usersQuery.refetch()}
+                />
+              )}
 
-            {!usersQuery.isLoading &&
-              !usersQuery.isError &&
-              (usersQuery.data?.items.length ? (
-                <>
-                  <div className="desktop-table">
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>사용자</th>
-                          <th>역할</th>
-                          <th>연락처</th>
-                          <th>상태</th>
-                          <th>가입일</th>
-                          <th>관리</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {usersQuery.data.items.map((user) => (
-                          <tr key={user.id}>
-                            <td>
-                              <div className="table-user">
-                                <span className="table-user__avatar">
-                                  {user.name.slice(0, 1)}
-                                </span>
-
-                                <span>
-                                  <strong>{user.name}</strong>
-                                  <small>
-                                    {user.loginId ?? "로그인 아이디 없음"}
-                                  </small>
-                                </span>
-                              </div>
-                            </td>
-                            <td>{ROLE_LABELS[user.role]}</td>
-                            <td>
-                              {user.phone ?? "연락처 없음"}
-                              <small className="table-secondary">
-                                {user.email ?? "이메일 없음"}
-                              </small>
-                            </td>
-                            <td>
-                              <span
-                                className={`status-badge ${
-                                  STATUS_CLASS_NAMES[user.status]
-                                }`}
-                              >
-                                {STATUS_LABELS[user.status]}
-                              </span>
-                            </td>
-                            <td>{formatDateTime(user.createdAt)}</td>
-                            <td>
-                              <div className="table-actions">
-                                <TemporaryPasswordButton
-                                  target={user}
-                                  onIssued={refreshUsers}
-                                />
-
-                                {user.status === "ACTIVE" && (
-                                  <button
-                                    type="button"
-                                    className="button button--ghost button--compact"
-                                    onClick={() =>
-                                      setAction({
-                                        type: "deactivate",
-                                        user,
-                                      })
-                                    }
-                                  >
-                                    <Power size={15} />
-                                    비활성화
-                                  </button>
-                                )}
-
-                                {user.status === "INACTIVE" && (
-                                  <button
-                                    type="button"
-                                    className="button button--secondary button--compact"
-                                    onClick={() =>
-                                      setAction({
-                                        type: "reactivate",
-                                        user,
-                                      })
-                                    }
-                                  >
-                                    <RotateCcw size={15} />
-                                    재활성화
-                                  </button>
-                                )}
-                              </div>
-                            </td>
+              {!usersQuery.isLoading &&
+                !usersQuery.isError &&
+                (usersQuery.data?.items.length ? (
+                  <>
+                    <div className="desktop-table">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>사용자</th>
+                            <th>역할</th>
+                            <th>연락처</th>
+                            <th>상태</th>
+                            <th>가입일</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
 
-                  <div className="mobile-record-list">
-                    {usersQuery.data.items.map((user) => (
-                      <article className="mobile-record-card" key={user.id}>
-                        <header>
-                          <div className="table-user">
-                            <span className="table-user__avatar">
-                              {user.name.slice(0, 1)}
-                            </span>
-
-                            <span>
-                              <strong>{user.name}</strong>
-                              <small>
-                                {ROLE_LABELS[user.role]} ·{" "}
-                                {user.loginId ?? "아이디 없음"}
-                              </small>
-                            </span>
-                          </div>
-
-                          <span
-                            className={`status-badge ${
-                              STATUS_CLASS_NAMES[user.status]
-                            }`}
-                          >
-                            {STATUS_LABELS[user.status]}
-                          </span>
-                        </header>
-
-                        <dl>
-                          <div>
-                            <dt>연락처</dt>
-                            <dd>{user.phone ?? "-"}</dd>
-                          </div>
-
-                          <div>
-                            <dt>이메일</dt>
-                            <dd>{user.email ?? "-"}</dd>
-                          </div>
-
-                          <div>
-                            <dt>가입일</dt>
-                            <dd>{formatDateTime(user.createdAt)}</dd>
-                          </div>
-                        </dl>
-
-                        {(user.status === "ACTIVE" ||
-                          user.status === "INACTIVE") && (
-                          <footer>
-                            <TemporaryPasswordButton
-                              target={user}
-                              onIssued={refreshUsers}
-                            />
-
-                            <button
-                              type="button"
-                              className="button button--secondary"
-                              onClick={() =>
-                                setAction({
-                                  type:
-                                    user.status === "ACTIVE"
-                                      ? "deactivate"
-                                      : "reactivate",
-                                  user,
-                                })
-                              }
+                        <tbody>
+                          {usersQuery.data.items.map((user) => (
+                            <tr
+                              key={user.id}
+                              data-selected={selectedUserId === user.id}
+                              onClick={() => setSelectedUserId(user.id)}
                             >
-                              {user.status === "ACTIVE"
-                                ? "비활성화"
-                                : "재활성화"}
-                            </button>
-                          </footer>
-                        )}
-                      </article>
-                    ))}
-                  </div>
-                </>
+                              <td>
+                                <div className="table-user">
+                                  <span className="table-user__avatar">
+                                    {user.name.slice(0, 1)}
+                                  </span>
+
+                                  <span>
+                                    <strong>{user.name}</strong>
+                                    <small>
+                                      {user.loginId ?? "로그인 아이디 없음"}
+                                    </small>
+                                  </span>
+                                </div>
+                              </td>
+                              <td>{ROLE_LABELS[user.role]}</td>
+                              <td>
+                                {user.phone ?? "연락처 없음"}
+                                <small className="table-secondary">
+                                  {user.email ?? "이메일 없음"}
+                                </small>
+                              </td>
+                              <td>
+                                <span
+                                  className={`status-badge ${
+                                    STATUS_CLASS_NAMES[user.status]
+                                  }`}
+                                >
+                                  {STATUS_LABELS[user.status]}
+                                </span>
+                              </td>
+                              <td>{formatDateTime(user.createdAt)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="mobile-record-list">
+                      {usersQuery.data.items.map((user) => (
+                        <button
+                          type="button"
+                          className="mobile-record-card users-mobile-card"
+                          key={user.id}
+                          onClick={() => setSelectedUserId(user.id)}
+                        >
+                          <header>
+                            <div className="table-user">
+                              <span className="table-user__avatar">
+                                {user.name.slice(0, 1)}
+                              </span>
+
+                              <span>
+                                <strong>{user.name}</strong>
+                                <small>
+                                  {ROLE_LABELS[user.role]} ·{" "}
+                                  {user.loginId ?? "아이디 없음"}
+                                </small>
+                              </span>
+                            </div>
+
+                            <span
+                              className={`status-badge ${
+                                STATUS_CLASS_NAMES[user.status]
+                              }`}
+                            >
+                              {STATUS_LABELS[user.status]}
+                            </span>
+                          </header>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <EmptyState
+                    title="조회된 사용자가 없습니다."
+                    description="검색 조건을 변경해 주세요."
+                  />
+                ))}
+
+              {(usersQuery.data?.pagination.totalPages ?? 0) > 1 && (
+                <Pagination
+                  page={userPage}
+                  totalPages={usersQuery.data?.pagination.totalPages ?? 1}
+                  onChange={setUserPage}
+                />
+              )}
+            </section>
+
+            <section className="surface-card users-detail-pane">
+              {selectedUser ? (
+                <UserDetailPanel
+                  key={selectedUser.id}
+                  user={selectedUser}
+                  onClose={() => setSelectedUserId(null)}
+                  onRequestStatusChange={(type) =>
+                    setAction({ type, user: selectedUser })
+                  }
+                  onRefresh={refreshUsers}
+                />
               ) : (
                 <EmptyState
-                  title="조회된 사용자가 없습니다."
-                  description="검색 조건을 변경해 주세요."
+                  title="사용자를 선택해 주세요."
+                  description="목록에서 사용자를 선택하면 상세 정보를 확인할 수 있습니다."
                 />
-              ))}
-
-            {(usersQuery.data?.pagination.totalPages ?? 0) > 1 && (
-              <Pagination
-                page={userPage}
-                totalPages={usersQuery.data?.pagination.totalPages ?? 1}
-                onChange={setUserPage}
-              />
-            )}
-          </section>
+              )}
+            </section>
+          </div>
         </>
       )}
 
@@ -754,6 +750,240 @@ export function UsersPage() {
         </Modal>
       )}
     </div>
+  );
+}
+
+type UserDetailPanelProps = {
+  user: UserSummary;
+  onClose: () => void;
+  onRequestStatusChange: (type: "deactivate" | "reactivate") => void;
+  onRefresh: () => Promise<void>;
+};
+
+function UserDetailPanel({
+  user,
+  onClose,
+  onRequestStatusChange,
+  onRefresh,
+}: UserDetailPanelProps) {
+  const isStudent = user.role === "STUDENT";
+
+  const updateMutation = useMutation({
+    mutationFn: (input: UpdateStudentProfileInput) =>
+      updateStudentProfile(user.id, input),
+    onSuccess: onRefresh,
+  });
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+    const input: UpdateStudentProfileInput = {
+      reason: String(formData.get("reason") ?? "").trim(),
+    };
+
+    const name = String(formData.get("name") ?? "").trim();
+    const phone = String(formData.get("phone") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    const birthDate = String(formData.get("birthDate") ?? "").trim();
+    const gender = String(formData.get("gender") ?? "").trim();
+    const guardianName = String(formData.get("guardianName") ?? "").trim();
+    const guardianPhone = String(formData.get("guardianPhone") ?? "").trim();
+
+    // 이름/연락처/이메일은 폼에 기존 값이 채워져 있으므로, 실제로 값이 바뀐
+    // 필드만 전송한다 — 그대로 재전송하면 서버 쪽 정규화(예: 연락처 하이픈 제거)로
+    // 건드리지 않은 값까지 바뀔 수 있다.
+    if (name && name !== user.name) input.name = name;
+    if (phone && phone !== (user.phone ?? "")) input.phone = phone;
+    if (email !== (user.email ?? "")) input.email = email;
+    if (birthDate) input.birthDate = birthDate;
+    if (gender) input.gender = gender as StudentGender;
+    if (guardianName) input.guardianName = guardianName;
+    if (guardianPhone) input.guardianPhone = guardianPhone;
+
+    updateMutation.mutate(input);
+  };
+
+  return (
+    <>
+      <header className="users-detail-header">
+        <div className="users-detail-header__identity">
+          <span className="table-user__avatar">{user.name.slice(0, 1)}</span>
+
+          <div>
+            <strong>{user.name}</strong>
+            <small>{user.loginId ?? "아이디 없음"}</small>
+          </div>
+
+          <span className={`status-badge ${STATUS_CLASS_NAMES[user.status]}`}>
+            {STATUS_LABELS[user.status]}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          className="users-detail-header__close"
+          aria-label="닫기"
+          onClick={onClose}
+        >
+          <X size={16} />
+        </button>
+      </header>
+
+      <div className="card-body users-detail-body">
+        <dl className="users-detail-meta">
+          <div>
+            <dt>역할</dt>
+            <dd>{ROLE_LABELS[user.role]}</dd>
+          </div>
+          <div>
+            <dt>가입일</dt>
+            <dd>{formatDateTime(user.createdAt)}</dd>
+          </div>
+        </dl>
+
+        {isStudent ? (
+          <form className="stack users-detail-form" onSubmit={handleSubmit}>
+            <div className="form-grid">
+              <label className="form-field">
+                <span>이름</span>
+                <input name="name" defaultValue={user.name} maxLength={100} />
+              </label>
+              <label className="form-field">
+                <span>연락처</span>
+                <input
+                  name="phone"
+                  defaultValue={user.phone ?? ""}
+                  placeholder="010-0000-0000"
+                />
+              </label>
+            </div>
+
+            <label className="form-field">
+              <span>이메일</span>
+              <input name="email" type="email" defaultValue={user.email ?? ""} />
+            </label>
+
+            <div className="form-grid">
+              <label className="form-field">
+                <span>생년월일</span>
+                <input name="birthDate" type="date" />
+              </label>
+              <label className="form-field">
+                <span>성별</span>
+                <select name="gender" defaultValue="">
+                  <option value="">변경 안 함</option>
+                  {Object.entries(GENDER_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="form-grid">
+              <label className="form-field">
+                <span>보호자 이름</span>
+                <input name="guardianName" maxLength={100} />
+              </label>
+              <label className="form-field">
+                <span>보호자 연락처</span>
+                <input name="guardianPhone" placeholder="010-0000-0000" />
+              </label>
+            </div>
+
+            <label className="form-field">
+              <span>변경 사유</span>
+              <textarea name="reason" rows={3} maxLength={500} required />
+            </label>
+
+            {updateMutation.isError && (
+              <div className="form-alert" role="alert">
+                {getErrorMessage(updateMutation.error)}
+              </div>
+            )}
+
+            {updateMutation.isSuccess && (
+              <p className="form-success">변경사항을 저장했습니다.</p>
+            )}
+
+            <div className="users-detail-actions">
+              <TemporaryPasswordButton target={user} onIssued={onRefresh} />
+
+              {user.status === "ACTIVE" && (
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  onClick={() => onRequestStatusChange("deactivate")}
+                >
+                  <Power size={15} />
+                  비활성화
+                </button>
+              )}
+
+              {user.status === "INACTIVE" && (
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={() => onRequestStatusChange("reactivate")}
+                >
+                  <RotateCcw size={15} />
+                  재활성화
+                </button>
+              )}
+
+              <button
+                type="submit"
+                className="button button--primary"
+                disabled={updateMutation.isPending}
+              >
+                {updateMutation.isPending ? "저장 중…" : "저장"}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <dl className="users-detail-meta">
+              <div>
+                <dt>연락처</dt>
+                <dd>{user.phone ?? "-"}</dd>
+              </div>
+              <div>
+                <dt>이메일</dt>
+                <dd>{user.email ?? "-"}</dd>
+              </div>
+            </dl>
+
+            <div className="users-detail-actions">
+              <TemporaryPasswordButton target={user} onIssued={onRefresh} />
+
+              {user.status === "ACTIVE" && (
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  onClick={() => onRequestStatusChange("deactivate")}
+                >
+                  <Power size={15} />
+                  비활성화
+                </button>
+              )}
+
+              {user.status === "INACTIVE" && (
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={() => onRequestStatusChange("reactivate")}
+                >
+                  <RotateCcw size={15} />
+                  재활성화
+                </button>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </>
   );
 }
 

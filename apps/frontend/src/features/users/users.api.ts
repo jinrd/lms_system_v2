@@ -109,6 +109,7 @@ export function getPendingStudents(page = 1): Promise<PendingStudentsPage> {
 export function approveStudent(userId: string): Promise<UserStatusChange> {
   return apiRequest<UserStatusChange>(`/users/${userId}/approve`, {
     method: "POST",
+    body: { role: "STUDENT" },
   });
 }
 
@@ -172,6 +173,43 @@ export function createStaff(
 ): Promise<CreateStaffResponse> {
   return apiRequest<CreateStaffResponse>("/users/staff", {
     method: "POST",
+    body: input,
+  });
+}
+
+export type StudentGender = "MALE" | "FEMALE" | "OTHER" | "UNDISCLOSED";
+
+export type StudentProfile = {
+  id: string;
+  loginId: string | null;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  birthDate: string | null;
+  gender: StudentGender | null;
+  isMinorAtSignup: boolean;
+  guardianName: string | null;
+  guardianPhone: string | null;
+  updatedAt: string;
+};
+
+export type UpdateStudentProfileInput = {
+  name?: string;
+  phone?: string;
+  email?: string;
+  birthDate?: string;
+  gender?: StudentGender;
+  guardianName?: string;
+  guardianPhone?: string;
+  reason: string;
+};
+
+export function updateStudentProfile(
+  userId: string,
+  input: UpdateStudentProfileInput,
+): Promise<StudentProfile> {
+  return apiRequest<StudentProfile>(`/users/${userId}/profile`, {
+    method: "PATCH",
     body: input,
   });
 }
