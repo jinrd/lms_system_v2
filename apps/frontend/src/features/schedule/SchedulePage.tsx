@@ -150,6 +150,7 @@ function ScheduleCalendar({
   const [range, setRange] = useState<{ start: string; end: string } | null>(null);
   const [classFilter, setClassFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<SessionStatus | "">("");
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [editor, setEditor] = useState<SessionEditor>(null);
 
   const classesById = useMemo(() => {
@@ -199,10 +200,9 @@ function ScheduleCalendar({
     [classesById, filteredSessions],
   );
 
-  const selectedSession =
-    editor && editor.type
-      ? allSessions.find((item) => item.id === editor.session.id) ?? editor.session
-      : null;
+  const selectedSession = selectedSessionId
+    ? allSessions.find((item) => item.id === selectedSessionId) ?? null
+    : null;
 
   const journalMutation = useMutation({
     mutationFn: ({
@@ -301,7 +301,8 @@ function ScheduleCalendar({
           events={events}
           eventClick={(info: EventClickArg) => {
             const session = info.event.extendedProps.session as ClassSession;
-            setEditor({ type: "journal", session });
+            setSelectedSessionId(session.id);
+            setEditor(null);
           }}
           datesSet={(arg) => {
             const start = toDateStr(arg.start);
@@ -313,11 +314,14 @@ function ScheduleCalendar({
         />
       </section>
 
-      {selectedSession && editor && (
+      {selectedSession && (
         <Modal
           title="수업 일정 상세"
           description={`${classesById.get(selectedSession.classId) ?? ""} · ${selectedSession.subjectName}`}
-          onClose={() => setEditor(null)}
+          onClose={() => {
+            setSelectedSessionId(null);
+            setEditor(null);
+          }}
         >
           <div className="stack schedule-detail">
             <div className="schedule-detail__meta">
@@ -409,7 +413,7 @@ function ScheduleCalendar({
               )}
             </div>
 
-            {editor.type === "journal" && (
+            {editor?.type === "journal" && (
               <form
                 className="stack schedule-journal-form"
                 onSubmit={(event: FormEvent<HTMLFormElement>) => {
@@ -477,7 +481,7 @@ function ScheduleCalendar({
               </form>
             )}
 
-            {editor.type === "start" && (
+            {editor?.type === "start" && (
               <div className="stack">
                 <div className="info-banner">
                   <Play size={19} />
@@ -506,7 +510,7 @@ function ScheduleCalendar({
               </div>
             )}
 
-            {editor.type === "complete" && (
+            {editor?.type === "complete" && (
               <form
                 className="stack"
                 onSubmit={(event: FormEvent<HTMLFormElement>) => {
