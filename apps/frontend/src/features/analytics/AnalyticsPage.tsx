@@ -9,7 +9,7 @@ import {
   RefreshCw,
   Users,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { ErrorState, LoadingState } from "../../components/ui/PageStates";
@@ -22,7 +22,37 @@ import { getInquiries } from "../communications/communications.api";
 import { getPrograms } from "../courses/programs.api";
 import { getExams, type ExamStatus } from "../exams/exams.api";
 import { getPendingStudents, getUsers } from "../users/users.api";
+import { getAttendanceStatistics, getExamStatistics } from "./statistics.api";
 import "./analytics.css";
+
+const ATTENDANCE_BUCKET_LABELS: Record<"present" | "late" | "earlyLeave" | "absent" | "excused" | "unprocessed", string> = {
+  present: "출석",
+  late: "지각",
+  earlyLeave: "조퇴",
+  absent: "결석",
+  excused: "인정 결석",
+  unprocessed: "미처리",
+};
+
+function todayDateString(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function daysAgoDateString(days: number): string {
+  return new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+}
+
+function RateDonut({ rate, label }: { rate: number | null; label: string }) {
+  const style = { "--rate": rate ?? 0 } as CSSProperties;
+  return (
+    <div className="analytics-donut" style={style}>
+      <div className="analytics-donut__label">
+        <strong>{rate === null ? "-" : `${rate}%`}</strong>
+        <span>{label}</span>
+      </div>
+    </div>
+  );
+}
 
 const CLASS_STATUS_LABELS: Record<DerivedClassStatus, string> = {
   UPCOMING: "운영 예정",
@@ -70,6 +100,9 @@ export function AnalyticsPage() {
 function ManagementAnalytics() {
   const [programId, setProgramId] = useState("");
   const [classStatus, setClassStatus] = useState<DerivedClassStatus | "">("");
+  const [classId, setClassId] = useState("");
+  const [from, setFrom] = useState(() => daysAgoDateString(29));
+  const [to, setTo] = useState(() => todayDateString());
 
   const classesQuery = useQuery({
     queryKey: ["analytics", "classes"],
@@ -96,6 +129,26 @@ function ManagementAnalytics() {
     queryKey: ["analytics", "inquiries"],
     queryFn: () => getInquiries({ page: 1 }),
   });
+  const attendanceStatsQuery = useQuery({
+    queryKey: ["analytics", "stats-attendance", programId, classId, from, to],
+    queryFn: () =>
+      getAttendanceStatistics({
+        courseOfferingId: programId || undefined,
+        classId: classId || undefined,
+        from,
+        to,
+      }),
+  });
+  const examStatsQuery = useQuery({
+    queryKey: ["analytics", "stats-exams", programId, classId, from, to],
+    queryFn: () =>
+      getExamStatistics({
+        courseOfferingId: programId || undefined,
+        classId: classId || undefined,
+        from,
+        to,
+      }),
+  });
 
   const queries = [
     classesQuery,
@@ -104,6 +157,8 @@ function ManagementAnalytics() {
     pendingQuery,
     examsQuery,
     inquiriesQuery,
+    attendanceStatsQuery,
+    examStatsQuery,
   ];
   const retry = () => queries.forEach((query) => void query.refetch());
 
@@ -130,6 +185,11 @@ function ManagementAnalytics() {
   const activeExams = exams.filter((item) =>
     ["SCHEDULED", "OPEN", "CLOSED", "GRADING"].includes(item.status),
   );
+  const attendanceOverall = attendanceStatsQuery.data?.overall;
+  const attendanceByClass = [...(attendanceStatsQuery.data?.classes ?? [])].sort(
+    (a, b) => (a.attendanceRate ?? 100) - (b.attendanceRate ?? 100),
+  );
+  const examStatsOverall = examStatsQuery.data?.overall;
   const crowdedClasses = filteredClasses
     .filter((item) => item.capacity > 0 && item.enrollmentCount / item.capacity >= 0.9)
     .sort(
@@ -150,6 +210,14 @@ function ManagementAnalytics() {
       </header>
 
       <section className="filter-bar analytics-filters" aria-label="통계 필터">
+        <label className="filter-control">
+          <span>기간</span>
+          <span className="analytics-date-range">
+            <input type="date" value={from} max={to} onChange={(event) => setFrom(event.target.value)} />
+            <span>~</span>
+            <input type="date" value={to} min={from} onChange={(event) => setTo(event.target.value)} />
+          </span>
+        </label>
         <label className="filter-control">
           <span>교육과정</span>
           <select value={programId} onChange={(event) => setProgramId(event.target.value)}>
@@ -173,6 +241,17 @@ function ManagementAnalytics() {
             {Object.entries(CLASS_STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="filter-control">
+          <span>반</span>
+          <select value={classId} onChange={(event) => setClassId(event.target.value)}>
+            <option value="">전체 반</option>
+            {filteredClasses.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
               </option>
             ))}
           </select>
@@ -207,6 +286,82 @@ function ManagementAnalytics() {
       </section>
 
       <section className="analytics-grid">
+        <article className="surface-card analytics-panel">
+          <header className="card-header">
+            <div>
+              <h2>출석 현황</h2>
+              <p>{from} ~ {to} 기간의 출석률입니다.</p>
+            </div>
+            <Link className="text-button" to="/attendance">
+              출석 관리 <ArrowRight size={15} />
+            </Link>
+          </header>
+          <div className="card-body analytics-stat-body">
+            <RateDonut rate={attendanceOverall?.attendanceRate ?? null} label="전체 출석률" />
+            <div className="distribution-list">
+              {(["present", "late", "earlyLeave", "absent", "excused"] as const).map((key) => {
+                const bucket = attendanceOverall;
+                const total = bucket
+                  ? bucket.present + bucket.late + bucket.earlyLeave + bucket.absent + bucket.excused + bucket.unprocessed
+                  : 0;
+                const count = bucket?.[key] ?? 0;
+                return (
+                  <div className="distribution-row" key={key}>
+                    <span>{ATTENDANCE_BUCKET_LABELS[key]}</span>
+                    <div><i style={{ width: `${percent(count, total)}%` }} /></div>
+                    <strong>{count}</strong>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          {attendanceByClass.length > 0 && (
+            <div className="analytics-compact-list">
+              {attendanceByClass.slice(0, 4).map((item) => (
+                <div key={item.classId}>
+                  <span>
+                    <strong>{item.className}</strong>
+                    <small>{item.courseOfferingName}</small>
+                  </span>
+                  <strong>{item.attendanceRate === null ? "-" : `${item.attendanceRate}%`}</strong>
+                </div>
+              ))}
+            </div>
+          )}
+        </article>
+
+        <article className="surface-card analytics-panel">
+          <header className="card-header">
+            <div>
+              <h2>시험 응시 및 합격 현황</h2>
+              <p>{from} ~ {to} 기간에 시작한 시험 기준입니다.</p>
+            </div>
+            <Link className="text-button" to="/learning">
+              시험 관리 <ArrowRight size={15} />
+            </Link>
+          </header>
+          <div className="card-body analytics-stat-body">
+            <RateDonut rate={examStatsOverall?.passRate ?? null} label="전체 합격률" />
+            <div className="distribution-list">
+              {(
+                [
+                  ["응시", examStatsOverall?.attemptedCount ?? 0],
+                  ["미응시", examStatsOverall?.notAttendedCount ?? 0],
+                  ["채점 대기", examStatsOverall?.incompleteCount ?? 0],
+                  ["합격", examStatsOverall?.passCount ?? 0],
+                  ["불합격", examStatsOverall?.failCount ?? 0],
+                ] as const
+              ).map(([label, count]) => (
+                <div className="distribution-row" key={label}>
+                  <span>{label}</span>
+                  <div><i style={{ width: `${percent(count, examStatsOverall?.targetCount ?? 0)}%` }} /></div>
+                  <strong>{count}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        </article>
+
         <article className="surface-card analytics-panel">
           <header className="card-header">
             <div>
