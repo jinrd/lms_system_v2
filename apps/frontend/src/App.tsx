@@ -14,7 +14,7 @@ import { CoursesPage } from "./features/courses/CoursePage";
 import { ClassesPage } from "./features/classes/ClassesPage";
 import { UsersPage } from "./features/users/UsersPage";
 import { TermsPage } from "./features/terms/TermsPage";
-import { InstructorSchedulePage } from "./features/instructor/InstructorSchedulePage";
+import { SchedulePage } from "./features/schedule/SchedulePage";
 import { AttendancePage } from "./features/attendance/AttendancePage";
 import { QuestionsPage } from "./features/questions/QuestionsPage";
 
@@ -112,8 +112,8 @@ const router = createBrowserRouter([
       {
         path: "schedule",
         element: (
-          <RequireRole roles={["INSTRUCTOR"]}>
-            <InstructorSchedulePage />
+          <RequireRole roles={["INSTRUCTOR", "MANAGER", "PRINCIPAL", "ADMIN"]}>
+            <SchedulePage />
           </RequireRole>
         ),
       },
