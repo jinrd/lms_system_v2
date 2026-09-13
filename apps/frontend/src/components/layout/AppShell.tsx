@@ -99,7 +99,7 @@ const navigationGroups: NavigationGroup[] = [
         label: "반 관리",
         path: "/classes",
         icon: Users,
-        roles: MANAGEMENT_ROLES,
+        roles: ["INSTRUCTOR", "ADMIN", "MANAGER", "PRINCIPAL"],
       },
       {
         label: "수업 일정",

@@ -104,7 +104,7 @@ const router = createBrowserRouter([
       {
         path: "classes",
         element: (
-          <RequireRole roles={["MANAGER", "PRINCIPAL", "ADMIN"]}>
+          <RequireRole roles={["INSTRUCTOR", "MANAGER", "PRINCIPAL", "ADMIN"]}>
             <ClassesPage />
           </RequireRole>
         ),

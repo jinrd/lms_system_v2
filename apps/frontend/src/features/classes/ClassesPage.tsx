@@ -1,6 +1,7 @@
-import { ChevronLeft, CirclePlus, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, CirclePlus, Pencil, Search, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
+import { useAuth } from "../../auth/AuthProvider";
 import { Modal } from "../../components/ui/Modal";
 import {
   EmptyState,
@@ -13,12 +14,15 @@ import { ClassSchedulePanel } from "./ClassSchedulePanel";
 import {
   changeManagedSubject,
   createManagedClass,
+  getInstructorClasses,
   getManagedClasses,
   removeManagedClass,
   updateManagedClass,
+  type DerivedClassStatus,
   type ManagedClass,
   type ManagedClassPage,
 } from "./class-management.api";
+import "./classes.css";
 
 const STATUS = {
   UPCOMING: { label: "운영 전", className: "status-badge--neutral" },
@@ -33,8 +37,121 @@ function errorMessage(error: unknown) {
 }
 
 export function ClassesPage() {
+  const { user } = useAuth();
+
+  return user?.role === "INSTRUCTOR" ? (
+    <InstructorClassesView />
+  ) : (
+    <StaffClassesView />
+  );
+}
+
+function InstructorClassesView() {
+  const [keyword, setKeyword] = useState("");
+  const classesQuery = useQuery({
+    queryKey: ["instructor-classes"],
+    queryFn: getInstructorClasses,
+  });
+
+  if (classesQuery.isLoading) {
+    return <LoadingState message="담당 반 정보를 불러오고 있습니다." />;
+  }
+  if (classesQuery.isError) {
+    return <ErrorState message="담당 반 정보를 불러오지 못했습니다." />;
+  }
+
+  const rows = classesQuery.data ?? [];
+  const normalizedKeyword = keyword.trim().toLocaleLowerCase("ko-KR");
+  const filtered = normalizedKeyword
+    ? rows.filter(
+        (item) =>
+          item.name.toLocaleLowerCase("ko-KR").includes(normalizedKeyword) ||
+          item.courseOfferingName
+            .toLocaleLowerCase("ko-KR")
+            .includes(normalizedKeyword),
+      )
+    : rows;
+
+  return (
+    <div className="page-stack classes-page">
+      <header className="page-header">
+        <div>
+          <h1>반 관리</h1>
+          <p>내가 담당하는 반의 운영 정보를 확인합니다.</p>
+        </div>
+      </header>
+
+      <div className="filter-bar classes-filter-bar">
+        <label className="classes-search">
+          <Search size={16} aria-hidden="true" />
+          <span className="sr-only">반 검색</span>
+          <input
+            placeholder="반명, 과정명으로 검색"
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+          />
+        </label>
+      </div>
+
+      {rows.length === 0 ? (
+        <EmptyState
+          title="담당하는 반이 없습니다."
+          description="교육과정에 반이 연결되면 이곳에 표시됩니다."
+        />
+      ) : (
+        <section className="surface-card">
+          <header className="card-header">
+            <div>
+              <h2>담당 반</h2>
+              <p>총 {filtered.length}개</p>
+            </div>
+          </header>
+
+          {filtered.length === 0 ? (
+            <EmptyState
+              title="검색 결과가 없습니다."
+              description="다른 검색어로 다시 시도해 주세요."
+            />
+          ) : (
+            <div className="desktop-table">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>반명</th>
+                    <th>과정명</th>
+                    <th>강의실</th>
+                    <th>운영 기간</th>
+                    <th>과목 수</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((item) => (
+                    <tr key={`${item.id}:${item.courseOfferingId}`}>
+                      <td>{item.name}</td>
+                      <td>{item.courseOfferingName}</td>
+                      <td>{item.room ?? "미정"}</td>
+                      <td>
+                        {item.startDate} ~ {item.endDate}
+                      </td>
+                      <td>{item.subjectCount}개</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
+
+function StaffClassesView() {
   const client = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
+  const [status, setStatus] = useState<DerivedClassStatus | "">("");
+  const [instructorId, setInstructorId] = useState("");
+  const [keyword, setKeyword] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [detailTab, setDetailTab] = useState<ClassDetailTab>("overview");
@@ -118,14 +235,41 @@ export function ClassesPage() {
     onSuccess: refresh,
   });
 
+  const items = useMemo(() => classesQuery.data?.items ?? [], [classesQuery.data?.items]);
+  const programs = programsQuery.data?.items ?? [];
+
+  const instructorOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of items) {
+      for (const program of item.programs) {
+        map.set(program.instructor.id, program.instructor.name);
+      }
+    }
+    return [...map.entries()];
+  }, [items]);
+
+  const filteredItems = useMemo(() => {
+    const normalizedKeyword = keyword.trim().toLocaleLowerCase("ko-KR");
+    return items.filter(
+      (item) =>
+        (!status || item.derivedStatus === status) &&
+        (!instructorId ||
+          item.programs.some(
+            (program) => program.instructor.id === instructorId,
+          )) &&
+        (!normalizedKeyword ||
+          item.name.toLocaleLowerCase("ko-KR").includes(normalizedKeyword)),
+    );
+  }, [instructorId, items, keyword, status]);
+
   if (classesQuery.isLoading || programsQuery.isLoading)
     return <LoadingState message="반 정보를 불러오고 있습니다." />;
   if (classesQuery.isError || programsQuery.isError)
     return <ErrorState message="반 관리 정보를 불러오지 못했습니다." />;
-  const items = classesQuery.data?.items ?? [];
-  const programs = programsQuery.data?.items ?? [];
   const selected =
-    items.find((item) => item.id === selectedId) ?? items[0] ?? null;
+    filteredItems.find((item) => item.id === selectedId) ??
+    filteredItems[0] ??
+    null;
 
   return (
     <div
@@ -136,7 +280,7 @@ export function ClassesPage() {
       <header className="page-header">
         <div>
           <h1>반 관리</h1>
-          <p>반에 교육과정을 연결하고 운영 기간과 시간표를 관리합니다.</p>
+          <p>반 개설부터 수강생 관리까지 반의 운영 정보를 관리합니다.</p>
         </div>
         <button
           className="button button--primary"
@@ -171,44 +315,154 @@ export function ClassesPage() {
         </button>
       </div>
 
-      {items.length === 0 ? (
+      <div className="filter-bar classes-filter-bar">
+        <label className="filter-control">
+          <span className="sr-only">상태</span>
+          <select
+            value={status}
+            onChange={(event) => {
+              setStatus(event.target.value as DerivedClassStatus | "");
+              setSelectedId(null);
+            }}
+          >
+            <option value="">전체 상태</option>
+            {(Object.keys(STATUS) as DerivedClassStatus[]).map((value) => (
+              <option key={value} value={value}>
+                {STATUS[value].label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="filter-control">
+          <span className="sr-only">강사</span>
+          <select
+            value={instructorId}
+            onChange={(event) => {
+              setInstructorId(event.target.value);
+              setSelectedId(null);
+            }}
+          >
+            <option value="">전체 강사</option>
+            {instructorOptions.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="classes-search">
+          <Search size={16} aria-hidden="true" />
+          <span className="sr-only">반명 검색</span>
+          <input
+            placeholder="반명 검색"
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+          />
+        </label>
+      </div>
+
+      {filteredItems.length === 0 ? (
         <EmptyState
           title={
-            showArchived ? "보관된 반이 없습니다." : "등록된 반이 없습니다."
+            items.length === 0
+              ? showArchived
+                ? "보관된 반이 없습니다."
+                : "등록된 반이 없습니다."
+              : "조건에 맞는 반이 없습니다."
           }
-          description="교육과정을 준비한 뒤 실제 운영할 반을 추가해 주세요."
+          description={
+            items.length === 0
+              ? "교육과정을 준비한 뒤 실제 운영할 반을 추가해 주세요."
+              : "필터를 변경해 주세요."
+          }
         />
       ) : (
-        <div className="master-detail-layout workbench-layout">
+        <div className="master-detail-layout workbench-layout classes-workbench">
           <section
-            className={`data-list master-pane master-pane--list ${
+            className={`surface-card master-pane master-pane--list classes-table-pane ${
               mobileDetailOpen ? "master-pane--mobile-hidden" : ""
             }`}
           >
-            {items.map((item) => (
-              <button
-                className={`selection-card ${selected?.id === item.id ? "selection-card--active" : ""}`}
-                type="button"
-                key={item.id}
-                onClick={() => {
-                  setSelectedId(item.id);
-                  setMobileDetailOpen(true);
-                  setDetailTab("overview");
-                }}
-              >
-                <span>
-                  <strong>{item.name}</strong>
-                  <small>
-                    {item.startDate}~{item.endDate}
-                  </small>
-                </span>
-                <span
-                  className={`status-badge ${STATUS[item.derivedStatus].className}`}
+            <div className="desktop-table">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>반명</th>
+                    <th>과정명/과목</th>
+                    <th>강사</th>
+                    <th>정원/수강생</th>
+                    <th>운영 기간</th>
+                    <th>상태</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredItems.map((item) => (
+                    <tr
+                      key={item.id}
+                      data-selected={selected?.id === item.id}
+                      onClick={() => {
+                        setSelectedId(item.id);
+                        setMobileDetailOpen(true);
+                        setDetailTab("overview");
+                      }}
+                    >
+                      <td>{item.name}</td>
+                      <td>
+                        {item.programs.map((program) => program.name).join(", ") ||
+                          "-"}
+                      </td>
+                      <td>
+                        {item.programs
+                          .map((program) => program.instructor.name)
+                          .join(", ") || "-"}
+                      </td>
+                      <td>
+                        {item.enrollmentCount}/{item.capacity}
+                      </td>
+                      <td>
+                        {item.startDate} ~ {item.endDate}
+                      </td>
+                      <td>
+                        <span
+                          className={`status-badge ${STATUS[item.derivedStatus].className}`}
+                        >
+                          {STATUS[item.derivedStatus].label}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mobile-record-list">
+              {filteredItems.map((item) => (
+                <button
+                  type="button"
+                  className="classes-mobile-card"
+                  key={item.id}
+                  onClick={() => {
+                    setSelectedId(item.id);
+                    setMobileDetailOpen(true);
+                    setDetailTab("overview");
+                  }}
                 >
-                  {STATUS[item.derivedStatus].label}
-                </span>
-              </button>
-            ))}
+                  <span>
+                    <strong>{item.name}</strong>
+                    <small>
+                      {item.startDate}~{item.endDate}
+                    </small>
+                  </span>
+                  <span
+                    className={`status-badge ${STATUS[item.derivedStatus].className}`}
+                  >
+                    {STATUS[item.derivedStatus].label}
+                  </span>
+                </button>
+              ))}
+            </div>
           </section>
           {selected && (
             <div
