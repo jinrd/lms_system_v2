@@ -193,8 +193,27 @@ export function ExamsPage() {
       {notice && <p className="form-success" role="status">{notice}</p>}
       <section className="master-detail-layout workbench-layout exam-workbench">
         <section className={`surface-card master-pane master-pane--list exam-list-pane ${mobileOpen ? "master-pane--mobile-hidden" : ""}`} aria-label="시험 목록">
-          <header className="card-header"><div><h2>시험 목록</h2><p>{list.data ? `총 ${list.data.pagination.total}개` : "목록을 불러오는 중"}</p></div><ClipboardPen size={20} /></header>
-          {list.isPending ? <LoadingState message="시험을 불러오는 중입니다." /> : list.isError ? <ErrorState message={readError(list.error)} onRetry={() => void list.refetch()} /> : list.data?.items.length === 0 ? <EmptyState title="등록된 시험이 없습니다." description="새 시험을 눌러 첫 시험 초안을 만드세요." /> : <div className="exam-list">{list.data?.items.map((exam) => <button type="button" key={exam.id} aria-pressed={id === exam.id && !editor} className={`exam-list-item ${id === exam.id && !editor ? "exam-list-item--selected" : ""}`} onClick={() => { setSelectedId(exam.id); setEditor(null); setPartEditor(null); setMobileOpen(true); setNotice(""); }}><span><span>{STAGE_LABELS[exam.stage]} · {SCOPE_LABELS[exam.scope]}</span><ExamStatusBadge status={exam.status} /></span><strong>{exam.title}</strong><small>{exam.courseOfferingName}</small><span><time>{formatDateTime(exam.opensAt)}</time><ChevronRight size={16} /></span></button>)}</div>}
+          <header className="card-header exam-list-header">
+            <div><h2>시험 목록</h2><p>{list.data ? `전체 ${list.data.pagination.total}개의 시험 운영 현황입니다.` : "목록을 불러오는 중"}</p></div>
+            <span className="exam-list-count">{list.data?.pagination.total ?? 0}건</span>
+          </header>
+          {list.isPending ? <LoadingState message="시험을 불러오는 중입니다." /> : list.isError ? <ErrorState message={readError(list.error)} onRetry={() => void list.refetch()} /> : list.data?.items.length === 0 ? <EmptyState title="등록된 시험이 없습니다." description="새 시험을 눌러 첫 시험 초안을 만드세요." /> : (
+            <div className="exam-table-wrap">
+              <table className="exam-table">
+                <thead><tr><th>시험명</th><th>교육과정</th><th>응시 대상</th><th>응시 기간</th><th>상태</th><th><span className="sr-only">상세 보기</span></th></tr></thead>
+                <tbody>{list.data?.items.map((exam) => (
+                  <tr key={exam.id} className={id === exam.id && !editor ? "exam-table-row--selected" : undefined}>
+                    <td><button type="button" className="exam-title-button" aria-label={`${exam.title} 상세 보기`} onClick={() => { setSelectedId(exam.id); setEditor(null); setPartEditor(null); setMobileOpen(true); setNotice(""); }}><strong>{exam.title}</strong><span>{STAGE_LABELS[exam.stage]} · {SCOPE_LABELS[exam.scope]}</span></button></td>
+                    <td><strong>{exam.courseOfferingName}</strong><span>{exam.subjects.map((subject) => subject.name).join(" · ") || "과목 미지정"}</span></td>
+                    <td><strong>{exam.classTargets.length > 0 ? `${exam.classTargets.length}개 반` : "미지정"}</strong><span>{exam.classTargets.map((target) => target.name).join(" · ") || "대상 반을 지정해 주세요"}</span></td>
+                    <td><time>{formatDateTime(exam.opensAt)}</time><span>{formatDateTime(exam.closesAt)}까지</span></td>
+                    <td><ExamStatusBadge status={exam.status} /></td>
+                    <td><button type="button" className="icon-button exam-row-action" aria-label={`${exam.title} 상세 보기`} onClick={() => { setSelectedId(exam.id); setEditor(null); setPartEditor(null); setMobileOpen(true); setNotice(""); }}><ChevronRight size={17} /></button></td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          )}
           {(list.data?.pagination.totalPages ?? 0) > 1 && <nav className="pagination" aria-label="시험 목록 페이지"><button type="button" className="button button--secondary" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}><ChevronLeft size={16} />이전</button><span>{page} / {list.data?.pagination.totalPages}</span><button type="button" className="button button--secondary" disabled={page >= (list.data?.pagination.totalPages ?? 1)} onClick={() => setPage((value) => value + 1)}>다음<ChevronRight size={16} /></button></nav>}
         </section>
         <div className={`master-pane master-pane--detail exam-detail-pane ${mobileOpen ? "" : "master-pane--mobile-hidden"}`}>
