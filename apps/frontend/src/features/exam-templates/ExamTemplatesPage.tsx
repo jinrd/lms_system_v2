@@ -188,7 +188,7 @@ export function ExamTemplatesPage() {
       >
         <fieldset disabled={locked}>
           <label className="form-field template-filters__keyword">
-            <span>템플릿 이름</span>
+            <span className="sr-only">템플릿 이름</span>
             <div className="template-search-input">
               <Search size={17} aria-hidden="true" />
               <input
@@ -196,12 +196,12 @@ export function ExamTemplatesPage() {
                 value={keyword}
                 maxLength={200}
                 onChange={(event) => setKeyword(event.target.value)}
-                placeholder="이름으로 검색"
+                placeholder="템플릿명으로 검색"
               />
             </div>
           </label>
           <label className="form-field">
-            <span>시험 범위</span>
+            <span className="sr-only">시험 범위</span>
             <select
               value={query.scope ?? ""}
               onChange={(event) =>
@@ -219,7 +219,7 @@ export function ExamTemplatesPage() {
             </select>
           </label>
           <label className="form-field">
-            <span>시험 단계</span>
+            <span className="sr-only">시험 단계</span>
             <select
               value={query.stage ?? ""}
               onChange={(event) =>
@@ -237,7 +237,7 @@ export function ExamTemplatesPage() {
             </select>
           </label>
           <label className="form-field">
-            <span>상태</span>
+            <span className="sr-only">상태</span>
             <select
               value={query.active === undefined ? "" : String(query.active)}
               onChange={(event) =>

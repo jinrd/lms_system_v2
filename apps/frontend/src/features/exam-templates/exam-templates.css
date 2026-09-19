@@ -637,3 +637,223 @@
 .template-editor__heading:focus {
   outline: none;
 }
+
+/* 학습관리 시안: 목록을 기준점으로 두고 선택한 템플릿을 한 작업대에서 구성한다. */
+.templates-page > .page-header {
+  margin-bottom: 2px;
+}
+
+.template-filters {
+  padding: 12px;
+}
+
+.template-filters > fieldset {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.template-filters .form-field input,
+.template-filters .form-field select {
+  min-height: 42px;
+}
+
+.template-workbench {
+  grid-template-columns: minmax(300px, .68fr) minmax(0, 1.7fr);
+  gap: 16px;
+}
+
+.template-list-pane {
+  position: sticky;
+  top: 92px;
+}
+
+.template-list-pane > .card-header {
+  min-height: 66px;
+  padding: 15px 16px;
+}
+
+.template-list-pane > .card-header h2 {
+  font-size: 15px;
+}
+
+.template-list-item {
+  position: relative;
+  gap: 6px;
+  padding: 15px 16px 15px 19px;
+}
+
+.template-list-item--selected::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--primary);
+  content: "";
+}
+
+.template-list-item > strong {
+  font-size: 14px;
+}
+
+.template-detail {
+  gap: 16px;
+}
+
+.template-detail > .surface-card > .card-header {
+  min-height: 68px;
+  padding: 16px 18px;
+}
+
+.template-detail > .surface-card > .card-header h2 {
+  font-size: 17px;
+}
+
+.template-detail__body {
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, .7fr);
+  gap: 14px 24px;
+  padding: 18px;
+}
+
+.template-guidance,
+.template-description {
+  grid-column: 1;
+}
+
+.template-metadata {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-content: start;
+  grid-template-columns: 1fr;
+  gap: 0;
+  padding-left: 20px;
+  border-left: 1px solid var(--border);
+}
+
+.template-metadata > div,
+.template-metadata > div:first-child {
+  display: grid;
+  grid-column: auto;
+  grid-template-columns: 105px minmax(0, 1fr);
+  min-height: 38px;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.template-metadata > div:last-child {
+  border-bottom: 0;
+}
+
+.template-metadata dt {
+  margin: 0;
+  font-size: 11px;
+}
+
+.template-metadata dd {
+  justify-content: flex-end;
+  margin: 0;
+  text-align: right;
+  font-size: 12px;
+}
+
+.template-parts > .card-header {
+  border-bottom: 0;
+}
+
+.template-part {
+  padding: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.template-part__header {
+  margin-bottom: 12px;
+}
+
+.template-part__facts {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.template-part__facts > div {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fbfcfb;
+}
+
+.template-part__facts dt {
+  margin-bottom: 3px;
+  font-size: 11px;
+}
+
+.template-part__facts dd {
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.template-lifecycle__body {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  padding: 16px 18px;
+}
+
+.template-lifecycle__actions {
+  align-items: center;
+}
+
+.template-lifecycle__body > :not(.template-lifecycle__actions) {
+  grid-column: 1 / -1;
+}
+
+.template-composer__body {
+  padding: 18px;
+}
+
+.template-composer-rows {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.template-composer-rows > li {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.template-composer-rows > li:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 1100px) {
+  .template-filters > fieldset {
+    flex-wrap: wrap;
+  }
+
+  .template-detail__body {
+    grid-template-columns: 1fr;
+  }
+
+  .template-metadata {
+    grid-column: 1;
+    grid-row: auto;
+    padding-top: 14px;
+    padding-left: 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .template-part__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .template-list-pane {
+    position: static;
+  }
+
+  .template-part__facts {
+    grid-template-columns: 1fr;
+  }
+}
