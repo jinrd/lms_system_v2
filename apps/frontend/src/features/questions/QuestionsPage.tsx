@@ -31,6 +31,7 @@ import {
   type QuestionOptionInput,
   type QuestionType,
 } from "./questions.api";
+import "./questions.css";
 
 const TYPE_LABELS: Record<QuestionType, string> = {
   SINGLE_CHOICE: "단일 선택",
@@ -350,97 +351,95 @@ export function QuestionsPage() {
           }
         />
       ) : (
-        <section className="master-detail-layout workbench-layout question-workbench">
-          <div
-            className={`surface-card master-pane master-pane--list question-list-pane ${
-              mobileDetailOpen ? "master-pane--mobile-hidden" : ""
-            }`}
-          >
-            <header className="card-header">
-              <div>
-                <h2>문제 목록</h2>
-                <p>총 {questionPage?.pagination.total ?? 0}개</p>
+        <section className="question-workbench">
+          <div className={`question-list-view ${mobileDetailOpen ? "question-list-view--mobile-hidden" : ""}`}>
+            <section className="surface-card question-table-card">
+              <header className="question-list-summary">
+                <strong>전체 문제 <span>{questionPage?.pagination.total ?? 0}</span></strong>
+                <small>문제를 선택하면 아래에서 정답과 해설을 미리 볼 수 있습니다.</small>
+              </header>
+              <div className="question-table-wrap">
+                <table className="question-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">문제 번호</th>
+                      <th scope="col">문제 내용</th>
+                      <th scope="col">과목</th>
+                      <th scope="col">난이도</th>
+                      <th scope="col">유형</th>
+                      <th scope="col">상태</th>
+                      <th scope="col">수정일</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {questions.map((question, index) => {
+                      const subject = subjectMap.get(question.subjectId);
+                      return (
+                        <tr
+                          key={question.id}
+                          className={selected?.id === question.id && !editor ? "question-table-row--selected" : ""}
+                        >
+                          <td>Q-{String((page - 1) * 20 + index + 1).padStart(4, "0")}</td>
+                          <td>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                saveMutation.reset();
+                                setEditor(null);
+                                setSelectedId(question.id);
+                                setMobileDetailOpen(true);
+                              }}
+                            >
+                              {question.prompt}
+                            </button>
+                          </td>
+                          <td>{subject?.name ?? "과목 정보 없음"}</td>
+                          <td><span className={`question-difficulty question-difficulty--${question.difficulty.toLowerCase()}`}>{DIFFICULTY_LABELS[question.difficulty]}</span></td>
+                          <td>{TYPE_LABELS[question.type]}</td>
+                          <td><span className={`status-badge ${question.active ? "status-badge--success" : "status-badge--neutral"}`}>{question.active ? "출제 가능" : "출제 중지"}</span></td>
+                          <td>{new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "short" }).format(new Date(question.updatedAt))}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            </header>
+              {(questionPage?.pagination.totalPages ?? 0) > 1 && (
+                <nav className="pagination question-pagination" aria-label="문제 목록 페이지">
+                  <button type="button" className="button button--secondary button--compact" disabled={page <= 1} onClick={() => { setPage((current) => Math.max(1, current - 1)); setSelectedId(null); }}><ChevronLeft size={16} />이전</button>
+                  <span>{page} / {questionPage?.pagination.totalPages}</span>
+                  <button type="button" className="button button--secondary button--compact" disabled={page >= (questionPage?.pagination.totalPages ?? 1)} onClick={() => { setPage((current) => current + 1); setSelectedId(null); }}>다음<ChevronRight size={16} /></button>
+                </nav>
+              )}
+            </section>
 
-            <div className="question-list">
-              {questions.map((question) => {
-                const subject = subjectMap.get(question.subjectId);
-
-                return (
-                  <button
-                    type="button"
-                    className={`question-list-item ${
-                      selected?.id === question.id && !editor
-                        ? "question-list-item--active"
-                        : ""
-                    }`}
-                    key={question.id}
-                    onClick={() => {
-                      saveMutation.reset();
-                      setEditor(null);
-                      setSelectedId(question.id);
-                      setMobileDetailOpen(true);
-                    }}
-                  >
-                    <span className="question-list-item__meta">
-                      <span>{subject?.name ?? "과목 정보 없음"}</span>
-                      <span>{TYPE_LABELS[question.type]}</span>
-                    </span>
-                    <strong>{question.prompt}</strong>
-                    <span className="question-list-item__footer">
-                      <span>{DIFFICULTY_LABELS[question.difficulty]} · {question.defaultScore}점</span>
-                      <span
-                        className={`status-badge ${
-                          question.active
-                            ? "status-badge--success"
-                            : "status-badge--neutral"
-                        }`}
-                      >
-                        {question.active ? "출제 가능" : "출제 중지"}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {(questionPage?.pagination.totalPages ?? 0) > 1 && (
-              <nav className="pagination" aria-label="문제 목록 페이지">
+            {selected && !editor && (
+              <>
                 <button
                   type="button"
-                  className="button button--secondary button--compact"
-                  disabled={page <= 1}
-                  onClick={() => {
-                    setPage((current) => Math.max(1, current - 1));
-                    setSelectedId(null);
-                  }}
+                  className="mobile-detail-back question-preview-back"
+                  onClick={() => setMobileDetailOpen(false)}
                 >
-                  <ChevronLeft size={16} />이전
+                  <ChevronLeft size={18} />문제 목록
                 </button>
-                <span>
-                  {page} / {questionPage?.pagination.totalPages}
-                </span>
-                <button
-                  type="button"
-                  className="button button--secondary button--compact"
-                  disabled={page >= (questionPage?.pagination.totalPages ?? 1)}
-                  onClick={() => {
-                    setPage((current) => current + 1);
-                    setSelectedId(null);
+                <QuestionDetail
+                  question={selected}
+                  subject={subjectMap.get(selected.subjectId)}
+                  changingActive={activeMutation.isPending}
+                  activeError={activeMutation.isError ? getErrorMessage(activeMutation.error) : null}
+                  onEdit={() => {
+                    saveMutation.reset();
+                    setEditor({ mode: "edit", question: selected });
+                    setMobileDetailOpen(true);
                   }}
-                >
-                  다음<ChevronRight size={16} />
-                </button>
-              </nav>
+                  onChangeActive={() => activeMutation.mutate(selected)}
+                />
+              </>
             )}
           </div>
 
-          <div
-            className={`master-pane master-pane--detail question-detail-pane ${
-              mobileDetailOpen ? "" : "master-pane--mobile-hidden"
-            }`}
-          >
+          {editor && (
+            <div className="question-detail-pane">
             <button
               type="button"
               className="mobile-detail-back"
@@ -453,8 +452,7 @@ export function QuestionsPage() {
               <ChevronLeft size={18} />문제 목록
             </button>
 
-            {editor ? (
-              <QuestionEditor
+            <QuestionEditor
                 key={
                   editor.mode === "edit"
                     ? `edit:${editor.question.id}`
@@ -476,29 +474,8 @@ export function QuestionsPage() {
                   })
                 }
               />
-            ) : selected ? (
-              <QuestionDetail
-                question={selected}
-                subject={subjectMap.get(selected.subjectId)}
-                changingActive={activeMutation.isPending}
-                activeError={
-                  activeMutation.isError ? getErrorMessage(activeMutation.error) : null
-                }
-                onEdit={() => {
-                  saveMutation.reset();
-                  setEditor({ mode: "edit", question: selected });
-                }}
-                onChangeActive={() => activeMutation.mutate(selected)}
-              />
-            ) : (
-              <div className="surface-card">
-                <EmptyState
-                  title="확인할 문제를 선택해 주세요."
-                  description="목록에서 문제를 선택하면 정답과 해설을 확인할 수 있습니다."
-                />
-              </div>
-            )}
           </div>
+          )}
         </section>
       )}
     </div>
@@ -548,74 +525,56 @@ function QuestionDetail({
       </header>
 
       <div className="card-body question-detail-body">
-        <div className="detail-grid">
-          <div className="detail-item">
-            <span>문제 유형</span>
-            <strong>{TYPE_LABELS[question.type]}</strong>
-          </div>
-          <div className="detail-item">
-            <span>난이도</span>
-            <strong>{DIFFICULTY_LABELS[question.difficulty]}</strong>
-          </div>
-          <div className="detail-item">
-            <span>기본 배점</span>
-            <strong>{question.defaultScore}점</strong>
-          </div>
-          <div className="detail-item">
-            <span>출제 상태</span>
-            <strong>{question.active ? "출제 가능" : "출제 중지"}</strong>
-          </div>
+        <div className="question-preview-content">
+          <section className="question-content-section">
+            <span className="question-preview-kicker">문제 미리보기</span>
+            <p className="question-prompt">{question.prompt}</p>
+          </section>
+
+          <section className="question-content-section">
+            <h3>{question.type === "SHORT_ANSWER" ? "허용 정답" : "보기와 정답"}</h3>
+            {question.type === "SHORT_ANSWER" ? (
+              <ol className="answer-list">
+                {question.acceptedAnswers.map((answer) => (
+                  <li key={answer.id}>
+                    <Check size={16} aria-hidden="true" />
+                    <span>{answer.answerText}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <ol className="answer-list">
+                {question.options.map((option) => (
+                  <li className={option.isCorrect ? "answer-list__correct" : ""} key={option.id}>
+                    <span className="answer-index">{option.displayOrder + 1}</span>
+                    <span>{option.content}</span>
+                    {option.isCorrect && <strong>정답</strong>}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+
+          <section className="question-content-section">
+            <h3>해설</h3>
+            <p className={question.explanation ? "question-explanation" : "muted"}>
+              {question.explanation || "등록된 해설이 없습니다."}
+            </p>
+          </section>
         </div>
 
-        <section className="question-content-section">
-          <h3>문제</h3>
-          <p className="question-prompt">{question.prompt}</p>
-        </section>
-
-        <section className="question-content-section">
-          <h3>{question.type === "SHORT_ANSWER" ? "허용 정답" : "보기와 정답"}</h3>
-          {question.type === "SHORT_ANSWER" ? (
-            <ol className="answer-list">
-              {question.acceptedAnswers.map((answer) => (
-                <li key={answer.id}>
-                  <Check size={16} aria-hidden="true" />
-                  <span>{answer.answerText}</span>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <ol className="answer-list">
-              {question.options.map((option) => (
-                <li
-                  className={option.isCorrect ? "answer-list__correct" : ""}
-                  key={option.id}
-                >
-                  <span className="answer-index">{option.displayOrder + 1}</span>
-                  <span>{option.content}</span>
-                  {option.isCorrect && <strong>정답</strong>}
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
-
-        <section className="question-content-section">
-          <h3>해설</h3>
-          <p className={question.explanation ? "question-explanation" : "muted"}>
-            {question.explanation || "등록된 해설이 없습니다."}
-          </p>
-        </section>
-
-        <dl className="question-detail-meta">
-          <div>
-            <dt>등록일</dt>
-            <dd>{formatDateTime(question.createdAt)}</dd>
-          </div>
-          <div>
-            <dt>최근 수정</dt>
-            <dd>{formatDateTime(question.updatedAt)}</dd>
-          </div>
-        </dl>
+        <aside className="question-info-panel">
+          <h3>문제 정보</h3>
+          <dl className="question-detail-meta">
+            <div><dt>과목</dt><dd>{subject?.name ?? "과목 정보 없음"}</dd></div>
+            <div><dt>문제 유형</dt><dd>{TYPE_LABELS[question.type]}</dd></div>
+            <div><dt>난이도</dt><dd>{DIFFICULTY_LABELS[question.difficulty]}</dd></div>
+            <div><dt>기본 배점</dt><dd>{question.defaultScore}점</dd></div>
+            <div><dt>출제 상태</dt><dd>{question.active ? "출제 가능" : "출제 중지"}</dd></div>
+            <div><dt>등록일</dt><dd>{formatDateTime(question.createdAt)}</dd></div>
+            <div><dt>최근 수정</dt><dd>{formatDateTime(question.updatedAt)}</dd></div>
+          </dl>
+        </aside>
 
         {activeError && <p className="form-error">{activeError}</p>}
       </div>
